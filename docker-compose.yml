@@ -1,0 +1,20 @@
+
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: local-mysql-db
+    ports:
+      - "3306:3306"
+    environment:
+      # These environment variables match the default values in your application-dev.yml
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}  # Corresponds to DB_PASSWORD default
+      MYSQL_DATABASE: ${DB_NAME}  # Corresponds to dev_database in the URL
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_bin
+
+volumes:
+  mysql_data:

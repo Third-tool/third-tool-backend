@@ -3,6 +3,7 @@ package com.example.thirdtool.Deck.presentation.controller;
 import com.example.thirdtool.Deck.application.service.DeckService;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.presentation.dto.DeckCreateRequestDto;
+import com.example.thirdtool.Deck.presentation.dto.DeckResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -61,6 +62,12 @@ public class DeckController {
     public ResponseEntity<Deck> updateDeck(@PathVariable Long deckId, @RequestBody DeckCreateRequestDto deckRequestDto) {
         Deck updatedDeck = deckService.updateDeck(deckId, deckRequestDto);
         return ResponseEntity.ok(updatedDeck);
+    }
+
+    @GetMapping//태그로 덱 조회하기
+    public ResponseEntity<List<DeckResponseDto>> getDecksByTag(@RequestParam(required = false) String tagName) {
+        List<DeckResponseDto> decks = deckService.findDecksByTag(tagName);
+        return ResponseEntity.ok(decks);
     }
 
 

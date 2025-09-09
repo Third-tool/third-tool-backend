@@ -4,8 +4,16 @@ import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.repository.DeckRepository;
 
 import com.example.thirdtool.Deck.presentation.dto.DeckCreateRequestDto;
+import com.example.thirdtool.Deck.presentation.dto.DeckResponseDto;
+import com.example.thirdtool.Tag.application.service.TagService;
+import com.example.thirdtool.Tag.domain.model.Tag;
+import com.example.thirdtool.Tag.domain.repository.TagRepository;
 import com.example.thirdtool.User.domain.model.User;
 import com.example.thirdtool.User.domain.repository.UserRepository;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +28,7 @@ public class DeckService {
 
     private final DeckRepository deckRepository;
     private final UserRepository userRepository; // ✅ UserRepository 주입
+    private final TagRepository tagRepository;
 
     //최상위 덱 가져오기(parentId 값이 null인)
     //최상위 덱 가져올 때는 업데이트 안하고 -> 그 밑에 있는 카드를 누를 때
@@ -42,16 +51,17 @@ public class DeckService {
         Long userId = 1L; // ✅ 임시로 userId를 1로 가정합니다. 실제 구현 시 수정 필요- 추후 무조건 수정
 
         User user = userRepository.findById(userId)
-                                  .orElseThrow(() -> new IllegalArgumentException("우리 서비스 유저가 아닙니다!"));
+            .orElseThrow(() -> new IllegalArgumentException("우리 서비스 유저가 아닙니다!"));
 
         Deck deck;
+
 
         // 부모 덱이 없는 경우 (최상위 덱)
         if (deckRequestDto.parentDeckId() == null) {
             deck = Deck.of(deckRequestDto.name(), deckRequestDto.scoringAlgorithmType(), user); // ✅ user 전달
         } else {
             Deck parentDeck = deckRepository.findById(deckRequestDto.parentDeckId())
-                                            .orElseThrow(() -> new IllegalArgumentException("부모 덱이 존재하지 않습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("부모 덱이 존재하지 않습니다."));
 
             // ✅ 부모 덱의 알고리즘 타입을 상속받아 새 덱을 생성
             String inheritedAlgorithmType = parentDeck.getScoringAlgorithmType();
@@ -59,10 +69,13 @@ public class DeckService {
 
         }
 
+        if (deckRequestDto.tagIds() != null && !deckRequestDto.tagIds().isEmpty()) {
+            List<Tag> tags = tagRepository.findAllById(deckRequestDto.tagIds());
+            deck.setTags(tags);
+        }
+
         return deckRepository.save(deck);
     }
-
-
 
     //최신 덱 가져오기
     @Transactional(readOnly = true)
@@ -85,14 +98,32 @@ public class DeckService {
     public Deck updateDeck(Long deckId, DeckCreateRequestDto deckRequestDto) {
         // 1. deckId로 기존 덱을 찾습니다.
         Deck deck = deckRepository.findById(deckId)
-                                  .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
+            .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
 
         // 2. 덱의 이름을 업데이트합니다.
         deck.updateName(deckRequestDto.name());
+
+        List<Tag> tags = tagRepository.findAllById(deckRequestDto.tagIds()); //태그 업데이트
+        deck.setTags(tags);
 
         // 3. 트랜잭션이 완료되면 변경사항이 자동으로 반영됩니다.
         return deck;
     }
 
     //최근 접속한 접속한 데이터
+
+    @Transactional(readOnly = true)
+    public List<DeckResponseDto> findDecksByTag(String tagName) {
+        List<Deck> decks;
+        if (tagName == null || tagName.isEmpty()) {
+            decks = deckRepository.findAll();
+        } else {
+            decks = deckRepository.findAllByTagName(tagName);
+        }
+
+        return decks.stream()
+            .map(DeckResponseDto::from)
+            .toList();
+    }
 }
+

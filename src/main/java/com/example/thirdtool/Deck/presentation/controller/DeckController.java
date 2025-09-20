@@ -64,11 +64,11 @@ public class DeckController {
         return ResponseEntity.ok(updatedDeck);
     }
 
-    @GetMapping//태그로 덱 조회하기
-    public ResponseEntity<List<DeckResponseDto>> getDecksByTag(@RequestParam(required = false) String tagName) {
-        List<DeckResponseDto> decks = deckService.findDecksByTag(tagName);
+    @GetMapping("/search-by-tag") //태그 이름으로 덱 조회하기
+    public ResponseEntity<List<DeckResponseDto>> searchByTagName(Long userId,@RequestParam(required = false) String tagName) {
+        //userId는 나중에 jwt로 받아올 예정 @AuthenticationPrincipal
+        List<DeckResponseDto> decks = deckService.findDecksByTagName(userId, tagName);
         return ResponseEntity.ok(decks);
     }
-
 
 }

@@ -20,10 +20,7 @@ public class UserService {
         if (userRepository.findByEmail(dto.email()).isPresent()) {
             throw new IllegalArgumentException("이미 사용 중인 이메일입니다.");
         }
-
-
         User user = User.of(dto.email(), dto.password());
-
         return userRepository.save(user);
     }
 
@@ -32,7 +29,6 @@ public class UserService {
         // 이메일로 사용자 조회
         User user = userRepository.findByEmail(dto.email())
                                   .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 잘못되었습니다."));
-
         return user;
     }
 }

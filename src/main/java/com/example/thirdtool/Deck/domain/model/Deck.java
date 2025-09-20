@@ -5,8 +5,6 @@ import com.example.thirdtool.Tag.domain.model.Tag;
 import com.example.thirdtool.User.domain.model.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import java.util.HashSet;
-import java.util.Set;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -71,6 +69,7 @@ public class Deck {
         this.user = user; // ✅ user 필드 초기화
     }
 
+
     public static Deck of(String name, Deck parentDeck, String scoringAlgorithmType, User user) { // ✅ User 인자 추가
         return internalBuilder()
             .name(name)
@@ -104,4 +103,10 @@ public class Deck {
             this.tags.addAll(tags);
         }
     }
+
+    public void addTag(Tag tag) {
+        this.tags.add(tag);
+        tag.getDecks().add(this);
+    }
+
 }

@@ -3,7 +3,6 @@ package com.example.thirdtool.Deck.presentation.dto;
 import com.example.thirdtool.Deck.domain.model.Deck;
 
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 // 예시: DeckResponseDto.java
@@ -20,7 +19,7 @@ public record DeckResponseDto(
             .map(DeckResponseDto::from)
             .collect(Collectors.toList());
         List<String> tagNames = deck.getTags().stream()
-            .map(tag -> tag.getName())
+            .map(tag -> tag.getDisplayName())
             .collect(Collectors.toList());
         return new DeckResponseDto(deck.getId(), deck.getName(), subDecks, tagNames);
     }

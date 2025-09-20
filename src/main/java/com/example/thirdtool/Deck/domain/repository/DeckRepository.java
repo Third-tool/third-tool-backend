@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import org.springframework.web.bind.annotation.RequestParam;
 
 @Repository
 public interface DeckRepository extends JpaRepository<Deck, Long> {
@@ -22,8 +21,11 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
         // ✅ 특정 부모 덱 ID를 가진 하위 덱들을 조회하는 쿼리 메서드
         List<Deck> findByParentDeckId(Long parentDeckId);
 
-        @Query("SELECT d FROM Deck d JOIN d.tags t WHERE t.name = :tagName")
-        List<Deck> findAllByTagName(@Param("tagName") String tagName);
+        @Query("SELECT d FROM Deck d JOIN d.tags t WHERE d.user.id = :userId and t.nameKey = :nameKey")
+        List<Deck> findAllByUserIdAndTagNameKey(@Param("userId")Long userId, @Param("nameKey")String nameKey);
+
+        @Query("SELECT d FROM Deck d JOIN d.tags t WHERE d.user.id = :userId and t.id = :tagId")
+        List<Deck> findAllByUserIdAndTagId(@Param("userId") Long userId, @Param("tagId") Long tagId);
 
         // ✅ lastAccessed 필드를 원자적으로 업데이트하는 JPQL 쿼리
         @Modifying

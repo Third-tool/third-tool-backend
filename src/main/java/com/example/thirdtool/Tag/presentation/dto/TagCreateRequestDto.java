@@ -1,5 +1,7 @@
 package com.example.thirdtool.Tag.presentation.dto;
 
-public record TagCreateRequestDto(String name) {
+import jakarta.validation.constraints.NotBlank;
+
+public record TagCreateRequestDto(@NotBlank String name) {
 
 }

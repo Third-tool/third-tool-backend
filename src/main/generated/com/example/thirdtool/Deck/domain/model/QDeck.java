@@ -36,6 +36,8 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public final ListPath<Deck, QDeck> subDecks = this.<Deck, QDeck>createList("subDecks", Deck.class, QDeck.class, PathInits.DIRECT2);
 
+    public final ListPath<com.example.thirdtool.Tag.domain.model.Tag, com.example.thirdtool.Tag.domain.model.QTag> tags = this.<com.example.thirdtool.Tag.domain.model.Tag, com.example.thirdtool.Tag.domain.model.QTag>createList("tags", com.example.thirdtool.Tag.domain.model.Tag.class, com.example.thirdtool.Tag.domain.model.QTag.class, PathInits.DIRECT2);
+
     public final com.example.thirdtool.User.domain.model.QUser user;
 
     public QDeck(String variable) {

@@ -5,15 +5,11 @@ import com.example.thirdtool.Deck.domain.repository.DeckRepository;
 
 import com.example.thirdtool.Deck.presentation.dto.DeckCreateRequestDto;
 import com.example.thirdtool.Deck.presentation.dto.DeckResponseDto;
-import com.example.thirdtool.Tag.application.service.TagService;
 import com.example.thirdtool.Tag.domain.model.Tag;
 import com.example.thirdtool.Tag.domain.repository.TagRepository;
 import com.example.thirdtool.User.domain.model.User;
 import com.example.thirdtool.User.domain.repository.UserRepository;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -71,7 +67,7 @@ public class DeckService {
 
         if (deckRequestDto.tagIds() != null && !deckRequestDto.tagIds().isEmpty()) {
             List<Tag> tags = tagRepository.findAllById(deckRequestDto.tagIds());
-            deck.setTags(tags);
+            deck.setTags(new ArrayList<>(tags));
         }
 
         return deckRepository.save(deck);
@@ -113,12 +109,26 @@ public class DeckService {
     //최근 접속한 접속한 데이터
 
     @Transactional(readOnly = true)
-    public List<DeckResponseDto> findDecksByTag(String tagName) {
+    public List<DeckResponseDto> findDecksByTagName(Long userId, String tagName) {
         List<Deck> decks;
         if (tagName == null || tagName.isEmpty()) {
             decks = deckRepository.findAll();
         } else {
-            decks = deckRepository.findAllByTagName(tagName);
+            decks = deckRepository.findAllByUserIdAndTagNameKey(userId, tagName);
+        }
+
+        return decks.stream()
+            .map(DeckResponseDto::from)
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DeckResponseDto> findDecksByTagId(Long userId, Long tagId) {
+        List<Deck> decks;
+        if (tagId == null) {
+            decks = deckRepository.findAll();
+        } else {
+            decks = deckRepository.findAllByUserIdAndTagId(userId,tagId);
         }
 
         return decks.stream()

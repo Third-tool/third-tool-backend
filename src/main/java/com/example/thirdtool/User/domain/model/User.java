@@ -1,9 +1,11 @@
 package com.example.thirdtool.User.domain.model;
 
+import com.example.thirdtool.Deck.domain.model.Deck;
+import com.example.thirdtool.Tag.domain.model.Tag;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,7 +13,7 @@ import lombok.NoArgsConstructor;
 
 
 @Entity
-@Table(name = "users")
+@Table(name = "user_id")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
@@ -26,10 +28,20 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Deck> decks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Tag> tags = new ArrayList<>();
+
     @Builder(builderMethodName = "internalBuilder")
     private User(String email, String password) {
         this.email = email;
         this.password = password;
+    }
+
+    public User(long l, String mail, String number) {
     }
 
     // ✅ 회원가입에 사용할 정적 팩토리 메서드

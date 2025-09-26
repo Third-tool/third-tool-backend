@@ -26,9 +26,13 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final BooleanPath isShared = createBoolean("isShared");
+
     public final DateTimePath<java.time.LocalDateTime> lastAccessed = createDateTime("lastAccessed", java.time.LocalDateTime.class);
 
     public final StringPath name = createString("name");
+
+    public final QDeck originalDeck;
 
     public final QDeck parentDeck;
 
@@ -58,6 +62,7 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public QDeck(Class<? extends Deck> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
+        this.originalDeck = inits.isInitialized("originalDeck") ? new QDeck(forProperty("originalDeck"), inits.get("originalDeck")) : null;
         this.parentDeck = inits.isInitialized("parentDeck") ? new QDeck(forProperty("parentDeck"), inits.get("parentDeck")) : null;
         this.user = inits.isInitialized("user") ? new com.example.thirdtool.User.domain.model.QUser(forProperty("user")) : null;
     }

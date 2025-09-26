@@ -1,17 +1,23 @@
 package com.example.thirdtool.Deck.application.service;
 
+import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.repository.DeckRepository;
 
 import com.example.thirdtool.Deck.presentation.dto.DeckCreateRequestDto;
 import com.example.thirdtool.Deck.presentation.dto.DeckResponseDto;
+import com.example.thirdtool.Deck.presentation.dto.DeckSearchDto;
 import com.example.thirdtool.Tag.domain.model.Tag;
 import com.example.thirdtool.Tag.domain.repository.TagRepository;
 import com.example.thirdtool.User.domain.model.User;
 import com.example.thirdtool.User.domain.repository.UserRepository;
+
 import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -106,15 +112,14 @@ public class DeckService {
         return deck;
     }
 
-    //최근 접속한 접속한 데이터
-
+    //덱 이름으로 덱 찾기
     @Transactional(readOnly = true)
-    public List<DeckResponseDto> findDecksByTagName(Long userId, String tagName) {
+    public List<DeckResponseDto> findDecksByName(Long userId, String deckName) {
         List<Deck> decks;
-        if (tagName == null || tagName.isEmpty()) {
+        if (deckName == null || deckName.isEmpty()) {
             decks = deckRepository.findAll();
         } else {
-            decks = deckRepository.findAllByUserIdAndTagNameKey(userId, tagName);
+            decks = deckRepository.findAllByUserIdAndDeckName(userId, deckName);
         }
 
         return decks.stream()
@@ -122,18 +127,91 @@ public class DeckService {
             .toList();
     }
 
+    //태그로 덱 찾기
     @Transactional(readOnly = true)
-    public List<DeckResponseDto> findDecksByTagId(Long userId, Long tagId) {
+    public List<DeckResponseDto> findDecksByTagId(Long userId, List<Long> tagIds) {
         List<Deck> decks;
-        if (tagId == null) {
+        if (tagIds == null || tagIds.isEmpty()) {
             decks = deckRepository.findAll();
         } else {
-            decks = deckRepository.findAllByUserIdAndTagId(userId,tagId);
+            decks = deckRepository.findAllByUserIdAndTagId(userId,tagIds);
         }
 
         return decks.stream()
             .map(DeckResponseDto::from)
             .toList();
     }
+
+    //덱 이름 자동완성
+    @Transactional(readOnly = true)
+    public List<DeckSearchDto> getAutocompleteDeckNames(String keyword,String scope, Long userId){
+        if (keyword == null || keyword.isBlank()) {
+            return List.of();
+        }
+        Pageable limit = (Pageable) PageRequest.of(0, 10); // 최대 10개 결과 제한
+
+        if ("public".equalsIgnoreCase(scope)){
+            return deckRepository.findPublicDecksByNameStartingWith(keyword, limit);
+        }
+        else if ("private".equalsIgnoreCase(scope)){
+            if (userId == null){
+                throw new IllegalArgumentException("User ID가 필요합니다");
+            }
+            return deckRepository.findUserDecksByNameStartingWith(userId, keyword, limit);
+        }
+        return List.of();
+    }
+
+    //덱 아카이브하기
+    @Transactional
+    public Deck archiveDeck(Long userId, Long deckId) {
+        Deck deck = deckRepository.findById(deckId)
+            .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 덱입니다"));
+        if( !deck.getUser().getId().equals(userId)){
+            throw new IllegalArgumentException("본인의 덱만 공유할 수 있습니다");
+        }
+        deck.setShared();
+        return deck;
+    }
+
+    //덱 비공개 상태로 전환하기
+    @Transactional
+    public Deck unArchiveDeck(Long userId, Long deckId) {
+        Deck deck = deckRepository.findById(deckId)
+            .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 덱입니다"));
+        if( !deck.getUser().getId().equals(userId)){
+            throw new IllegalArgumentException("본인의 덱만 공유할 수 있습니다");
+        }
+        deck.setUnshared();
+        return deck;
+    }
+
+    //덱 복사하기
+    @Transactional
+    public Deck copyDeckToUser(Long deckId,Long newOwnerId) {
+        Deck originalDeck = deckRepository.findById(deckId)
+            .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 덱입니다"));
+        User newOwner = userRepository.findById(newOwnerId)
+            .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다"));
+
+        Deck copiedDeck = Deck.of(originalDeck.getName(), originalDeck.getScoringAlgorithmType(), newOwner);
+        copiedDeck.setTags(new ArrayList<>(originalDeck.getTags()));
+
+        List<Card> copiedCards = new ArrayList<>();
+        for (Card originalCard : originalDeck.getCards()) {
+            Card copiedCard = Card.of(originalCard.getQuestion(), originalCard.getAnswer(), copiedDeck);
+            copiedCards.add(copiedCard);
+        }
+        copiedDeck.setCards(copiedCards);
+        return deckRepository.save(copiedDeck);
+    }
+
+    //아카이브된 덱들 조회하기
+    @Transactional(readOnly = true)
+    public List<Deck> getAllArchivedDecks() {
+        return deckRepository.findByIsSharedTrue();
+    }
+
+
 }
 

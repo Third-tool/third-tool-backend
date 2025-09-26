@@ -11,12 +11,13 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 
-
+@Setter
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "cards")

@@ -106,8 +106,5 @@ class TagServiceTest {
         assertEquals(2, tagRepository.findAll().size());
     }
 
-    /*  @Transactional(readOnly = true)
-    public Optional<Tag> findTagsByUserId(Long userId){  //모든 태그 조회
-        return tagRepository.findByUserId(userId);
-    }*/
+
 }

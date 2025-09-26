@@ -23,11 +23,20 @@ public class Deck {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(nullable = false)
     private String name;
 
     // ✅ lastAccessed 필드 추가
     private LocalDateTime lastAccessed;
+
+    @Column(nullable = false) //공유 되었는지 여부
+    private boolean isShared = false;
+
+    // ✅ 이 덱이 어떤 원본 덱으로부터 복사되었는지를 나타내는 관계
+    // (복사본이 아닌 원본 덱은 이 필드가 null)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "original_deck_id")
+    private Deck originalDeck;
 
     // ✅ scoringAlgorithmType 필드 추가
     @Column(nullable = false, length = 50)
@@ -38,6 +47,16 @@ public class Deck {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_deck_id")
     private Deck parentDeck;
+
+    //공유 됨을 표시
+    public void setShared() {
+        this.isShared = true;
+    }
+
+    //비공개로 전환
+    public void setUnshared() {
+        this.isShared = false;
+    }
 
     @JsonIgnore
     @OneToMany(mappedBy = "parentDeck")
@@ -109,4 +128,10 @@ public class Deck {
         tag.getDecks().add(this);
     }
 
+    public void setCards(List<Card> copiedCards) {
+        this.cards.clear();
+        if (copiedCards != null) {
+            this.cards.addAll(copiedCards);
+        }
+    }
 }

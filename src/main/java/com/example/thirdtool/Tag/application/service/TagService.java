@@ -62,7 +62,7 @@ public class TagService { //유저 개인이 태그 관리
         return tag;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<Tag> findTagsByUserId(Long userId){  //모든 태그 조회
         return tagRepository.findByUserId(userId);
     }

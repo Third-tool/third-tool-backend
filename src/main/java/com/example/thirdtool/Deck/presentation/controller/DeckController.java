@@ -78,7 +78,7 @@ public class DeckController {
     public ResponseEntity<List<DeckResponseDto>> getDecksByTag(@RequestParam(required = false) List<Long> tagIds) {
         Long userId = 1L; // TODO: 임시 사용자, 나중에 JWT/리졸버로 대체
         List<DeckResponseDto> decks = deckService.findDecksByTagId(userId, tagIds);
-        return ResponseEntity.ok(decks);
+        return ResponseEntity.ok(decks); 
     }
 
     //덱 이름 자동완성

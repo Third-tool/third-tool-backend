@@ -86,7 +86,7 @@ public class DeckController {
     public ResponseEntity<List<DeckSearchDto>> autoCompleteDeckNames(@RequestParam String keyword, @RequestParam(defaultValue = "public") String scope){
         Long userId = 1L;
         List<DeckSearchDto> suggestions = deckService.getAutocompleteDeckNames(keyword, scope, userId);
-        return ResponseEntity.ok(suggestions); 
+        return ResponseEntity.ok(suggestions);
     }
 
     //덱 공유하기(공개하기)

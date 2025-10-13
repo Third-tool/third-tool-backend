@@ -30,7 +30,7 @@ public class QCardRank extends EntityPathBase<CardRank> {
 
     public final StringPath name = createString("name");
 
-    public final com.example.thirdtool.User.domain.model.QUser user;
+    public final com.example.thirdtool.User.domain.model.QUserEntity user;
 
     public QCardRank(String variable) {
         this(CardRank.class, forVariable(variable), INITS);
@@ -50,7 +50,7 @@ public class QCardRank extends EntityPathBase<CardRank> {
 
     public QCardRank(Class<? extends CardRank> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.user = inits.isInitialized("user") ? new com.example.thirdtool.User.domain.model.QUser(forProperty("user")) : null;
+        this.user = inits.isInitialized("user") ? new com.example.thirdtool.User.domain.model.QUserEntity(forProperty("user")) : null;
     }
 
 }

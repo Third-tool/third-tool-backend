@@ -1,0 +1,19 @@
+# Build Stage
+FROM gradle:8.8-jdk21-alpine AS builder
+WORKDIR /app
+COPY build.gradle settings.gradle gradlew ./
+COPY gradle ./gradle
+RUN ./gradlew dependencies --no-daemon
+COPY . .
+RUN ./gradlew clean bootJar --no-daemon
+
+# Run Stage
+FROM eclipse-temurin:21-jdk-alpine
+WORKDIR /app
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
+    echo "Asia/Seoul" > /etc/timezone && \
+    apk del tzdata
+COPY --from=builder /app/build/libs/*SNAPSHOT.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,8 +1,8 @@
 package com.example.thirdtool.Card.presentation.controller;
 
 import com.example.thirdtool.Card.application.service.CardRankService;
-import com.example.thirdtool.Card.presentation.dto.CardRankUpdateRequestDto;
-import com.example.thirdtool.Card.presentation.dto.UserCreateRequestDto;
+import com.example.thirdtool.Card.presentation.dto.request.CardRankUpdateRequestDto;
+import com.example.thirdtool.Card.presentation.dto.request.UserCreateRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,15 +14,6 @@ public class CardRankController {
 
     private final CardRankService cardRankService;
 
-
-
-    // ✅ 새로운 사용자를 위한 기본 랭크 설정 API
-    // POST /api/card-ranks/default-ranks
-    @PostMapping("/default-ranks")
-    public ResponseEntity<Void> createDefaultRanks(@RequestBody UserCreateRequestDto requestDto) {
-        cardRankService.createDefaultRanksForUser(requestDto.userId());
-        return ResponseEntity.ok().build();
-    }
 
     // ✅ 사용자의 랭크 기준을 수정하는 API
     // PUT /api/card-ranks/users/{userId}

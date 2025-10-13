@@ -5,62 +5,108 @@ import com.example.thirdtool.Card.domain.model.CardRank;
 import com.example.thirdtool.Card.domain.model.CardRankType;
 import com.example.thirdtool.Card.domain.model.QCardRank;
 import com.example.thirdtool.Card.presentation.dto.CardInfoDto;
+import com.example.thirdtool.Card.presentation.dto.QCardInfoDto;
 import com.example.thirdtool.Deck.domain.model.DeckMode;
-import com.example.thirdtool.User.domain.model.QUser;
+
+import com.example.thirdtool.Scoring.domain.model.QLearningProfile;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
 import java.util.List;
 
 import static com.example.thirdtool.Card.domain.model.QCard.card;
 import static com.example.thirdtool.Card.domain.model.QCardRank.cardRank;
-import static com.example.thirdtool.User.domain.model.QUser.user;
+import static com.example.thirdtool.Deck.domain.model.QDeck.deck;
+import static com.example.thirdtool.Scoring.domain.model.QLearningProfile.learningProfile;
 
-@RequiredArgsConstructor
+
 @Repository
+@RequiredArgsConstructor
 public class CardRepositoryCustomImpl implements CardRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<CardInfoDto> findCardsByRankWithQuerydsl(Long userId, Long deckId, CardRankType rankName, DeckMode mode) {
-        // 랭크의 점수 범위를 찾기 위한 서브쿼리
-        CardRank rankInfo = queryFactory
-                .selectFrom(cardRank)
-                .where(cardRank.user.id.eq(userId).and(cardRank.name.eq(rankName.name()))) // ✅ .name() 추가
-                .fetchOne();
+    public Slice<CardInfoDto> findCardsByScoreRange(Long userId,
+                                                    Long deckId,
+                                                    DeckMode mode,
+                                                    int minScore,
+                                                    int maxScore,
+                                                    Pageable pageable) {
+        QLearningProfile learningProfile = QLearningProfile.learningProfile;
 
-        if (rankInfo == null) {
-            return List.of();
-        }
-
-        // 메인 쿼리: 랭크의 점수 범위를 사용해 카드를 조회
-        BooleanExpression scoreBetween = card.score.between(rankInfo.getMinScore(), rankInfo.getMaxScore());
-        BooleanExpression deckModeEq = card.mode.eq(mode);
-        BooleanExpression deckIdEq = card.deck.id.eq(deckId);
-
-        return queryFactory
-                .select(Projections.constructor(CardInfoDto.class,
-                        card.id, card.question, card.answer, card.score, card.mode)) // ✅ score와 mode 필드 추가
+        List<CardInfoDto> results = queryFactory
+                .select(new QCardInfoDto(card.id, card.question, card.answer))
                 .from(card)
-                .where(scoreBetween.and(deckModeEq).and(deckIdEq))
+                .join(card.deck, deck)
+                .join(card.learningProfile, learningProfile)
+                .where(
+                        deck.id.eq(deckId),
+                        deck.user.id.eq(userId),
+                        learningProfile.mode.eq(mode),
+                        learningProfile.score.between(minScore, maxScore) // ✅ 점수 조건
+                      )
+                .orderBy(card.id.asc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize() + 1)
                 .fetch();
+
+        boolean hasNext = results.size() > pageable.getPageSize();
+        if (hasNext) results.remove(pageable.getPageSize());
+
+        return new SliceImpl<>(results, pageable, hasNext);
     }
 
-    // ✅ 랭크, 모드 기준으로 점수가 낮은 상위 N개의 카드를 조회하는 로직
     @Override
     public List<Card> findTopNCardsByRankAndMode(Long userId, String rankName, DeckMode mode, int count) {
-        return queryFactory
-                .selectFrom(card)
-                .join(cardRank).on(card.score.between(cardRank.minScore, cardRank.maxScore)
-                                             .and(cardRank.user.id.eq(userId))
-                                             .and(cardRank.name.eq(rankName)))
-                .where(card.mode.eq(mode))
-                .orderBy(card.score.asc()) // 점수가 낮은 순서로 정렬
-                .limit(count) // N개만 가져오기
-                .fetch();
+
+        // 1️⃣ CardRank 범위 가져오기
+        CardRank rank = queryFactory
+                .selectFrom(cardRank)
+                .where(cardRank.user.id.eq(userId)
+                                       .and(cardRank.name.eq(rankName)))
+                .fetchOne();
+
+        if (rank == null) return Collections.emptyList();
+
+        // 2️⃣ 점수 범위 내에서 상위 N개 카드 조회
+        return queryFactory.selectFrom(card)
+                           .join(card.learningProfile, learningProfile).fetchJoin()
+                           .where(
+                                   card.learningProfile.mode.eq(mode),
+                                   card.learningProfile.score.between(rank.getMinScore(), rank.getMaxScore())
+                                 )
+                           .orderBy(card.learningProfile.score.asc())
+                           .limit(count)
+                           .fetch();
+    }
+
+    @Override
+    public int countByRankAndMode(Long userId, String rankName, DeckMode mode) {
+        CardRank rank = queryFactory
+                .selectFrom(cardRank)
+                .where(cardRank.user.id.eq(userId)
+                                       .and(cardRank.name.eq(rankName)))
+                .fetchOne();
+
+        if (rank == null) return 0;
+
+        Long count = queryFactory.select(card.count())
+                                 .from(card)
+                                 .join(card.learningProfile, learningProfile)
+                                 .where(
+                                         card.learningProfile.mode.eq(mode),
+                                         card.learningProfile.score.between(rank.getMinScore(), rank.getMaxScore())
+                                       )
+                                 .fetchOne();
+
+        return count != null ? count.intValue() : 0;
     }
 }

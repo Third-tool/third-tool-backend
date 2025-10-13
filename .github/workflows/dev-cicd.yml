@@ -1,0 +1,112 @@
+name: Deploy To EC2(dev 버전)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ 소스 코드 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ JDK 21 설치
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # 3️⃣ application.yml 주입 (GitHub Secrets 사용)
+      - name: application.yml 파일 만들기 전닫ㄹ 받아서 사용
+        run: echo "${{ secrets.APPLICATION_YML }}" > ./src/main/resources/application.yml
+
+      # 4️⃣ Gradle 빌드 (테스트 포함)
+      - name: Build with Gradle
+        run: ./gradlew clean build -x test
+
+      # 5️⃣ AWS 접근 권한 설정
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-northeast-2
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # 6️⃣ ECR 로그인
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 7️⃣ Docker 이미지 빌드 (우리 Dockerfile 기반)
+      - name: Build Docker image
+        run: docker build -t third-tool-server .
+
+      # 8️⃣ 이미지 태그 지정
+      - name: Tag Docker image
+        run: docker tag third-tool-server:latest ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+
+      # 9️⃣ ECR에 이미지 푸시
+      - name: Push to Amazon ECR
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+
+      # 🔟 EC2 배포 (SSH)
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEV_EC2_HOST }}
+          username: ${{ secrets.DEV_EC2_USERNAME }}
+          key: ${{ secrets.DEV_EC2_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            echo "🚀 [Deploy] Starting deployment on EC2..."
+
+            cd /home/ec2-user/third-tool || mkdir -p /home/ec2-user/third-tool
+            cd /home/ec2-user/third-tool
+            
+            
+            docker compose down || true
+            docker compose up -d
+
+            # 1️⃣ 기존 컨테이너 정리
+            echo "🧹 Stopping and removing old Spring container..."
+            docker stop third-tool-server || true
+            docker rm third-tool-server || true
+     
+
+            # 2️⃣ 최신 ECR 이미지 pull
+            echo "📦 Pulling latest Spring image from ECR..."
+            docker pull ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+
+            # 3️⃣ docker-compose 파일 업데이트 (Secrets에서 주입)
+            echo "🧩 Updating docker-compose.yml..."
+            echo "${{ secrets.DOCKER_COMPOSE_YML }}" > docker-compose.yml
+
+
+            # 5️⃣ Spring 서버 실행 (Compose 네트워크에 연결)
+            echo "⚙️ Running Spring Boot container..."
+            docker run -d \
+              --name third-tool-server \
+              --network third-tool_default \   # ⚠️ docker-compose의 네트워크 이름과 동일해야 함
+              -p 8080:8080 \
+              -e SPRING_PROFILES_ACTIVE=dev \
+              -e DB_NAME=${{ secrets.DB_NAME }} \
+              -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+              -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+              -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+              -e KAKAO_CLIENT_ID="${{ secrets.KAKAO_CLIENT_ID }}" \
+              -e KAKAO_CLIENT_SECRET="${{ secrets.KAKAO_CLIENT_SECRET }}" \
+              -e NAVER_CLIENT_ID="${{ secrets.NAVER_CLIENT_ID }}" \
+              -e NAVER_CLIENT_SECRET="${{ secrets.NAVER_CLIENT_SECRET }}" \
+              -e TZ=Asia/Seoul \
+              ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+
+            # 6️⃣ 상태 확인
+            echo "🔍 Checking running containers..."
+            docker ps
+
+            echo "✅ Deployment completed successfully!"

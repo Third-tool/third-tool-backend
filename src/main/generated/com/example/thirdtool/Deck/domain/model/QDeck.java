@@ -24,6 +24,8 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public final ListPath<com.example.thirdtool.Card.domain.model.Card, com.example.thirdtool.Card.domain.model.QCard> cards = this.<com.example.thirdtool.Card.domain.model.Card, com.example.thirdtool.Card.domain.model.QCard>createList("cards", com.example.thirdtool.Card.domain.model.Card.class, com.example.thirdtool.Card.domain.model.QCard.class, PathInits.DIRECT2);
 
+    public final NumberPath<Integer> depth = createNumber("depth", Integer.class);
+
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final DateTimePath<java.time.LocalDateTime> lastAccessed = createDateTime("lastAccessed", java.time.LocalDateTime.class);
@@ -36,7 +38,7 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public final ListPath<Deck, QDeck> subDecks = this.<Deck, QDeck>createList("subDecks", Deck.class, QDeck.class, PathInits.DIRECT2);
 
-    public final com.example.thirdtool.User.domain.model.QUser user;
+    public final com.example.thirdtool.User.domain.model.QUserEntity user;
 
     public QDeck(String variable) {
         this(Deck.class, forVariable(variable), INITS);
@@ -57,7 +59,7 @@ public class QDeck extends EntityPathBase<Deck> {
     public QDeck(Class<? extends Deck> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
         this.parentDeck = inits.isInitialized("parentDeck") ? new QDeck(forProperty("parentDeck"), inits.get("parentDeck")) : null;
-        this.user = inits.isInitialized("user") ? new com.example.thirdtool.User.domain.model.QUser(forProperty("user")) : null;
+        this.user = inits.isInitialized("user") ? new com.example.thirdtool.User.domain.model.QUserEntity(forProperty("user")) : null;
     }
 
 }

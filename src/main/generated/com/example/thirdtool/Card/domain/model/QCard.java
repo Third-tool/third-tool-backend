@@ -26,30 +26,18 @@ public class QCard extends EntityPathBase<Card> {
 
     public final StringPath answer = createString("answer");
 
-    public final NumberPath<Integer> badCount = createNumber("badCount", Integer.class);
-
     //inherited
     public final DateTimePath<java.time.LocalDateTime> createdDate = _super.createdDate;
 
     public final com.example.thirdtool.Deck.domain.model.QDeck deck;
 
-    public final NumberPath<Double> easinessFactor = createNumber("easinessFactor", Double.class);
-
-    public final NumberPath<Integer> goodCount = createNumber("goodCount", Integer.class);
-
-    public final NumberPath<Integer> greatCount = createNumber("greatCount", Integer.class);
-
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
-    public final EnumPath<com.example.thirdtool.Deck.domain.model.DeckMode> mode = createEnum("mode", com.example.thirdtool.Deck.domain.model.DeckMode.class);
+    public final ListPath<CardImage, QCardImage> images = this.<CardImage, QCardImage>createList("images", CardImage.class, QCardImage.class, PathInits.DIRECT2);
 
-    public final NumberPath<Integer> normalCount = createNumber("normalCount", Integer.class);
+    public final com.example.thirdtool.Scoring.domain.model.QLearningProfile learningProfile;
 
     public final StringPath question = createString("question");
-
-    public final NumberPath<Integer> repetition = createNumber("repetition", Integer.class);
-
-    public final NumberPath<Integer> score = createNumber("score", Integer.class);
 
     //inherited
     public final DateTimePath<java.time.LocalDateTime> updatedDate = _super.updatedDate;
@@ -73,6 +61,7 @@ public class QCard extends EntityPathBase<Card> {
     public QCard(Class<? extends Card> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
         this.deck = inits.isInitialized("deck") ? new com.example.thirdtool.Deck.domain.model.QDeck(forProperty("deck"), inits.get("deck")) : null;
+        this.learningProfile = inits.isInitialized("learningProfile") ? new com.example.thirdtool.Scoring.domain.model.QLearningProfile(forProperty("learningProfile"), inits.get("learningProfile")) : null;
     }
 
 }

@@ -7,7 +7,7 @@ services:
       - "3306:3306"
     environment:
       # These environment variables match the default values in your application-dev.yml
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}  # Corresponds to DB_PASSWORD default
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}  # Corresponds to DB_PASSWORD default
       MYSQL_DATABASE: ${DB_NAME}  # Corresponds to dev_database in the URL
 
     volumes:
@@ -16,5 +16,15 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_bin
 
+  redis:
+    image: redis:7.2
+    container_name: third-tool-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: [ "redis-server", "--appendonly", "yes" ]  # AOF 켜서 데이터 유실 방지
+
 volumes:
   mysql_data:
+  redis_data:

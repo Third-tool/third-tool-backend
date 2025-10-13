@@ -1,6 +1,6 @@
 package com.example.thirdtool.Scoring.aapplication.service;
 
-import com.example.thirdtool.Scoring.domain.model.ScoringAlgorithm;
+import com.example.thirdtool.Scoring.domain.model.algorithm.ScoringAlgorithm;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +26,7 @@ public class CardAlgorithmService {
     }
 
     public ScoringAlgorithm getAlgorithm(String algorithmName) {
+
         if (algorithmName == null || algorithmName.isBlank()) {
             log.warn("알고리즘 이름이 null 또는 비어있습니다. 기본 알고리즘을 사용합니다: {}", DEFAULT_ALGORITHM);
             return algorithms.get(DEFAULT_ALGORITHM);

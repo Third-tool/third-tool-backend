@@ -1,130 +1,149 @@
 package com.example.thirdtool.Card.domain.model;
 
-
 import com.example.thirdtool.Common.BaseEntity;
+import com.example.thirdtool.Common.Exception.BusinessException;
+import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
-import com.example.thirdtool.Deck.domain.model.DeckMode;
-import com.example.thirdtool.Scoring.domain.model.ScoringAlgorithm;
+import com.example.thirdtool.Scoring.domain.model.LearningProfile;
+import com.example.thirdtool.Scoring.domain.model.LeitnerLearningProfile;
+import com.example.thirdtool.Scoring.domain.model.Sm2LearningProfile;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.hibernate.annotations.ColumnDefault;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
-
+@Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "cards")
-@Entity
 public class Card extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 500)
-    private String question; // 질문
-
-    @Column(nullable = false, length = 500)
-    private String answer; // 답변
-
-    @ColumnDefault("0")
-    private int greatCount; // GREAT 선택 횟수
-    @ColumnDefault("0")
-    private int goodCount; // GOOD 선택 횟수
-    @ColumnDefault("0")
-    private int normalCount; // NORMAL 선택 횟수
-    @ColumnDefault("0")
-    private int badCount; // BAD 선택 횟수
-
-    private int score; // SM-2의 난이도를 기반으로 하는 점수
+    private String question;
+    private String answer;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "deck_id", nullable = false)
-    private Deck deck; // Deck 엔티티와 다대일 관계 (FK)
+    private Deck deck;
 
-    // ✅ SM-2 알고리즘을 위한 추가 필드
-    private int repetition; // 반복 횟수
-    private double easinessFactor; // 난이도 계수
+    @OneToMany(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CardImage> images = new ArrayList<>();
 
-    @Enumerated(EnumType.STRING)
-    private DeckMode mode;
+    // ✅ Card 하나당 반드시 하나의 LearningState 보유
+    @JsonManagedReference
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // 프록시 무시
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "learning_state_id")
+    private LearningProfile learningProfile;
 
-    @Builder(builderMethodName = "internalBuilder")
-    private Card(String question, String answer, int greatCount, int goodCount,
-                 int normalCount, int badCount, int score, Deck deck, int repetition, double easinessFactor, DeckMode mode) {
+
+    @Builder
+    private Card(String question, String answer, Deck deck, LearningProfile learningProfile) {
         this.question = question;
         this.answer = answer;
-        this.greatCount = greatCount;
-        this.goodCount = goodCount;
-        this.normalCount = normalCount;
-        this.badCount = badCount;
-        this.score = score;
         this.deck = deck;
-        this.repetition = repetition;
-        this.easinessFactor = easinessFactor;
-        this.mode = mode;
+        this.learningProfile = learningProfile;
     }
 
+    public void registerLearningProfile(LearningProfile profile) {
+        this.learningProfile = profile;
+        if (profile != null) {
+            profile.linkToCard(this);
+        }
+    }
+
+    // ✅ 정적 팩토리 메서드
     public static Card of(String question, String answer, Deck deck) {
-        return internalBuilder()
-                .question(question)
-                .answer(answer)
-                .greatCount(0)
-                .goodCount(0)
-                .normalCount(0)
-                .badCount(0)
-                .score(0)
-                .deck(deck)
-                .repetition(0)
-                .easinessFactor(2.5)
-                .mode(DeckMode.THREE_DAY)
-                .build();
-    }
+        String algorithmType = deck.getScoringAlgorithmType();
+        LearningProfile profile = switch (algorithmType) {
+            case "SM2"     -> Sm2LearningProfile.init();
+            case "LEITNER" -> LeitnerLearningProfile.init();
+            default -> throw new IllegalArgumentException("지원하지 않는 알고리즘: " + algorithmType);
+        };
 
-    // ✅ 알고리즘을 받아 점수를 업데이트하는 퍼블릭 메서드 (엔티티가 로직 수행을 위임)
-    public void updateScoreWithAlgorithm(ScoringAlgorithm algorithm, FeedbackType feedback) {
-        algorithm.updateScore(this, feedback);
-    }
+        Card card=Card.builder()
+                   .question(question)
+                   .answer(answer)
+                   .deck(deck)
+                   .learningProfile(null)
+                   .build();
 
-    // ✅ Scoring 도메인에서 호출할 상태 변경 메서드 (캡슐화 유지)
-    public void setScoreByAlgorithm(int newScore, int newRepetition, double newEasinessFactor,
-                                    int newGreatCount, int newGoodCount, int newNormalCount, int newBadCount) {
-        this.score = newScore;
-        this.repetition = newRepetition;
-        this.easinessFactor = newEasinessFactor;
-        this.greatCount = newGreatCount;
-        this.goodCount = newGoodCount;
-        this.normalCount = newNormalCount;
-        this.badCount = newBadCount;
+        card.registerLearningProfile(profile);
+        return card;
     }
 
 
-    public void updateMode(DeckMode deckMode) {
-        this.mode = deckMode;
-    }
 
     public void updateCard(String question, String answer) {
         if (question == null || question.isBlank()) {
-            throw new IllegalArgumentException("카드 질문은 비어있을 수 없습니다.");
+            throw new BusinessException(ErrorCode.CARD_NOT_FOUND);
         }
         if (answer == null || answer.isBlank()) {
-            throw new IllegalArgumentException("카드 답변은 비어있을 수 없습니다.");
+            throw new BusinessException(ErrorCode.CARD_NOT_FOUND);
         }
         this.question = question;
         this.answer = answer;
     }
 
-    // ✅ 새로운 점수로 학습 지표를 재설정하는 메서드
-    public void resetLearningMetrics(int newScore) {
-        this.mode = DeckMode.THREE_DAY; // 모드를 3day로 변경
-        this.score = newScore; // 원하는 점수로 설정
-        this.easinessFactor = 2.5; // 난이도 계수 초기화
+
+    // 내 점수 묻는 메서드
+    public int currentScore() {
+        return this.learningProfile.getScore();
     }
+
+    // 이미지 업데이트
+    public void updateImage(ImageType imageType, String newUrl, Integer sequence) {
+        // 해당 타입의 기존 이미지 찾기
+        Optional<CardImage> existingImage = this.images.stream()
+                                                       .filter(img -> img.getImageType() == imageType && img.getSequence().equals(sequence))
+                                                       .findFirst();
+
+        if (existingImage.isPresent()) {
+            existingImage.get().updateImage(newUrl, sequence);
+        } else {
+            // 없으면 새로 추가
+            this.images.add(CardImage.of(this, newUrl, imageType, sequence));
+        }
+    }
+
+    //사진 이미지 추가하기
+    public void addImage(CardImage image) {
+        this.images.add(image);
+    }
+
+
+    // ✅ 외부에서 알고리즘 타입을 가져올 때는 이 메서드만 쓰도록
+    public String getScoringAlgorithmType() {
+        if (deck == null) {
+            throw new BusinessException(ErrorCode.DECK_NOT_FOUND);
+        }
+        return deck.getScoringAlgorithmType();
+    }
+
+    public void moveTo(Deck newDeck) {
+        this.deck = newDeck;
+    }
+
+    public Card copyTo(Deck newDeck) {
+        return Card.builder()
+                   .question(this.question)
+                   .answer(this.answer)
+                   .deck(newDeck)
+                   .learningProfile(null)
+                   .build();
+    }
+
+
+
 }

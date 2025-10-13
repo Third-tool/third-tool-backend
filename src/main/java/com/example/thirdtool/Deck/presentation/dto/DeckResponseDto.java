@@ -2,6 +2,7 @@ package com.example.thirdtool.Deck.presentation.dto;
 
 import com.example.thirdtool.Deck.domain.model.Deck;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -9,14 +10,19 @@ import java.util.stream.Collectors;
 public record DeckResponseDto(
         Long id,
         String name,
-        List<DeckResponseDto> subDecks
+        String scoringAlgorithmType,
+        int depth,
+        LocalDateTime lastAccessed,
+        Long parentDeckId
 ) {
-    // 팩토리 메서드: 엔티티를 DTO로 변환
     public static DeckResponseDto from(Deck deck) {
-        // 하위 덱이 있다면 재귀적으로 DTO로 변환
-        List<DeckResponseDto> subDecks = deck.getSubDecks().stream()
-                                             .map(DeckResponseDto::from)
-                                             .collect(Collectors.toList());
-        return new DeckResponseDto(deck.getId(), deck.getName(), subDecks);
+        return new DeckResponseDto(
+                deck.getId(),
+                deck.getName(),
+                deck.getScoringAlgorithmType(),
+                deck.getDepth(),
+                deck.getLastAccessed(),
+                deck.getParentDeck() != null ? deck.getParentDeck().getId() : null
+        );
     }
 }

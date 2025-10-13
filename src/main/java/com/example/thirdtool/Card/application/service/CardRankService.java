@@ -3,8 +3,10 @@ package com.example.thirdtool.Card.application.service;
 import com.example.thirdtool.Card.domain.model.CardRank;
 import com.example.thirdtool.Card.domain.model.CardRankType;
 import com.example.thirdtool.Card.domain.repository.CardRankRepository;
-import com.example.thirdtool.Card.presentation.dto.CardRankUpdateRequestDto;
-import com.example.thirdtool.User.domain.model.User;
+import com.example.thirdtool.Card.presentation.dto.request.CardRankUpdateRequestDto;
+import com.example.thirdtool.Common.Exception.BusinessException;
+import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,33 +25,32 @@ public class CardRankService {
 
     // ✅ 사용자의 랭크 기준을 수정하는 메서드
     @Transactional
-    public void updateUserCardRank(Long userId, CardRankUpdateRequestDto updateDto) {
-        // 1. 해당 사용자의 랭크를 조회합니다.
-        CardRank existingRank = cardRankRepository.findByUserIdAndName(userId, updateDto.name())
-                                                  .orElseThrow(() -> new IllegalArgumentException("유저 랭크 값이 확인이 안됩니다!"));
-
-        // 2. 새로운 점수 기준으로 업데이트합니다.
-        existingRank.updateScoreRange(updateDto.minScore(), updateDto.maxScore());
+    public void updateUserCardRank(Long userId, CardRankUpdateRequestDto dto) {
+        CardRank rank = cardRankRepository.findByUserIdAndName(userId, dto.name())
+                                          .orElseThrow(() -> new BusinessException(ErrorCode.RANK_NOT_FOUND));
+        rank.updateScoreRange(dto.minScore(), dto.maxScore());
     }
+
 
     // ✅ 새로운 사용자를 위한 기본 랭크를 자동 생성하는 메서드 (기존에 논의했던 로직)
     // 시작 로직입니다!!
     @Transactional
-    public void createDefaultRanksForUser(Long userId) {
-        // 1. userId로 User 객체를 조회합니다.
-        User user = userRepository.findById(userId)
-                                  .orElseThrow(() -> new IllegalArgumentException("없는 사용자입니당"));
-        // 기본 랭크 설정값
-        int silverMaxScore = 99;
-        int goldMaxScore = 150;
-        int diamondMaxScore = 300;
+    public void createDefaultRanksIfAbsent(Long userId) {
+        UserEntity user = userRepository.findById(userId)
+                                        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // ✅ CardRank.createRank() 메서드 사용
-        CardRank silver = CardRank.createRank(CardRankType.SILVER.name(), 0, silverMaxScore, user);
-        CardRank gold = CardRank.createRank(CardRankType.GOLD.name(), silverMaxScore + 1, goldMaxScore, user);
-        CardRank diamond = CardRank.createRank(CardRankType.DIAMOND.name(), goldMaxScore + 1, diamondMaxScore, user);
+        // 이미 랭크가 존재한다면 생성하지 않음
+        boolean hasRanks = cardRankRepository.existsByUserId(userId);
+        if (hasRanks) return;
 
+        int silverMax = 99, goldMax = 150, diamondMax = 300;
 
-        cardRankRepository.saveAll(List.of(silver, gold, diamond));
+        CardRank silver = CardRank.createRank(CardRankType.SILVER.name(), 0, silverMax, user);
+        CardRank gold   = CardRank.createRank(CardRankType.GOLD.name(), silverMax + 1, goldMax, user);
+        CardRank dia    = CardRank.createRank(CardRankType.DIAMOND.name(), goldMax + 1, diamondMax, user);
+
+        cardRankRepository.saveAll(List.of(silver, gold, dia));
+
+        log.info("[CardRankService] 기본 랭크 생성 완료 - userId={}", userId);
     }
 }

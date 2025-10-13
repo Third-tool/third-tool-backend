@@ -1,7 +1,8 @@
 package com.example.thirdtool.Card.domain.model;
 
 
-import com.example.thirdtool.User.domain.model.User;
+
+import com.example.thirdtool.User.domain.model.UserEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -10,7 +11,13 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "card_ranks")
+@Table(
+        name = "card_ranks",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_card_rank_user_name",
+                columnNames = {"user_id", "name"}
+        )
+)
 @Entity
 public class CardRank {
 
@@ -30,11 +37,11 @@ public class CardRank {
     // ✅ CardRank가 특정 User에 속하게 됩니다.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private UserEntity user;
 
     // ✅ 빌더를 위한 private 생성자
     @Builder(builderMethodName = "internalBuilder")
-    private CardRank(String name, int minScore, int maxScore, User user) {
+    private CardRank(String name, int minScore, int maxScore, UserEntity user) {
         this.name = name;
         this.minScore = minScore;
         this.maxScore = maxScore;
@@ -42,7 +49,7 @@ public class CardRank {
     }
 
     // ✅ 정적 팩토리 메서드
-    public static CardRank createRank(String name, int minScore, int maxScore, User user) {
+    public static CardRank createRank(String name, int minScore, int maxScore, UserEntity user) {
         return internalBuilder()
                 .name(name)
                 .minScore(minScore)

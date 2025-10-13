@@ -52,7 +52,7 @@ jobs:
 
       # 7️⃣ Docker 이미지 빌드 (우리 Dockerfile 기반)
       - name: Build Docker image
-        run: docker build -t third-tool-server .
+        run: docker build -t third-tool-server -f ./Dockerfile-dev .
 
       # 8️⃣ 이미지 태그 지정
       - name: Tag Docker image

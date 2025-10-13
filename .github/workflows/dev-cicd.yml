@@ -21,9 +21,15 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: Check working directory
+        run: pwd && ls -R
+
       # 3️⃣ application.yml 주입 (GitHub Secrets 사용)
       - name: application.yml 파일 만들기 전닫ㄹ 받아서 사용
-        run: echo "${{ secrets.APPLICATION_YML }}" > ./src/main/resources/application.yml
+        run: |
+          cd third-tool-backend
+          mkdir -p ./src/main/resources
+          echo "${{ secrets.APPLICATION_YML }}" > ./src/main/resources/application.yml
 
       # 4️⃣ Gradle 빌드 (테스트 포함)
       - name: Build with Gradle

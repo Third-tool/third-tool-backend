@@ -22,7 +22,7 @@ import java.util.List;
 
 @Slf4j
 @Component
-@Profile("dev")           // ★ dev 프로파일에서만 실행
+@Profile("local")           // ★ dev 프로파일에서만 실행
 @Order(1)
 @RequiredArgsConstructor
 public class DevDataInitializer implements CommandLineRunner {

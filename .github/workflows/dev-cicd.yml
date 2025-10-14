@@ -71,8 +71,9 @@ jobs:
             cd /home/ubuntu/third-tool
             
             # 1️⃣ EC2에 application.yml 작성
-            echo "${{ secrets.APPLICATION_YML }}" > /home/ubuntu/third-tool/application.yml
-            
+            cat <<'EOF' > /home/ubuntu/third-tool/application.yml
+            ${{ secrets.APPLICATION_YML }}
+            EOF
             
             docker compose down || true
             docker compose up -d

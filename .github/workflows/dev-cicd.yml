@@ -79,6 +79,17 @@ jobs:
             
             docker compose down || true
             docker compose up -d
+            
+             # 2️⃣ DB 컨테이너가 완전히 준비될 때까지 대기
+            echo "⏳ Waiting for MySQL to be ready..."
+            for i in {1..15}; do
+              if docker exec local-mysql-db mysqladmin ping -h"localhost" --silent; then
+                echo "✅ MySQL is ready!"
+                break
+              fi
+              echo "⏱️ MySQL not ready yet... ($i/15)"
+              sleep 5
+            done
 
             # 1️⃣ 기존 컨테이너 정리
             echo "🧹 Stopping and removing old Spring container..."
@@ -90,28 +101,24 @@ jobs:
             echo "📦 Pulling latest Spring image from ECR..."
             docker pull ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
-            # 3️⃣ docker-compose 파일 업데이트 (Secrets에서 주입)
-            echo "🧩 Updating docker-compose.yml..."
-            echo "${{ secrets.DOCKER_COMPOSE_YML }}" > docker-compose.yml
-
 
             # 5️⃣ Spring 서버 실행 (Compose 네트워크에 연결)
             echo "⚙️ Running Spring Boot container..."
             docker run -d \
-              --name third-tool-server \
-              --network third-tool_default \ 
-              -p 8080:8080 \
-              -e SPRING_PROFILES_ACTIVE=dev \
-              -e DB_NAME=${{ secrets.DB_NAME }} \
-              -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
-              -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
-              -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-              -e KAKAO_CLIENT_ID="${{ secrets.KAKAO_CLIENT_ID }}" \
-              -e KAKAO_CLIENT_SECRET="${{ secrets.KAKAO_CLIENT_SECRET }}" \
-              -e NAVER_CLIENT_ID="${{ secrets.NAVER_CLIENT_ID }}" \
-              -e NAVER_CLIENT_SECRET="${{ secrets.NAVER_CLIENT_SECRET }}" \
-              -e TZ=Asia/Seoul \
-              ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+            --name third-tool-server \
+            --network third-tool_default \
+            -p 8080:8080 \
+            -e SPRING_PROFILES_ACTIVE=dev \
+            -e DB_NAME=${{ secrets.DB_NAME }} \
+            -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+            -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -e KAKAO_CLIENT_ID="${{ secrets.KAKAO_CLIENT_ID }}" \
+            -e KAKAO_CLIENT_SECRET="${{ secrets.KAKAO_CLIENT_SECRET }}" \
+            -e NAVER_CLIENT_ID="${{ secrets.NAVER_CLIENT_ID }}" \
+            -e NAVER_CLIENT_SECRET="${{ secrets.NAVER_CLIENT_SECRET }}" \
+            -e TZ=Asia/Seoul \
+            ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
             # 6️⃣ 상태 확인
             echo "🔍 Checking running containers..."

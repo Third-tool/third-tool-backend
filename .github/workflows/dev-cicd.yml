@@ -24,12 +24,6 @@ jobs:
       - name: Check working directory
         run: pwd && ls -R
 
-      # 3️⃣ application.yml 주입 (GitHub Secrets 사용)
-      - name: application.yml 파일 만들기 전닫ㄹ 받아서 사용
-        run: |
-          mkdir -p ./src/main/resources
-          echo "${{ secrets.APPLICATION_YML }}" > ./src/main/resources/application.yml
-
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
@@ -76,6 +70,9 @@ jobs:
             cd /home/ubuntu/third-tool || mkdir -p /home/ubuntu/third-tool
             cd /home/ubuntu/third-tool
             
+            # 1️⃣ EC2에 application.yml 작성
+            echo "${{ secrets.APPLICATION_YML }}" > /home/ubuntu/third-tool/application.yml
+            
             
             docker compose down || true
             docker compose up -d
@@ -108,6 +105,7 @@ jobs:
             --name third-tool-server \
             --network third-tool_default \
             -p 8080:8080 \
+            -v /home/ubuntu/third-tool/application.yml:/app/config/application.yml \
             -e SPRING_PROFILES_ACTIVE=dev \
             -e DB_NAME=${{ secrets.DB_NAME }} \
             -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \

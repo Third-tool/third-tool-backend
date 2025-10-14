@@ -5,6 +5,7 @@ COPY build.gradle settings.gradle gradlew ./
 COPY gradle ./gradle
 RUN ./gradlew dependencies --no-daemon
 COPY . .
+RUN rm -f src/main/resources/application.yml || true
 RUN ./gradlew clean bootJar --no-daemon
 
 # Run Stage

@@ -70,17 +70,13 @@ jobs:
             cd /home/ubuntu/third-tool || mkdir -p /home/ubuntu/third-tool
             cd /home/ubuntu/third-tool
             
-            # 1️⃣ EC2에 application.yml 작성
-            cat <<'EOF' > /home/ubuntu/third-tool/application.yml
-            ${{ secrets.APPLICATION_YML }}
-            EOF
-            
+  
             docker compose down || true
             docker compose up -d
             
              # 2️⃣ DB 컨테이너가 완전히 준비될 때까지 대기
             echo "⏳ Waiting for MySQL to be ready..."
-            for i in {1..15}; do
+            for i in {1..5}; do
               if docker exec local-mysql-db mysqladmin ping -h"localhost" --silent; then
                 echo "✅ MySQL is ready!"
                 break

@@ -100,7 +100,6 @@ jobs:
             docker run -d \
               --name third-tool-server \
               --network third-tool_default \ 
-              # ⚠️ docker-compose의 네트워크 이름과 동일해야 함
               -p 8080:8080 \
               -e SPRING_PROFILES_ACTIVE=dev \
               -e DB_NAME=${{ secrets.DB_NAME }} \

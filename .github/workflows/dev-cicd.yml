@@ -73,8 +73,8 @@ jobs:
           script: |
             echo "🚀 [Deploy] Starting deployment on EC2..."
 
-            cd /home/ec2-user/third-tool || mkdir -p /home/ec2-user/third-tool
-            cd /home/ec2-user/third-tool
+            cd /home/ubuntu/third-tool || mkdir -p /home/ubuntu/third-tool
+            cd /home/ubuntu/third-tool
             
             
             docker compose down || true

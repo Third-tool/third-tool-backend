@@ -4,6 +4,7 @@ package com.example.thirdtool.Common.security.filter;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.security.Util.JWTUtil;
+import com.example.thirdtool.Common.security.Util.WhitelistPath;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.repository.UserRepository;
 import jakarta.servlet.FilterChain;
@@ -39,6 +40,13 @@ public class JWTFilter extends OncePerRequestFilter {
 
         log.info("[JWTFilter] 요청 URI: {}", requestUri);
         log.debug("[JWTFilter] Authorization Header: {}", authorization);
+
+        // ✅ 0️⃣ JWT 검증을 건너뛸 경로 (화이트리스트)
+        if (isExcludedPath(requestUri)) {
+            log.debug("[JWTFilter] 화이트리스트 경로 감지 → JWT 검증 생략: {}", requestUri);
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         // 1️⃣ Authorization 헤더 유무 확인
         if (authorization == null) {
@@ -90,6 +98,13 @@ public class JWTFilter extends OncePerRequestFilter {
             log.error("[JWTFilter] ❌ 예외 발생 during token validation: {}", e.getMessage(), e);
             writeUnauthorizedResponse(response, "JWT 검증 중 오류 발생: " + e.getMessage());
         }
+    }
+
+    /**
+     * ✅ actuator / swagger / public API 등 JWT 검증 제외 경로
+     */
+    private boolean isExcludedPath(String uri) {
+        return WhitelistPath.PATHS.stream().anyMatch(uri::startsWith);
     }
 
     private void writeUnauthorizedResponse(HttpServletResponse response, String message) throws IOException {

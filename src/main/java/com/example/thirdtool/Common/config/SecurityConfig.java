@@ -49,7 +49,8 @@ public class SecurityConfig {
             "/app/token/**",
             "/api/auth/refresh",
             "/social/login/**",
-            "/oauth2/**" // ✅ 카카오/네이버 로그인 엔드포인트도 화이트리스트에 추가
+            "/oauth2/**",
+            "/actuator/health"// ✅ 카카오/네이버 로그인 엔드포인트도 화이트리스트에 추가
     };
 
     private final UserRepository userRepository;

@@ -43,7 +43,7 @@ public class JWTFilter extends OncePerRequestFilter {
 
         // ✅ 0️⃣ JWT 검증을 건너뛸 경로 (화이트리스트)
         if (isExcludedPath(requestUri)) {
-            log.debug("[JWTFilter] 화이트리스트 경로 감지 → JWT 검증 생략: {}", requestUri);
+            log.info("[JWTFilter] 화이트리스트 경로 감지 → JWT 검증 생략: {}", requestUri);
             filterChain.doFilter(request, response);
             return;
         }
@@ -104,7 +104,7 @@ public class JWTFilter extends OncePerRequestFilter {
      * ✅ actuator / swagger / public API 등 JWT 검증 제외 경로
      */
     private boolean isExcludedPath(String uri) {
-        return WhitelistPath.PATHS.stream().anyMatch(uri::startsWith);
+        return WhitelistPath.PATHS.stream().anyMatch(uri::contains);
     }
 
     private void writeUnauthorizedResponse(HttpServletResponse response, String message) throws IOException {

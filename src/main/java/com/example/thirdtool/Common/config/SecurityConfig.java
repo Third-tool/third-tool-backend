@@ -92,7 +92,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173","http://localhost:8080"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -131,6 +131,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                                 // ✅ 인증 없이 접근 가능한 화이트리스트
                                 .requestMatchers(AUTH_ALLOWLIST).permitAll()
+                                .requestMatchers(
+                                        "/swagger-ui/**",
+                                        "/health",
+                                        "/swagger-ui.html",
+                                        "/v3/api-docs/**",
+                                        "/v3/api-docs.yaml",
+                                        "/swagger-resources/**",
+                                        "/webjars/**",
+                                        "/custom-api-docs/**",     // ✅ Swagger 커스텀 문서 경로 추가
+                                        "/swagger-config",          // ✅ swagger-ui가 자동으로 호출하는 경로
+                                        "/swagger-ui/swagger-config"
+                                                ).permitAll()
 
                                 // ✅ 회원가입/중복확인 API
                                 .requestMatchers(HttpMethod.POST, "/user", "/user/exist").permitAll()

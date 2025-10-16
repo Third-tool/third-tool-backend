@@ -1,8 +1,11 @@
 package com.example.thirdtool.Card.application.service;
 
 import com.example.thirdtool.Card.domain.model.Card;
+import com.example.thirdtool.Card.domain.model.CardRankType;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.DailyLearningProgress.application.DailyLearningProgressService;
+import com.example.thirdtool.DailyLearningProgress.domain.DailyLearningProgress;
 import com.example.thirdtool.Scoring.domain.model.LearningProfile;
 import com.example.thirdtool.Card.domain.repository.CardRepository;
 import com.example.thirdtool.Card.presentation.dto.request.FeedbackRequestDto;
@@ -20,15 +23,11 @@ public class CardFeedbackService {
 
     private final CardRepository cardRepository;
     private final CardAlgorithmService cardAlgorithmService;
+    private final DailyLearningProgressService dailyLearningProgressService;
 
     private static final int PERMANENT_THRESHOLD_SCORE = 300;
 
-    /**
-     * 학습 피드백 및 점수 조절
-     * - FeedbackRequestDto를 받아 카드의 학습 프로필을 업데이트
-     * - "again, hard, normal, good" 기반 점수 조절
-     */
-    public void giveFeedback(FeedbackRequestDto dto) {
+    public void giveFeedback(Long userId,FeedbackRequestDto dto) {
         //있는 카드인지 확인
         Card card = cardRepository.findById(dto.cardId())
                                   .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
@@ -45,13 +44,18 @@ public class CardFeedbackService {
         ScoringAlgorithm algorithm = cardAlgorithmService.getAlgorithm(algorithmType);
 
         // ✅ 학습 프로필이 직접 피드백 처리
-        profile.applyFeedback(algorithm, card, dto.feedback());
+        profile.applyFeedback(algorithm,
+                card,
+                dto.feedback());
 
         // ✅ 점수 기반 DeckMode 전환도 학습 프로필이 관리
         if (profile.getScore() >= PERMANENT_THRESHOLD_SCORE) {
             profile.updateMode(DeckMode.PERMANENT);
         }
-
+        // ✅ 4️⃣ DailyProgress 증가 (rank는 FE가 보냄)
+        if (dto.rankType() != null) {
+            dailyLearningProgressService.increaseRankCount(userId, dto.rankType());
+        }
     }
 
     /**
@@ -70,4 +74,5 @@ public class CardFeedbackService {
         profile.reset(newScore);
         profile.updateMode(DeckMode.THREE_DAY);
     }
+
 }

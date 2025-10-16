@@ -30,11 +30,7 @@ public class CardLearningService {
     private final DeckRepository deckRepository;
     private final CardImageRepository cardImageRepository;
 
-    /**
-     * ✅ (1) cardId로 특정 카드 학습 페이지 진입
-     * - mainCard: 현재 학습할 카드
-     * - rightPanel: score + rank + mode 기반 추천 10개
-     */
+
     @Transactional(readOnly = true)
     public CardLearningResponseDto getLearningPageByCardId(Long userId,
                                                            Long deckId,

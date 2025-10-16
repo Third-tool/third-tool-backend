@@ -17,8 +17,9 @@ public class DailyLearningProgressService {
 
     private final DailyLearningProgressRepository progressRepository;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public DailyLearningProgress getTodayProgress(Long userId) {
+
         return progressRepository.findByUserId(userId)
                                  .orElseGet(() -> progressRepository.save(DailyLearningProgress.init(userId)));
     }

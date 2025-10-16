@@ -4,8 +4,10 @@ import com.example.thirdtool.Card.application.service.CardFeedbackService;
 import com.example.thirdtool.Card.application.service.CardService;
 import com.example.thirdtool.Card.presentation.dto.request.FeedbackRequestDto;
 import com.example.thirdtool.Card.presentation.dto.request.ResetScoreRequestDto;
+import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,8 +19,10 @@ public class CardFeedbackController {
     private final CardFeedbackService cardFeedbackService;
 
     @PostMapping("/feedback")
-    public ResponseEntity<Void> giveFeedback(@RequestBody FeedbackRequestDto dto) {
-        cardFeedbackService.giveFeedback(dto);
+    public ResponseEntity<Void> giveFeedback(@AuthenticationPrincipal UserEntity user
+                                                 , @RequestBody FeedbackRequestDto dto) {
+        var userId=user.getId();
+        cardFeedbackService.giveFeedback(userId, dto);
         return ResponseEntity.ok().build();
     }
 

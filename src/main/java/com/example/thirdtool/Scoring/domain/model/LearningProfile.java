@@ -59,7 +59,9 @@ public abstract class LearningProfile {
     }
 
     // ✅ 알고리즘별 피드백 적용 책임은 자식이 가짐- 수정 가능성
-    public abstract void applyFeedback(ScoringAlgorithm algorithm, Card card, FeedbackType feedback);
+    public abstract void applyFeedback(ScoringAlgorithm algorithm,
+                                       Card card,
+                                       FeedbackType feedback);
 
     // ✅ 공통 초기화
     public void reset(int newScore) {

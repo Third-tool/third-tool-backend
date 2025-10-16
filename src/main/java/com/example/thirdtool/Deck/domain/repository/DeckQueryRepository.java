@@ -29,8 +29,8 @@ public class DeckQueryRepository {
                         deck.id,
                         deck.name,
                         lp.score.avg(),
-                        lp.badCount.sum(),
-                        lp.badCount.add(lp.normalCount).add(lp.goodCount).add(lp.greatCount).sum(),
+                        lp.badCount.sum().longValue(),
+                        lp.badCount.add(lp.normalCount).add(lp.goodCount).add(lp.greatCount).sum().longValue(),
                         deck.lastAccessed.max(),
                         card.id.count()
                                                ))

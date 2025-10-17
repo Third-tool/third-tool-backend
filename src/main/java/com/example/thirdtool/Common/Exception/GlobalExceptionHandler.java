@@ -12,9 +12,11 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -28,6 +30,14 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(ec.getStatus())
                              .body(new ErrorResponse(ec.getCode(), ec.getMessage(), req.getRequestURI(), OffsetDateTime.now()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> handleMaxSizeException(MaxUploadSizeExceededException e) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "파일 용량 초과");
+        response.put("message", "허용된 최대 업로드 크기를 초과했습니다.");
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

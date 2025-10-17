@@ -41,7 +41,6 @@ public class CardLearningService {
         // ✅ 덱 존재 확인
         Deck deck = deckRepository.findById(deckId)
                                   .orElseThrow(() -> new BusinessException(ErrorCode.DECK_NOT_FOUND));
-        deck.updateLastAccessed();
 
         // ✅ 메인 카드 조회
         Card mainCard = cardRepository.findById(cardId)
@@ -75,7 +74,6 @@ public class CardLearningService {
         Deck deck = deckRepository.findById(dto.getDeckId())
                                   .orElseThrow(() -> new BusinessException(ErrorCode.DECK_NOT_FOUND));
 
-        deck.updateLastAccessed();
 
         // 1️⃣ 점수 낮은 순으로 상위 10개 조회
         List<Card> topTen = cardRepository.findTopNCardsByRankAndMode(
@@ -128,7 +126,6 @@ public class CardLearningService {
         Deck deck = deckRepository.findById(dto.getDeckId())
                                   .orElseThrow(() -> new BusinessException(ErrorCode.DECK_NOT_FOUND));
 
-        deck.updateLastAccessed();
 
         Long cardId = dto.getCardId()
                          .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
@@ -163,8 +160,6 @@ public class CardLearningService {
     public CardLearningPermanentResponseDto preparePermanentRandomLearning(CardLearningPermanentRequestDto dto) {
         Deck deck = deckRepository.findById(dto.getDeckId())
                                   .orElseThrow(() -> new BusinessException(ErrorCode.DECK_NOT_FOUND));
-
-        deck.updateLastAccessed();
 
         // ✅ PERMANENT 모드 카드 10개 조회
         List<Card> cards = cardRepository.findTop10ByDeckIdAndMode(dto.getDeckId(), DeckMode.PERMANENT);

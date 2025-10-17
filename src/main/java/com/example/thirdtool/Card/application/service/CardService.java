@@ -21,6 +21,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -47,17 +48,29 @@ public class CardService {
                 writeCardDto.answer(),
                 deck);
 
-        // ✅ S3 업로드 및 URL 추출
-        if (writeCardDto.questionImage() != null && !writeCardDto.questionImage().isEmpty()) {
-            String uploadedUrl = fileStoragePort.uploadFile(writeCardDto.questionImage(), "question");
-            CardImage questionImage = CardImage.of(card, uploadedUrl, ImageType.QUESTION, 1);
-            card.addImage(questionImage);
+        // ✅ 질문 이미지 여러 개 처리
+        if (writeCardDto.questionImages() != null && !writeCardDto.questionImages().isEmpty()) {
+            int sequence = 1;
+
+            for (MultipartFile file : writeCardDto.questionImages()) {
+                if (file != null && !file.isEmpty()) {
+                    String uploadedUrl = fileStoragePort.uploadFile(file, "question");
+                    CardImage questionImage = CardImage.of(card, uploadedUrl, ImageType.QUESTION, sequence++);
+                    card.addImage(questionImage);
+                }
+            }
         }
 
-        if (writeCardDto.answerImage() != null && !writeCardDto.answerImage().isEmpty()) {
-            String uploadedUrl = fileStoragePort.uploadFile(writeCardDto.answerImage(), "answer");
-            CardImage answerImage = CardImage.of(card, uploadedUrl, ImageType.ANSWER, 1);
-            card.addImage(answerImage);
+        // ✅ 답변 이미지 여러 개 처리
+        if (writeCardDto.answerImages() != null && !writeCardDto.answerImages().isEmpty()) {
+            int sequence = 1;
+            for (MultipartFile file : writeCardDto.answerImages()) {
+                if (file != null && !file.isEmpty()) {
+                    String uploadedUrl = fileStoragePort.uploadFile(file, "answer");
+                    CardImage answerImage = CardImage.of(card, uploadedUrl, ImageType.ANSWER, sequence++);
+                    card.addImage(answerImage);
+                }
+            }
         }
         // card 객체에 만들어서 한번에 다 집어넣었다.
         cardRepository.save(card);
@@ -72,18 +85,28 @@ public class CardService {
                                .map(dto -> {
                                    Card card = Card.of(dto.question(), dto.answer(), deck);
 
-                                   // ✅ 질문 이미지 업로드 및 URL 저장
-                                   if (dto.questionImage() != null && !dto.questionImage().isEmpty()) {
-                                       String questionUrl = fileStoragePort.uploadFile(dto.questionImage(), "question");
-                                       CardImage questionImage = CardImage.of(card, questionUrl, ImageType.QUESTION, 1);
-                                       card.addImage(questionImage);
+                                   // ✅ 질문 이미지 여러 개 처리
+                                   if (dto.questionImages() != null && !dto.questionImages().isEmpty()) {
+                                       int sequence = 1;
+                                       for (MultipartFile file : dto.questionImages()) {
+                                           if (file != null && !file.isEmpty()) {
+                                               String uploadedUrl = fileStoragePort.uploadFile(file, "question");
+                                               CardImage questionImage = CardImage.of(card, uploadedUrl, ImageType.QUESTION, sequence++);
+                                               card.addImage(questionImage);
+                                           }
+                                       }
                                    }
 
-                                   // ✅ 답변 이미지 업로드 및 URL 저장
-                                   if (dto.answerImage() != null && !dto.answerImage().isEmpty()) {
-                                       String answerUrl = fileStoragePort.uploadFile(dto.answerImage(), "answer");
-                                       CardImage answerImage = CardImage.of(card, answerUrl, ImageType.ANSWER, 1);
-                                       card.addImage(answerImage);
+                                   // ✅ 답변 이미지 여러 개 처리
+                                   if (dto.answerImages() != null && !dto.answerImages().isEmpty()) {
+                                       int sequence = 1;
+                                       for (MultipartFile file : dto.answerImages()) {
+                                           if (file != null && !file.isEmpty()) {
+                                               String uploadedUrl = fileStoragePort.uploadFile(file, "answer");
+                                               CardImage answerImage = CardImage.of(card, uploadedUrl, ImageType.ANSWER, sequence++);
+                                               card.addImage(answerImage);
+                                           }
+                                       }
                                    }
 
                                    return card;
@@ -102,16 +125,28 @@ public class CardService {
         // ✅ 텍스트 업데이트
         card.updateCard(dto.question(), dto.answer());
 
-        // ✅ 질문 이미지 처리
-        if (dto.questionImage() != null && !dto.questionImage().isEmpty()) {
-            String questionUrl = fileStoragePort.uploadFile(dto.questionImage(), "question");
-            card.updateImage(ImageType.QUESTION, questionUrl, 1);
+        // ✅ 질문 이미지 여러 개 처리
+        if (dto.questionImages() != null && !dto.questionImages().isEmpty()) {
+            int sequence = 1;
+            for (MultipartFile file : dto.questionImages()) {
+                if (file != null && !file.isEmpty()) {
+                    String uploadedUrl = fileStoragePort.uploadFile(file, "question");
+                    CardImage questionImage = CardImage.of(card, uploadedUrl, ImageType.QUESTION, sequence++);
+                    card.addImage(questionImage);
+                }
+            }
         }
 
-        // ✅ 답변 이미지 처리
-        if (dto.answerImage() != null && !dto.answerImage().isEmpty()) {
-            String answerUrl = fileStoragePort.uploadFile(dto.answerImage(), "answer");
-            card.updateImage(ImageType.ANSWER, answerUrl, 1);
+        // ✅ 답변 이미지 여러 개 처리
+        if (dto.answerImages() != null && !dto.answerImages().isEmpty()) {
+            int sequence = 1;
+            for (MultipartFile file : dto.answerImages()) {
+                if (file != null && !file.isEmpty()) {
+                    String uploadedUrl = fileStoragePort.uploadFile(file, "answer");
+                    CardImage answerImage = CardImage.of(card, uploadedUrl, ImageType.ANSWER, sequence++);
+                    card.addImage(answerImage);
+                }
+            }
         }
     }
 
@@ -148,7 +183,12 @@ public class CardService {
                                                DeckMode mode,
                                                int page,
                                                int size) {
+        Deck deck = deckRepository.findById(deckId)
+                                  .orElseThrow(() -> new BusinessException(ErrorCode.DECK_NOT_FOUND));
+        deck.updateLastAccessed(); // ✅ 덱 입장할 때 자동 업데이트
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+
         return cardRepository.findByDeckIdAndProfileMode(deckId, mode, pageable);
     }
 

@@ -38,6 +38,12 @@ public class JWTFilter extends OncePerRequestFilter {
         String authorization = request.getHeader("Authorization");
         String requestUri = request.getRequestURI();
 
+        // ✅ Health Check 요청이면 로그 남기지 않고 통과
+        if (requestUri.equals("/health")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         log.info("[JWTFilter] 요청 URI: {}", requestUri);
         log.debug("[JWTFilter] Authorization Header: {}", authorization);
 
@@ -50,7 +56,6 @@ public class JWTFilter extends OncePerRequestFilter {
 
         // ✅ 0️⃣ JWT 검증을 건너뛸 경로 (화이트리스트)
         if (isExcludedPath(requestUri)) {
-            log.info("[JWTFilter] 화이트리스트 경로 감지 → JWT 검증 생략: {}", requestUri);
             filterChain.doFilter(request, response);
             return;
         }

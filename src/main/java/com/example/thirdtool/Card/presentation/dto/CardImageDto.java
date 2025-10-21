@@ -10,6 +10,16 @@ public record CardImageDto(
         Integer sequence
 ) {
 
+    //이미지 전달은 불변이 예상되므로 record 사용
+    public static CardImageDto of(CardImage image) {
+        return new CardImageDto(
+                image.getId(),
+                image.getImageUrl(),
+                image.getImageType(),
+                image.getSequence()
+        );
+    }
+
     public static CardImageDto from(CardImage image) {
         return new CardImageDto(image.getId(),
                 image.getImageUrl(),

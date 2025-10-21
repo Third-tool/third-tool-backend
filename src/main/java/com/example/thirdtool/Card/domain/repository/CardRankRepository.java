@@ -12,4 +12,5 @@ public interface CardRankRepository extends JpaRepository<CardRank, Long> {
     Optional<CardRank> findByUserIdAndName(Long userId, String name);
 
     boolean existsByUserId(Long userId);
+
 }

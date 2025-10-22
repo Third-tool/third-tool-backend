@@ -46,37 +46,69 @@ public interface CardRepository extends JpaRepository<Card, Long>,CardRepository
     Slice<Card>  findByDeckId(Long deckId,Pageable pageable);
 
 
-    /**
-     * ✅ 1️⃣ Deck + Mode 기준으로 점수가 낮은 순 정렬 후 상위 N개 조회 (3Day용)
-     */
-    @Query("""
-        SELECT c FROM Card c
-        JOIN c.learningProfile lp
-        WHERE c.deck.id = :deckId
-          AND lp.mode = :mode
-        ORDER BY lp.score ASC
-    """)
-    List<Card> findTopNByDeckAndModeOrderByScoreAsc(@Param("deckId") Long deckId,
-                                                    @Param("mode") DeckMode mode,
-                                                    Pageable pageable);
-
-    /**
-     * ✅ 2️⃣ Permanent 모드 전용 추천 카드 10개 (deck 기반)
-     */
-    @Query("""
-        SELECT c FROM Card c
-        JOIN c.learningProfile lp
-        WHERE c.deck.id = :deckId
-          AND lp.mode = 'PERMANENT'
-        ORDER BY RAND()
-    """)
-    List<Card> findTop10ByDeckIdAndMode(@Param("deckId") Long deckId,DeckMode mode);
-
     @Modifying
     @Query("update Card c set c.deck.id = :toDeckId where c.id in :cardIds")
     int bulkMove(@Param("cardIds") List<Long> cardIds, @Param("toDeckId") Long toDeckId);
 
-    @Query("select count(c) from Card c where c.deck.id = :deckId")
-    long countByDeckId(@Param("deckId") Long deckId);
+
+
+    /**
+     * ✅ rankName이 없는 경우 (단순 mode 기반)
+     */
+    @Query("""
+        SELECT COUNT(c)
+        FROM Card c
+        WHERE c.deck.id = :deckId
+          AND c.learningProfile.mode = :mode
+    """)
+    long countByDeckAndMode(@Param("deckId") Long deckId,
+                            @Param("mode") DeckMode mode);
+
+    /**
+     * ✅ rankName이 있는 경우 (user별 점수 범위 조건 적용)
+     */
+    @Query("""
+        SELECT COUNT(c)
+        FROM Card c
+        WHERE c.deck.id = :deckId
+          AND c.learningProfile.mode = :mode
+          AND c.learningProfile.score BETWEEN :minScore AND :maxScore
+    """)
+    long countByDeckAndModeAndScoreRange(@Param("deckId") Long deckId,
+                                         @Param("mode") DeckMode mode,
+                                         @Param("minScore") int minScore,
+                                         @Param("maxScore") int maxScore);
+
+
+    @Query("""
+    SELECT c FROM Card c
+    JOIN c.learningProfile lp
+    WHERE c.deck.id = :deckId
+      AND lp.mode = :mode
+      AND lp.score BETWEEN :minScore AND :maxScore
+""")
+    List<Card> findCardsByDeckAndModeAndScoreRange(@Param("deckId") Long deckId,
+                                                   @Param("mode") DeckMode mode,
+                                                   @Param("minScore") int minScore,
+                                                   @Param("maxScore") int maxScore);
+    /**
+     * ✅ (2) Rank 없이 Deck 전체에서 Mode로만 조회
+     */
+    @Query("""
+        SELECT c
+        FROM Card c
+        JOIN c.deck d
+        JOIN c.learningProfile lp
+        WHERE d.id = :deckId
+          AND lp.mode = :mode
+        ORDER BY lp.score DESC
+        """)
+    List<Card> findCardsByDeckAndMode(
+            @Param("deckId") Long deckId,
+            @Param("mode") DeckMode mode
+                                     );
 
 }
+
+
+

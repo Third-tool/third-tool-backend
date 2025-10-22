@@ -1,27 +1,37 @@
 package com.example.thirdtool.Card.presentation.dto.request;
 
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.util.Optional;
 
 @Getter
+@Builder // 외부에서 직접 builder() 호출 막기
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class CardLearningPermanentRequestDto {
-    private Long userId;
-    private Long deckId;
-    private Optional<Long> cardId; // 특정 카드 학습에만 사용되는 선택적 필드
 
-    // cardId를 포함하는 생성자
-    public CardLearningPermanentRequestDto(Long userId, Long deckId, Optional<Long> cardId) {
-        this.userId = userId;
-        this.deckId = deckId;
-        this.cardId = cardId;
+    private final Long userId;
+    private final Long deckId;
+    private final Optional<Long> cardId; // 특정 카드 학습에만 사용되는 선택적 필드
+
+    /** ✅ 기본 요청용 (cardId 없는 경우) */
+    public static CardLearningPermanentRequestDto of(Long userId, Long deckId) {
+        return CardLearningPermanentRequestDto.builder()
+                                              .userId(userId)
+                                              .deckId(deckId)
+                                              .cardId(Optional.empty())
+                                              .build();
     }
 
-    // cardId가 없는 경우를 위한 생성자
-    public CardLearningPermanentRequestDto(Long userId, Long deckId) {
-        this.userId = userId;
-        this.deckId = deckId;
-        this.cardId = Optional.empty(); // cardId가 없음을 명시적으로 표현
+    /** ✅ 특정 카드 학습용 (cardId 있는 경우) */
+    public static CardLearningPermanentRequestDto of(Long userId, Long deckId, Long cardId) {
+        return CardLearningPermanentRequestDto.builder()
+                                              .userId(userId)
+                                              .deckId(deckId)
+                                              .cardId(Optional.ofNullable(cardId))
+                                              .build();
     }
 }

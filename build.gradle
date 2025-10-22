@@ -64,6 +64,9 @@ dependencies {
     // AWS S3 SDK
     implementation 'software.amazon.awssdk:s3:2.30.0'
 
+    //elasticsearch 툴 ㅇㅇ
+    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+
 
 }
 

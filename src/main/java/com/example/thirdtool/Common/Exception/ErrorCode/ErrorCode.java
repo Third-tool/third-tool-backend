@@ -31,6 +31,7 @@ public enum ErrorCode {
 
     // Rank
     RANK_NOT_FOUND("RANK001", "유저 랭크 값을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    CARD_RANK_NOT_FOUND("RANK002", "" , HttpStatus.NOT_FOUND ),
 
     // 파일/스토리지
     FILE_EMPTY("FILE001", "파일이 비어있습니다.", HttpStatus.BAD_REQUEST),

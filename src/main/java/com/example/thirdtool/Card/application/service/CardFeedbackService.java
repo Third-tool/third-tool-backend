@@ -1,69 +1,80 @@
 package com.example.thirdtool.Card.application.service;
 
+import com.example.thirdtool.Card.application.resolver.PermanentThresholdResolver;
 import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.model.CardRankType;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.DailyLearningProgress.application.DailyLearningProgressService;
-import com.example.thirdtool.DailyLearningProgress.domain.DailyLearningProgress;
 import com.example.thirdtool.Scoring.domain.model.LearningProfile;
 import com.example.thirdtool.Card.domain.repository.CardRepository;
 import com.example.thirdtool.Card.presentation.dto.request.FeedbackRequestDto;
 import com.example.thirdtool.Deck.domain.model.DeckMode;
 import com.example.thirdtool.Scoring.aapplication.service.CardAlgorithmService;
 import com.example.thirdtool.Scoring.domain.model.algorithm.ScoringAlgorithm;
+import com.example.thirdtool.Scoring.domain.repository.LearningProfileRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class CardFeedbackService {
 
     private final CardRepository cardRepository;
+    private final LearningProfileRepository learningProfileRepository;
+
     private final CardAlgorithmService cardAlgorithmService;
     private final DailyLearningProgressService dailyLearningProgressService;
+    private final PermanentThresholdResolver permanentThresholdResolver;
 
-    private static final int PERMANENT_THRESHOLD_SCORE = 300;
+    public void giveFeedback(Long userId, FeedbackRequestDto dto) {
+        // 1️⃣ 프로필 로드 (이제 Profile이 FK를 가짐)
+        LearningProfile profile = learningProfileRepository.findByCardId(dto.cardId())
+                                                           .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
 
-    public void giveFeedback(Long userId,FeedbackRequestDto dto) {
-        //있는 카드인지 확인
-        Card card = cardRepository.findById(dto.cardId())
-                                  .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
+        // 2️⃣ Card도 필요할 경우 Profile로부터 접근
+        Card card = profile.getCard();
 
+        log.info("[Feedback] 카드 ID={}, 프로필 ID={}, 실제 클래스={}, 알고리즘 타입={}",
+                card.getId(),
+                profile.getId(),
+                profile.getClass().getSimpleName(),
+                profile.getAlgorithmType());
 
-        LearningProfile profile = card.getLearningProfile();
+        // 3️⃣ 모드 체크
         try {
             profile.ensureFeedbackAllowed();
-        } catch (IllegalStateException e) { // 기존 로직이 예외를 던진다면 래핑 (혹은 ensureFeedbackAllowed 자체에서 BusinessException 던지도록 수정)
+        } catch (IllegalStateException e) {
             throw new BusinessException(ErrorCode.CARD_FEEDBACK_NOT_ALLOWED);
         }
 
-        String algorithmType = card.getScoringAlgorithmType();
-        ScoringAlgorithm algorithm = cardAlgorithmService.getAlgorithm(algorithmType);
+        // 4️⃣ 알고리즘 선택
+        ScoringAlgorithm algorithm = cardAlgorithmService.getAlgorithm(profile.getAlgorithmType());
+        log.debug("[Feedback] 선택된 알고리즘 Bean: {}", algorithm.getClass().getSimpleName());
 
-        // ✅ 학습 프로필이 직접 피드백 처리
-        profile.applyFeedback(algorithm,
-                card,
-                dto.feedback());
+        // 5️⃣ 피드백 적용 (프로필 중심)
+        profile.applyFeedback(algorithm, card, dto.feedback());
 
-        // ✅ 점수 기반 DeckMode 전환도 학습 프로필이 관리
-        if (profile.getScore() >= PERMANENT_THRESHOLD_SCORE) {
+        // 6️⃣ 임계값 계산 후 모드 전환
+        int threshold = permanentThresholdResolver.resolveForUser(userId);
+        if (profile.getScore() >= threshold) {
+            log.info("[Feedback] 카드 {} → PERMANENT 모드 전환 (score={}, threshold={})",
+                    card.getId(), profile.getScore(), threshold);
             profile.updateMode(DeckMode.PERMANENT);
         }
-        // ✅ 4️⃣ DailyProgress 증가 (rank는 FE가 보냄)
+
+        // 7️⃣ 랭크 카운트 증가 (optional)
         if (dto.rankType() != null) {
             dailyLearningProgressService.increaseRankCount(userId, dto.rankType());
         }
     }
 
-    /**
-     * 카드 초기화 및 점수 설정
-     * - PERMANENT 모드일 때만 초기화 가능
-     */
+
     @Transactional
-    public void resetCardWithScore(Long cardId, int newScore) {
+    public void resetCardToSilverMin(Long cardId) {
         Card card = cardRepository.findById(cardId)
                                   .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
 
@@ -71,7 +82,11 @@ public class CardFeedbackService {
         if (profile.getMode() != DeckMode.PERMANENT) {
             throw new BusinessException(ErrorCode.CARD_RESET_NOT_ALLOWED);
         }
-        profile.reset(newScore);
+
+        Long userId = card.getDeck().getUser().getId();
+        int silverMin = permanentThresholdResolver.resolveSilverMinForUser(userId);
+
+        profile.reset(silverMin);
         profile.updateMode(DeckMode.THREE_DAY);
     }
 

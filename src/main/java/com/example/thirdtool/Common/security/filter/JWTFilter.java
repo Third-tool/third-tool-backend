@@ -3,8 +3,8 @@ package com.example.thirdtool.Common.security.filter;
 
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
-import com.example.thirdtool.Common.security.Util.JWTUtil;
-import com.example.thirdtool.Common.security.Util.WhitelistPath;
+import com.example.thirdtool.Common.Util.JWTUtil;
+import com.example.thirdtool.Common.Util.WhitelistPath;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.repository.UserRepository;
 import jakarta.servlet.FilterChain;

@@ -39,6 +39,10 @@ public class Deck {
     @Column(nullable = false, length = 50)
     private String scoringAlgorithmType;
 
+    @Column(nullable = false)
+    private boolean onLibrary = false;   // 공개 라이브러리 등록 여부
+
+    private LocalDateTime publishedAt;   // 공개 시각 (정렬용)
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

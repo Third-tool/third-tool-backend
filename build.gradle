@@ -64,9 +64,12 @@ dependencies {
     // AWS S3 SDK
     implementation 'software.amazon.awssdk:s3:2.30.0'
 
-    //elasticsearch 툴 ㅇㅇ
+    //elasticsearch + uuid 툴
     implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
-
+    implementation 'de.huxhorn.sulky:de.huxhorn.sulky.ulid:8.3.0'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    implementation 'org.springframework:spring-web'   // MultipartFile 인터페이스
+    implementation 'org.springframework:spring-test'  // ✅ MockMultipartFile (런타임에서도 사용)
 
 }
 

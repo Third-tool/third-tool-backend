@@ -3,7 +3,7 @@ package com.example.thirdtool.User.application;
 import com.example.thirdtool.Card.application.service.CardRankService;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
-import com.example.thirdtool.Common.security.Util.JWTUtil;
+import com.example.thirdtool.Common.Util.JWTUtil;
 import com.example.thirdtool.User.domain.model.CustomOAuth2User;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
 import com.example.thirdtool.User.domain.model.UserEntity;

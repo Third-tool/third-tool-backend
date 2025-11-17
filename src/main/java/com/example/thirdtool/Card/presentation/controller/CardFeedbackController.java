@@ -26,10 +26,9 @@ public class CardFeedbackController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{cardId}/reset-with-score")
-    public ResponseEntity<Void> resetCardWithScore(@PathVariable Long cardId,
-                                                   @RequestBody ResetScoreRequestDto dto) {
-        cardFeedbackService.resetCardWithScore(cardId, dto.newScore());
+    @PostMapping("/{cardId}/reset")
+    public ResponseEntity<Void> resetCardToSilver(@PathVariable Long cardId) {
+        cardFeedbackService.resetCardToSilverMin(cardId);
         return ResponseEntity.ok().build();
     }
 

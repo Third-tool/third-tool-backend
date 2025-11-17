@@ -24,6 +24,9 @@ public class DeckRecommendation {
     private double lastAccessFactor;
     private String reason;
 
+    // ✅ 썸네일 URL 추가
+    private String thumbnailUrl;
+
     public DeckRecommendation(Long deckId,
                               String deckName,
                               double avgScore,
@@ -37,6 +40,7 @@ public class DeckRecommendation {
         this.daysSinceAccess = daysSinceAccess;
         this.totalCards = totalCards;
     }
+
 
     /** ✅ 도메인 행동: 가중치 및 추천 사유 계산 */
     public DeckRecommendation calculateRecommendation() {
@@ -52,4 +56,10 @@ public class DeckRecommendation {
                                    );
         return this;
     }
+
+
+    public void setThumbnailUrl(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
+    }
+
 }

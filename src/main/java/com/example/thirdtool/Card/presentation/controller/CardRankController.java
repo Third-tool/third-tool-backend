@@ -1,10 +1,13 @@
 package com.example.thirdtool.Card.presentation.controller;
 
 import com.example.thirdtool.Card.application.service.CardRankService;
+import com.example.thirdtool.Card.presentation.dto.request.CardRankBoundaryUpdateRequestDto;
 import com.example.thirdtool.Card.presentation.dto.request.CardRankUpdateRequestDto;
 import com.example.thirdtool.Card.presentation.dto.request.UserCreateRequestDto;
+import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,10 +20,12 @@ public class CardRankController {
 
     // ✅ 사용자의 랭크 기준을 수정하는 API
     // PUT /api/card-ranks/users/{userId}
-    @PutMapping("/users/{userId}")
-    public ResponseEntity<Void> updateUserCardRank(@PathVariable Long userId,
-                                                   @RequestBody CardRankUpdateRequestDto updateDto) {
-        cardRankService.updateUserCardRank(userId, updateDto);
+    @PutMapping("/users/me/boundaries")
+    public ResponseEntity<Void> updateUserCardRankBoundaries(@AuthenticationPrincipal UserEntity user,
+                                                             @RequestBody CardRankBoundaryUpdateRequestDto dto) {
+        Long userId = user.getId();
+
+        cardRankService.updateUserCardRankBoundaries(userId, dto);
         return ResponseEntity.ok().build();
     }
 

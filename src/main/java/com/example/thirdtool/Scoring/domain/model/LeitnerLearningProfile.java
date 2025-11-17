@@ -3,6 +3,7 @@ package com.example.thirdtool.Scoring.domain.model;
 import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.FeedbackType;
 import com.example.thirdtool.Scoring.domain.model.algorithm.ScoringAlgorithm;
+import com.example.thirdtool.Scoring.domain.model.algorithm.Sm2Algorithm;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import lombok.AccessLevel;
@@ -30,6 +31,11 @@ public class LeitnerLearningProfile extends LearningProfile {
     @Override
     public void applyFeedback(ScoringAlgorithm algorithm, Card card, FeedbackType feedback) {
         incrementFeedback(feedback);            // 공통 카운팅
+
+        if (algorithm instanceof Sm2Algorithm) {
+            throw new IllegalArgumentException("LeitnerLearningProfile은 SM2 알고리즘을 사용할 수 없습니다.");
+        }
+
         algorithm.updateScore(card.getLearningProfile(), feedback);  // 알고리즘 점수 산정
     }
 
@@ -37,5 +43,10 @@ public class LeitnerLearningProfile extends LearningProfile {
         this.score = score;
         this.repetition = repetition;
         this.easinessFactor = easinessFactor;
+    }
+
+    @Override
+    public String getAlgorithmType() {
+        return "LEITNER";
     }
 }

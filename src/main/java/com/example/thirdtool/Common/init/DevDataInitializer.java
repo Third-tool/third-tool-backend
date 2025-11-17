@@ -1,252 +1,270 @@
 package com.example.thirdtool.Common.init;
 
+import com.example.thirdtool.Card.application.service.CardService;
 import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.model.CardImage;
-import com.example.thirdtool.Card.domain.model.ImageType;
-import com.example.thirdtool.Card.domain.repository.CardRepository;
+import com.example.thirdtool.Card.presentation.dto.WriteCardDto;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.repository.DeckRepository;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.List;
 
 @Slf4j
 @Component
-@Profile("local")           // ★ dev 프로파일에서만 실행
+@Profile("local")
 @Order(1)
 @RequiredArgsConstructor
 public class DevDataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final DeckRepository deckRepository;
-    private final CardRepository cardRepository;
+    private final CardService cardService;
     private final PasswordEncoder passwordEncoder;
 
-    // ===== 시드 규모 조절 상수 =====
-    private static final int ROOT_DECKS_PER_USER   = 5;   // 유저당 상위 덱 개수
-    private static final int CHILDREN_PER_ROOT     = 2;   // 상위 덱당 하위 덱 개수
-    private static final int CARDS_PER_ROOT        = 6;   // 상위 덱당 카드 개수
-    private static final int CARDS_PER_CHILD       = 4;   // 하위 덱당 카드 개수
+    @Value("${seed.s3-base-url}")
+    private String s3BaseUrl;
+
+    /** 🔹 덱당 카드 20장 (테스트용) */
+    private static final int CARDS_PER_DECK = 20;
 
     @Override
-    @Transactional
-    public void run(String... args) {
-        // 이미 한 번이라도 유저가 있으면 스킵(안전장치)
+    public void run(String... args) throws Exception {
+        log.info("==============================================");
+        log.info("🚀 [DevSeed] 테스트용 시드 데이터 생성 시작 (2덱 × 20장)");
+        log.info("==============================================");
+
         if (userRepository.count() > 0) {
-            log.info("[DevSeed] existing data detected. skip.");
+            log.info("[DevSeed] 기존 데이터 감지됨 → 시드 생성 스킵");
             return;
         }
 
-        // 1) 유저 3명 생성
-        List<UserEntity> users = List.of(
+        // 1) 유저 생성 (testuser1, testuser2)
+        List<UserEntity> users = createUsers();
+        userRepository.saveAll(users);
+
+        UserEntity testUser1 = users.stream()
+                                    .filter(u -> "testuser1".equals(u.getUsername()))
+                                    .findFirst()
+                                    .orElse(users.get(0));
+
+        // 2) testuser1에게만 테스트용 덱 2개 생성
+        List<Deck> decks = List.of(
+                Deck.of("백엔드 CS 지식", null, "LEITNER", testUser1),
+                Deck.of("스프링 지식", null, "SM2", testUser1)
+                                  );
+        deckRepository.saveAll(decks);
+
+        // 3) 각 덱당 20장씩 카드 생성
+        for (Deck deck : decks) {
+            createBulkCards(testUser1, deck, CARDS_PER_DECK, deck.getName());
+        }
+
+        log.info("==============================================");
+        log.info("✅ [DevSeed] 테스트용 시드 생성 완료");
+        log.info("==============================================");
+    }
+
+    private List<UserEntity> createUsers() {
+        return List.of(
                 UserEntity.ofLocal("testuser1", passwordEncoder.encode("pass1234!"), "테스트1", "u1@example.com"),
-                UserEntity.ofLocal("testuser2", passwordEncoder.encode("pass1234!"), "테스트2", "u2@example.com"),
-                UserEntity.ofLocal("testuser3", passwordEncoder.encode("pass1234!"), "테스트3", "u3@example.com")
-                                        );
-        users = userRepository.saveAll(users);
-        log.info("[DevSeed] users created: {}", users.size());
+                UserEntity.ofLocal("testuser2", passwordEncoder.encode("pass1234!"), "테스트2", "u2@example.com")
+                      );
+    }
 
-        // 2) 주제 Pool (의미 있는 이름들). 유저별로 다른 조합을 순환 사용
-        List<DeckSpec> topicPool = List.of(
-                new DeckSpec("Java 기초", "LEITNER"),
-                new DeckSpec("Spring Boot 핵심", "SM2"),
-                new DeckSpec("알고리즘/자료구조", "LEITNER"),
-                new DeckSpec("요리 - 한식 기초", "SM2"),
-                new DeckSpec("스포츠 - 축구 상식", "LEITNER"),
-                new DeckSpec("영어 - 기초 단어", "SM2"),
-                new DeckSpec("역사 - 세계사 핵심연도", "LEITNER"),
-                new DeckSpec("Java 컬렉션", "SM2"),
-                new DeckSpec("요리 - 베이킹 기초", "LEITNER"),
-                new DeckSpec("스포츠 - 농구 상식", "SM2")
-                                          );
+    /** 덱당 카드 N장 생성 (이미지는 S3에서 바로 읽기) */
+    private void createBulkCards(UserEntity user, Deck deck, int count, String topic) {
+        log.info("[DevSeed] ▶ 덱 '{}' → {}장 카드 생성 중...", deck.getName(), count);
 
-        int topicCursor = 0;
-        int imgSeed = 100;
+        for (int i = 1; i <= count; i++) {
+            try {
+                String question = makeRealisticQuestion(topic, i);
+                String answer = makeRealisticAnswer(topic, i);
 
-        for (UserEntity user : users) {
-            List<Deck> roots = new ArrayList<>();
-            for (int i = 0; i < ROOT_DECKS_PER_USER; i++) {
-                DeckSpec spec = topicPool.get(topicCursor % topicPool.size());
-                topicCursor++;
+                MultipartFile qFile = fromS3Seed("question", i); // q1~q10
+                MultipartFile aFile = fromS3Seed("answer", i);   // a1~a10
 
-                // ✅ 중복 체크: 같은 유저에 같은 이름이 이미 있으면 skip
-                if (deckRepository.existsByUserAndName(user, spec.name())) {
-                    log.warn("[DevSeed] duplicate deck name={} for user={} skipped", spec.name(), user.getUsername());
-                    continue;
-                }
+                WriteCardDto dto = new WriteCardDto(
+                        question,
+                        answer,
+                        List.of(qFile),
+                        List.of(aFile)
+                );
 
-                Deck root = Deck.of(spec.name(), null, spec.algorithm(), user);
-                roots.add(root);
+                // ⭐ 카드 생성 (Card 반환형이라고 가정)
+                Card card = cardService.createCard(deck.getId(), dto);
+
+                log.info("[DevSeed] ✅ 카드 생성 완료 - deck='{}', idx={}, cardId={}",
+                        deck.getName(), i, card.getId());
+
+            } catch (Exception e) {
+                // 개별 실패는 로그만 남기고 계속 진행
+                log.warn("[DevSeed] ⚠️ 카드 생성 실패 (deck='{}', idx={}): {}", deck.getName(), i, e.getMessage());
             }
-            deckRepository.saveAll(roots);
-
-            // 하위 덱 생성 + 카드 생성 (상위/하위 모두)
-            List<Deck> children = new ArrayList<>();
-            for (Deck root : roots) {
-                // 하위 덱 CHILDREN_PER_ROOT 개 (부모 알고리즘 그대로 사용)
-                for (int c = 1; c <= CHILDREN_PER_ROOT; c++) {
-                    Deck child = Deck.of(root.getName() + " - 서브" + c, root, root.getScoringAlgorithmType(), user);
-                    children.add(child);
-                }
-            }
-            deckRepository.saveAll(children);
-
-            // 카드 만들기
-            List<Card> cards = new ArrayList<>();
-
-            // 상위 덱 카드
-            for (Deck root : roots) {
-                List<QAPair> pairs = pairsFor(root.getName());
-                for (int i = 0; i < Math.min(CARDS_PER_ROOT, pairs.size()); i++) {
-                    Card card = Card.of(pairs.get(i).q(), pairs.get(i).a(), root);
-                    attachImages(card, imgSeed++);
-                    cards.add(card);
-                }
-            }
-
-            // 하위 덱 카드
-            for (Deck child : children) {
-                List<QAPair> pairs = pairsForChild(child.getName());
-                for (int i = 0; i < Math.min(CARDS_PER_CHILD, pairs.size()); i++) {
-                    Card card = Card.of(pairs.get(i).q(), pairs.get(i).a(), child);
-                    attachImages(card, imgSeed++);
-                    cards.add(card);
-                }
-            }
-
-            cardRepository.saveAll(cards);
-            log.info("[DevSeed] user {} done: roots={}, children={}, cards={}",
-                    user.getUsername(), roots.size(), children.size(), cards.size());
         }
 
-        log.info("[DevSeed] DONE ✅ (users=3)");
+        log.info("[DevSeed] ✅ 덱 '{}' 카드 생성 완료", deck.getName());
     }
 
-    // ===== 이미지 부착 (QUESTION/ANSWER 1장씩) =====
-    private void attachImages(Card card, int seed) {
-        String qUrl = "https://picsum.photos/seed/q" + seed + "/600/400";
-        String aUrl = "https://picsum.photos/seed/a" + seed + "/600/400";
-        card.addImage(CardImage.of(card, qUrl, ImageType.QUESTION, 1));
-        card.addImage(CardImage.of(card, aUrl, ImageType.ANSWER, 1));
-    }
+    /** 🔹 S3에서 q1~q10, a1~a10을 읽어 MockMultipartFile로 변환 (jpg/png 둘 다 시도) */
+    private MultipartFile fromS3Seed(String folder, int index) throws IOException {
+        int normalizedIndex = ((index - 1) % 10) + 1; // 1~10 반복
+        char prefix = folder.equals("question") ? 'q' : 'a';
 
-    // ===== Q/A 데이터: 상위 덱 전용 =====
-    private List<QAPair> pairsFor(String deckName) {
-        switch (deckName) {
-            case "Java 기초": return List.of(
-                    qa("JVM/JRE/JDK 차이?", "JVM은 실행환경, JRE는 JVM+라이브러리, JDK는 JRE+개발도구."),
-                    qa("기본형/참조형?", "기본형은 값 저장, 참조형은 객체 참조 저장."),
-                    qa("== vs equals?", "==는 참조 비교, equals는 내용 비교."),
-                    qa("오버로딩/오버라이딩?", "오버로딩=시그니처 다름, 오버라이딩=상속 재정의."),
-                    qa("final의 의미?", "상수/오버라이드 금지/상속 금지."),
-                    qa("String이 불변인 이유?", "보안/캐싱/스레드안전/해시코드 유지.")
-                                          );
-            case "Spring Boot 핵심": return List.of(
-                    qa("@Component vs @Bean", "자동 탐지 vs 수동 등록."),
-                    qa("@Configuration", "프록시로 싱글톤 보장."),
-                    qa("DI 방법", "생성자(권장)/세터/필드."),
-                    qa("AOP 핵심", "관심사 분리: 어드바이스/포인트컷."),
-                    qa("@Profile", "환경별 설정 분리."),
-                    qa("Actuator", "헬스/메트릭/엔드포인트.")
-                                                 );
-            case "알고리즘/자료구조": return List.of(
-                    qa("O(N log N) 예", "퀵/머지/힙 정렬 평균."),
-                    qa("스택/큐", "LIFO vs FIFO."),
-                    qa("해시 충돌 해결", "체이닝/오픈어드레싱."),
-                    qa("트리/그래프", "트리는 비순환, 그래프 일반."),
-                    qa("BFS/DFS", "레벨 우선/깊이 우선."),
-                    qa("힙 특징", "완전이진트리 기반.")
-                                            );
-            case "요리 - 한식 기초": return List.of(
-                    qa("육수 비율", "물:멸치:다시마 비율 조절."),
-                    qa("간 맞추기", "소금/간장→설탕/식초 순."),
-                    qa("지단 팁", "약불/체치기/식혀 접기."),
-                    qa("잡채 면", "덜 삶고 팬에서 마무리."),
-                    qa("된장/고추장 보관", "냉장/표면 랩/밀폐."),
-                    qa("불고기 양념", "간장/설탕/배즙/마늘/참기름.")
-                                             );
-            case "스포츠 - 축구 상식": return List.of(
-                    qa("오프사이드", "패스 순간 수비 뒤."),
-                    qa("4-3-3 장점", "측면 전개/압박."),
-                    qa("경고/퇴장", "거친 파울/방해."),
-                    qa("VAR", "명백한 오심 최소화."),
-                    qa("스루패스", "라인 사이 공간 찌르기."),
-                    qa("하프스페이스", "측면과 중앙 사이.")
-                                              );
-            case "영어 - 기초 단어": return List.of(
-                    qa("apple 뜻", "사과"), qa("book 뜻", "책"),
-                    qa("city 뜻", "도시"), qa("family 뜻", "가족"),
-                    qa("bread 뜻", "빵"), qa("water 뜻", "물")
-                                             );
-            case "역사 - 세계사 핵심연도": return List.of(
-                    qa("서로마 멸망", "476년"),
-                    qa("마그나카르타", "1215년"),
-                    qa("백년전쟁", "1337~1453"),
-                    qa("프랑스혁명", "1789"),
-                    qa("미 독립선언", "1776"),
-                    qa("UN 창설", "1945")
-                                                );
-            case "Java 컬렉션": return List.of(
-                    qa("List/Set 차이", "순서/중복 vs 중복 불가."),
-                    qa("HashMap/TreeMap", "O(1) vs O(logN) 정렬."),
-                    qa("ArrayList/LinkedList", "랜덤접근 vs 삽입/삭제 강점."),
-                    qa("HashSet 원리", "hashCode + equals."),
-                    qa("ConcurrentHashMap", "버킷 동시성 제어."),
-                    qa("Queue/Deque", "FIFO vs 양쪽 입출력.")
-                                           );
-            case "요리 - 베이킹 기초": return List.of(
-                    qa("크리밍", "버터+설탕 공기 주입."),
-                    qa("글루텐", "밀가루+물+반죽."),
-                    qa("BP/BS 차이", "파우더 완제품/소다는 산 필요."),
-                    qa("머랭 단계", "소프트/스티프 피크."),
-                    qa("오븐 예열", "필수, 온도 안정화."),
-                    qa("오버믹싱", "질겨짐 원인.")
-                                              );
-            case "스포츠 - 농구 상식": return List.of(
-                    qa("픽앤롤", "스크린 후 롤/팝."),
-                    qa("3점 라인", "국제 6.75m."),
-                    qa("파울 기준", "FIBA 5, NBA 6."),
-                    qa("트랜지션", "속공."),
-                    qa("박스아웃", "뒤 공간 선점."),
-                    qa("존 디펜스", "공간 수비.")
-                                              );
-            default:
-                return genericPairs(deckName, CARDS_PER_ROOT);
+        String[] exts = {"jpg", "png", "jpeg"};
+
+        for (String ext : exts) {
+            String fileUrl = String.format("%s/%s/%c%d.%s",
+                    s3BaseUrl, folder, prefix, normalizedIndex, ext);
+
+            try (InputStream in = new URL(fileUrl).openStream()) {
+                byte[] bytes = in.readAllBytes();
+                log.debug("[DevSeed] S3 이미지 로드 성공: {}", fileUrl);
+                return new MockMultipartFile(
+                        folder,
+                        prefix + normalizedIndex + "." + ext,
+                        "image/" + ext,
+                        bytes
+                );
+            } catch (Exception e) {
+                // 다음 확장자 시도
+                log.debug("[DevSeed] S3 이미지 로드 실패, 다음 확장자 시도: {} ({})", fileUrl, e.getMessage());
+            }
         }
+
+        // 전부 실패한 경우: 빈 더미 파일 반환 (이미지 없는 카드)
+        log.warn("[DevSeed] ⚠️ S3 이미지 찾기 실패 → dummy 이미지 사용, folder={}, index={}", folder, index);
+        return new MockMultipartFile(folder, "dummy.png", "image/png", new byte[0]);
     }
 
-    // ===== Q/A 데이터: 하위 덱 전용 =====
-    private List<QAPair> pairsForChild(String deckName) {
-        if (deckName.contains("서브")) {
-            return List.of(
-                    qa(deckName + " - Q1", deckName + " - A1"),
-                    qa(deckName + " - Q2", deckName + " - A2"),
-                    qa(deckName + " - Q3", deckName + " - A3"),
-                    qa(deckName + " - Q4", deckName + " - A4"),
-                    qa(deckName + " - Q5", deckName + " - A5") // 여분 1개(필요 시)
-                          );
+    // ======================================================
+    // 🔹 주제별 realistic 질문/답변 (각 20개, 전부 다른 내용)
+    // ======================================================
+
+    private String makeRealisticQuestion(String topic, int index) {
+        if ("백엔드 CS 지식".equals(topic)) {
+            return BACKEND_CS_Q[index - 1];
         }
-        return genericPairs(deckName, CARDS_PER_CHILD);
+        if ("스프링 지식".equals(topic)) {
+            return SPRING_Q[index - 1];
+        }
+        return topic + " 관련 질문 " + index;
     }
 
-    private List<QAPair> genericPairs(String deckName, int n) {
-        List<QAPair> list = new ArrayList<>();
-        for (int i = 1; i <= n; i++) list.add(qa(deckName + " Q" + i, deckName + " A" + i));
-        return list;
+    private String makeRealisticAnswer(String topic, int index) {
+        if ("백엔드 CS 지식".equals(topic)) {
+            return BACKEND_CS_A[index - 1];
+        }
+        if ("스프링 지식".equals(topic)) {
+            return SPRING_A[index - 1];
+        }
+        return topic + " 관련 답변 " + index;
     }
 
-    private QAPair qa(String q, String a) { return new QAPair(q, a); }
+    // ───────── 백엔드 CS 20문항 ─────────
+    private static final String[] BACKEND_CS_Q = {
+            "HTTP 1.1과 HTTP 2.0의 가장 큰 차이는 무엇인가요?",
+            "TCP 3-way handshake는 왜 필요한가요?",
+            "프로세스와 스레드의 차이를 설명하세요.",
+            "캐시 메모리가 프로그램 실행 속도를 높이는 원리는?",
+            "DB 인덱스가 빠른 이유는 무엇인가요?",
+            "교착상태(Deadlock)가 발생하기 위한 조건 4가지는?",
+            "트랜잭션의 ACID는 각각 무엇을 의미하나요?",
+            "메시지 큐를 사용하면 확장성이 좋아지는 이유는?",
+            "REST API의 자원(Resource)을 설계하는 기준은?",
+            "CPU 스케줄링의 Round-Robin 방식은 어떻게 동작하나요?",
+            "세마포어와 뮤텍스의 차이는 무엇인가요?",
+            "DNS 조회 과정은 어떻게 이루어지나요?",
+            "가상 메모리(Virtual Memory)가 필요한 이유는?",
+            "Load Balancer가 필요한 이유는 무엇인가요?",
+            "HTTP 상태코드 301과 302의 차이는?",
+            "JWT가 세션 방식과 다른 점은 무엇인가요?",
+            "파일 시스템의 inode는 어떤 역할을 하나요?",
+            "Redis가 빠른 핵심 이유는 무엇인가요?",
+            "ORM을 사용했을 때 장점은 무엇인가요?",
+            "CAP 이론의 세 가지 요소는 무엇인가요?"
+    };
 
-    private record QAPair(String q, String a) {}
-    private record DeckSpec(String name, String algorithm) {}
+    private static final String[] BACKEND_CS_A = {
+            "HTTP/2는 멀티플렉싱을 지원해 하나의 연결로 여러 요청을 병렬 처리합니다.",
+            "연결 신뢰성을 보장하고, 양쪽이 통신 준비가 되었는지 확인하기 위해서입니다.",
+            "프로세스는 독립된 메모리 공간을 가지지만, 스레드는 프로세스 내 자원을 공유합니다.",
+            "CPU보다 빠른 SRAM에 자주 쓰는 데이터를 저장해 메모리 병목을 줄입니다.",
+            "B-Tree 기반으로 정렬되어 있어 탐색 시간이 O(log N)으로 줄어듭니다.",
+            "상호 배제, 점유와 대기, 비선점, 순환 대기의 네 가지 조건이 동시에 만족될 때 발생합니다.",
+            "원자성, 일관성, 고립성, 지속성을 보장해 데이터 무결성을 유지합니다.",
+            "생산자와 소비자를 느슨하게 연결해 피크 트래픽을 흡수할 수 있습니다.",
+            "리소스를 명사형으로 표현하고, 상태는 HTTP 메서드와 코드로 표현합니다.",
+            "각 프로세스에 일정 시간만큼 CPU를 할당하며 순환시키는 방식입니다.",
+            "뮤텍스는 하나만 들어갈 수 있는 잠금, 세마포어는 카운터 기반 동기화 도구입니다.",
+            "클라이언트는 로컬/리커서브 DNS를 통해 루트 → TLD → 권한 DNS 순서로 조회합니다.",
+            "물리 메모리보다 큰 주소 공간을 제공해 여러 프로그램을 동시에 실행할 수 있게 합니다.",
+            "트래픽을 여러 서버로 분산해 가용성과 응답 속도를 높입니다.",
+            "301은 영구 이동, 302는 임시 이동을 의미합니다.",
+            "JWT는 토큰 자체에 정보를 담고 있어 서버 세션 저장소가 필요 없습니다.",
+            "inode는 파일의 메타 정보와 디스크 블록 위치를 담고 있는 구조체입니다.",
+            "메모리 기반 저장소이고, 단일 스레드 이벤트 루프 구조로 오버헤드가 적습니다.",
+            "객체 모델과 데이터베이스 간 매핑을 자동화해 생산성과 유지보수성을 높입니다.",
+            "일관성, 가용성, 파티션 내성 중 둘만 완벽히 만족할 수 있다는 분산 시스템 이론입니다."
+    };
+
+    // ───────── 스프링 지식 20문항 ─────────
+    private static final String[] SPRING_Q = {
+            "Spring의 IoC 컨테이너는 어떤 역할을 하나요?",
+            "DI(의존성 주입)의 장점은 무엇인가요?",
+            "AOP가 필요한 이유는 무엇인가요?",
+            "Spring Bean의 대표적인 스코프는 무엇인가요?",
+            "Filter와 Interceptor의 차이는 무엇인가요?",
+            "DispatcherServlet은 어떤 패턴을 구현한 컴포넌트인가요?",
+            "BeanFactory와 ApplicationContext의 차이는 무엇인가요?",
+            "Proxy 기반 AOP는 어떤 방식으로 동작하나요?",
+            "Spring Boot AutoConfiguration은 어떤 기준으로 Bean을 등록하나요?",
+            "@RestController와 @Controller의 차이는 무엇인가요?",
+            "트랜잭션 전파(Transaction Propagation) 옵션은 왜 필요한가요?",
+            "JPA의 영속성 컨텍스트는 어떤 이점을 주나요?",
+            "Lazy Loading이 실패하는 대표적인 상황은 무엇인가요?",
+            "EntityManager는 어떤 책임을 가지나요?",
+            "Spring Security에서 Authentication 객체는 어디에 저장되나요?",
+            "OAuth2 로그인에서 Authorization Code는 어떤 역할을 하나요?",
+            "MessageConverter는 어떤 일을 담당하나요?",
+            "CORS 설정은 왜 필요한가요?",
+            "RestTemplate과 WebClient의 가장 큰 차이는 무엇인가요?",
+            "Spring의 ApplicationEventPublisher는 언제 유용하게 사용할 수 있나요?"
+    };
+
+    private static final String[] SPRING_A = {
+            "객체 생성과 생명주기 관리를 맡고, 의존성 주입을 통해 빈들을 연결합니다.",
+            "결합도를 낮추고 테스트와 확장을 쉽게 만들어줍니다.",
+            "로그, 트랜잭션, 보안처럼 여러 계층에 흩어진 공통 로직을 모듈화하기 위해서입니다.",
+            "Singleton, Prototype, Request, Session 등이 대표적인 스코프입니다.",
+            "Filter는 Servlet 앞단, Interceptor는 Spring MVC Handler 앞단에서 동작합니다.",
+            "Front Controller 패턴을 구현해 모든 요청을 한 지점에서 받아 분기합니다.",
+            "ApplicationContext는 BeanFactory 기능 + 메시지소스, 이벤트 등 부가 기능을 제공합니다.",
+            "JDK Dynamic Proxy나 CGLIB으로 프록시 객체를 생성하여 메서드 호출을 가로챕니다.",
+            "클래스패스의 의존성을 스캔해서 조건에 맞는 자동 설정 클래스를 활성화합니다.",
+            "@RestController는 @ResponseBody가 포함되어 JSON 바디를 바로 반환합니다.",
+            "기존 트랜잭션에 참여할지, 새로 열지, 예외 시 어떻게 처리할지 제어하기 위해 필요합니다.",
+            "엔티티 변경 감지와 1차 캐시를 제공하여 성능과 일관성을 높입니다.",
+            "영속성 컨텍스트가 닫힌 후 프록시를 접근할 때 LazyInitializationException이 발생합니다.",
+            "엔티티의 저장, 조회, 변경 감지, 플러시 등을 담당합니다.",
+            "SecurityContextHolder에 저장되어 현재 인증된 사용자를 어디서든 조회할 수 있습니다.",
+            "클라이언트가 액세스 토큰을 직접 받지 않고 서버 간에 안전하게 교환할 수 있게 합니다.",
+            "HTTP 요청/응답 바디를 자바 객체와 JSON/문자열 등으로 변환합니다.",
+            "브라우저의 동일 출처 정책 때문에 다른 도메인 간 요청이 차단되는 것을 허용하기 위해서입니다.",
+            "RestTemplate는 동기 블로킹, WebClient는 비동기 논블로킹 방식입니다.",
+            "도메인 이벤트 기반으로 계층 간 결합도를 낮추고 확장 포인트를 만들 때 유용합니다."
+    };
 }

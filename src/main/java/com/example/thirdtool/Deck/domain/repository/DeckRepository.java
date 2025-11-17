@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DeckRepository extends JpaRepository<Deck, Long> {
@@ -37,4 +38,12 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
         Double findAvgScore(@Param("deckId") Long deckId);
 
         List<Deck> findByUser(UserEntity user);
+
+        Optional<Deck> findFirstByUserIdOrderByLastAccessedDesc(Long userId);
+
+        @Modifying(clearAutomatically = true, flushAutomatically = true)
+        @Query("update Deck d set d.lastAccessed = :now where d.id = :deckId and d.user.id = :userId")
+        int touchLastAccessed(@Param("userId") Long userId,
+                              @Param("deckId") Long deckId,
+                              @Param("now") LocalDateTime now);
 }

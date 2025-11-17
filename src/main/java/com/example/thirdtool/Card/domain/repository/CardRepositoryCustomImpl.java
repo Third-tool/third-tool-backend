@@ -1,16 +1,12 @@
 package com.example.thirdtool.Card.domain.repository;
 
-import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.model.CardRank;
-import com.example.thirdtool.Card.domain.model.CardRankType;
-import com.example.thirdtool.Card.domain.model.QCardRank;
-import com.example.thirdtool.Card.presentation.dto.CardInfoDto;
-import com.example.thirdtool.Card.presentation.dto.QCardInfoDto;
+import com.example.thirdtool.Card.domain.model.*;
+import com.example.thirdtool.Card.presentation.dto.CardRankInfoDto;
+import com.example.thirdtool.Card.presentation.dto.QCardRankInfoDto;
 import com.example.thirdtool.Deck.domain.model.DeckMode;
 
 import com.example.thirdtool.Scoring.domain.model.QLearningProfile;
-import com.querydsl.core.types.Projections;
-import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static com.example.thirdtool.Card.domain.model.QCard.card;
+import static com.example.thirdtool.Card.domain.model.QCardImage.cardImage;
 import static com.example.thirdtool.Card.domain.model.QCardRank.cardRank;
 import static com.example.thirdtool.Deck.domain.model.QDeck.deck;
 import static com.example.thirdtool.Scoring.domain.model.QLearningProfile.learningProfile;
@@ -34,16 +31,32 @@ public class CardRepositoryCustomImpl implements CardRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Slice<CardInfoDto> findCardsByScoreRange(Long userId,
-                                                    Long deckId,
-                                                    DeckMode mode,
-                                                    int minScore,
-                                                    int maxScore,
-                                                    Pageable pageable) {
+    public Slice<CardRankInfoDto> findCardsByScoreRange(Long userId,
+                                                        Long deckId,
+                                                        DeckMode mode,
+                                                        int minScore,
+                                                        int maxScore,
+                                                        Pageable pageable) {
         QLearningProfile learningProfile = QLearningProfile.learningProfile;
 
-        List<CardInfoDto> results = queryFactory
-                .select(new QCardInfoDto(card.id, card.question, card.answer))
+        // ✅ 대표 이미지(QUESTION 타입 or sequence=0) 서브쿼리
+        var thumbnailSubQuery = JPAExpressions
+                .select(cardImage.imageUrl)
+                .from(cardImage)
+                .where(
+                        cardImage.card.eq(card),
+                        cardImage.imageType.eq(ImageType.QUESTION)
+                      )
+                .limit(1);
+
+        // ✅ 본 쿼리
+        List<CardRankInfoDto> results = queryFactory
+                .select(new QCardRankInfoDto(
+                        card.id,
+                        card.question,
+                        card.answer,
+                        thumbnailSubQuery
+                                                    ))
                 .from(card)
                 .join(card.deck, deck)
                 .join(card.learningProfile, learningProfile)
@@ -51,7 +64,8 @@ public class CardRepositoryCustomImpl implements CardRepositoryCustom {
                         deck.id.eq(deckId),
                         deck.user.id.eq(userId),
                         learningProfile.mode.eq(mode),
-                        learningProfile.score.between(minScore, maxScore) // ✅ 점수 조건
+                        learningProfile.score.between(minScore, maxScore),
+                        card.deleted.isFalse()
                       )
                 .orderBy(card.id.asc())
                 .offset(pageable.getOffset())
@@ -81,7 +95,8 @@ public class CardRepositoryCustomImpl implements CardRepositoryCustom {
                            .join(card.learningProfile, learningProfile).fetchJoin()
                            .where(
                                    card.learningProfile.mode.eq(mode),
-                                   card.learningProfile.score.between(rank.getMinScore(), rank.getMaxScore())
+                                   card.learningProfile.score.between(rank.getMinScore(), rank.getMaxScore()),
+                                   card.deleted.isFalse()
                                  )
                            .orderBy(card.learningProfile.score.asc())
                            .limit(count)
@@ -103,7 +118,8 @@ public class CardRepositoryCustomImpl implements CardRepositoryCustom {
                                  .join(card.learningProfile, learningProfile)
                                  .where(
                                          card.learningProfile.mode.eq(mode),
-                                         card.learningProfile.score.between(rank.getMinScore(), rank.getMaxScore())
+                                         card.learningProfile.score.between(rank.getMinScore(), rank.getMaxScore()),
+                                         card.deleted.isFalse()
                                        )
                                  .fetchOne();
 

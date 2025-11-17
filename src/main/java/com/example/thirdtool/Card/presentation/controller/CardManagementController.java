@@ -47,19 +47,4 @@ public class CardManagementController {
         return ResponseEntity.ok(Map.of("moved", updated));
     }
 
-    // 검색/필터
-    @GetMapping("/search")
-    public ResponseEntity<Page<Card>> search(
-            @AuthenticationPrincipal UserEntity user,
-            @RequestParam(required = false) Long deckId,
-            @RequestParam(required = false) DeckMode mode,
-            @RequestParam(required = false) String rankName,
-            @RequestParam(required = false) String q,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-
-        Page<Card> result = cardMgmtService.search(
-                user.getId(), deckId, mode, rankName, q, PageRequest.of(page, size, Sort.by("id").ascending()));
-        return ResponseEntity.ok(result);
-    }
 }

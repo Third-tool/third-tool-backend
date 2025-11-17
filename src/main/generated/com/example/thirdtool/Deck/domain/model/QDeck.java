@@ -32,7 +32,11 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public final StringPath name = createString("name");
 
+    public final BooleanPath onLibrary = createBoolean("onLibrary");
+
     public final QDeck parentDeck;
+
+    public final DateTimePath<java.time.LocalDateTime> publishedAt = createDateTime("publishedAt", java.time.LocalDateTime.class);
 
     public final StringPath scoringAlgorithmType = createString("scoringAlgorithmType");
 

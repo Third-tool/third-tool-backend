@@ -2,6 +2,7 @@ package com.example.thirdtool.Recommendation.controller;
 
 import com.example.thirdtool.Recommendation.application.RecommendationService;
 import com.example.thirdtool.Recommendation.domain.DeckRecommendation;
+import com.example.thirdtool.Recommendation.domain.dto.RecommendationExplainResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,12 +27,14 @@ public class RecommendationController {
         return ResponseEntity.ok(recommendationService.recommendDecks(user, limit));
     }
 
-    /** ✅ 특정 덱 추천 이유 상세 보기 */
+
     @GetMapping("/decks/{deckId}/explain")
-    public ResponseEntity<DeckRecommendation> explainRecommendation(
+    public ResponseEntity<RecommendationExplainResponse> explainRecommendation(
             @PathVariable Long deckId,
             @AuthenticationPrincipal UserEntity user) {
 
-        return ResponseEntity.ok(recommendationService.explainRecommendation(deckId, user));
+        String reason = recommendationService.explainRecommendation(deckId,user);
+        return ResponseEntity.ok(new RecommendationExplainResponse(deckId, reason));
     }
+
 }

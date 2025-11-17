@@ -24,6 +24,8 @@ public class QLeitnerLearningProfile extends EntityPathBase<LeitnerLearningProfi
 
     public final QLearningProfile _super;
 
+    public final StringPath algorithmType = createString("algorithmType");
+
     //inherited
     public final NumberPath<Integer> badCount;
 

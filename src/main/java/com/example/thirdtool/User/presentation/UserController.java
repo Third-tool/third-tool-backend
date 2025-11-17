@@ -1,6 +1,6 @@
 package com.example.thirdtool.User.presentation;
 
-import com.example.thirdtool.Common.security.Util.JWTUtil;
+import com.example.thirdtool.Common.Util.JWTUtil;
 import com.example.thirdtool.Common.security.auth.jwt.JwtService;
 import com.example.thirdtool.User.dto.*;
 import com.example.thirdtool.User.application.UserService;

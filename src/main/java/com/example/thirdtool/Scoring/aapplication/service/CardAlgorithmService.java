@@ -1,5 +1,7 @@
 package com.example.thirdtool.Scoring.aapplication.service;
 
+import com.example.thirdtool.Common.Exception.BusinessException;
+import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Scoring.domain.model.algorithm.ScoringAlgorithm;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -15,39 +17,43 @@ import java.util.stream.Collectors;
 @Service
 public class CardAlgorithmService {
 
-    private static final String DEFAULT_ALGORITHM = "sm2Algorithm"; // ✅ 기본 알고리즘 설정
-
     private final Map<String, ScoringAlgorithm> algorithms;
 
-    // ✅ 애플리케이션 시작 시 사용 가능한 알고리즘 목록을 로그로 출력
+    // 명시적 매핑 — Deck의 scoringAlgorithmType 값과 연결
+    private static final Map<String, String> NAME_MAP = Map.of(
+            "SM2", "sm2Algorithm",
+            "LEITNER", "leitnerAlgorithm"
+                                                              );
+
     @PostConstruct
     public void init() {
-        log.info("사용 가능한 학습 알고리즘: {}", algorithms.keySet());
+        log.info("✅ 등록된 학습 알고리즘 빈 목록: {}", algorithms.keySet());
     }
 
-    public ScoringAlgorithm getAlgorithm(String algorithmName) {
-
-        if (algorithmName == null || algorithmName.isBlank()) {
-            log.warn("알고리즘 이름이 null 또는 비어있습니다. 기본 알고리즘을 사용합니다: {}", DEFAULT_ALGORITHM);
-            return algorithms.get(DEFAULT_ALGORITHM);
+    public ScoringAlgorithm getAlgorithm(String algorithmType) {
+        if (algorithmType == null || algorithmType.isBlank()) {
+            throw new BusinessException(ErrorCode.DECK_ALGORITHM_NOT_SET);
         }
 
-        String beanName = algorithmName.substring(0, 1).toLowerCase() + algorithmName.substring(1);
+        String beanName = NAME_MAP.get(algorithmType.toUpperCase());
+
+        if (beanName == null) {
+            throw new BusinessException(ErrorCode.UNSUPPORTED_ALGORITHM);
+        }
+
         ScoringAlgorithm algorithm = algorithms.get(beanName);
-
         if (algorithm == null) {
-            log.error("지원하지 않는 알고리즘입니다: {}. 기본 알고리즘을 사용합니다.", algorithmName);
-            return algorithms.get(DEFAULT_ALGORITHM);
+            throw new BusinessException(ErrorCode.ALGORITHM_BEAN_NOT_FOUND);
         }
 
+        log.debug("✅ 선택된 학습 알고리즘: {}", beanName);
         return algorithm;
     }
 
-    // ✅ 사용 가능한 모든 알고리즘 이름 목록을 반환
+    /**
+     * 현재 애플리케이션에서 등록된 모든 알고리즘 이름 조회용
+     */
     public List<String> getAvailableAlgorithmNames() {
-        return algorithms.keySet().stream()
-                         .map(key -> key.substring(0, 1).toUpperCase() + key.substring(1))
-                         .collect(Collectors.toList());
+        return algorithms.keySet().stream().sorted().toList();
     }
-
 }

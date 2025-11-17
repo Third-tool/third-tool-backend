@@ -31,6 +31,10 @@ public class QCard extends EntityPathBase<Card> {
 
     public final com.example.thirdtool.Deck.domain.model.QDeck deck;
 
+    public final BooleanPath deleted = createBoolean("deleted");
+
+    public final DateTimePath<java.time.LocalDateTime> deletedAt = createDateTime("deletedAt", java.time.LocalDateTime.class);
+
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final ListPath<CardImage, QCardImage> images = this.<CardImage, QCardImage>createList("images", CardImage.class, QCardImage.class, PathInits.DIRECT2);

@@ -4,7 +4,7 @@ import com.example.thirdtool.Card.application.service.CardImageService;
 import com.example.thirdtool.Card.application.service.CardService;
 import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.CardRankType;
-import com.example.thirdtool.Card.presentation.dto.CardInfoDto;
+import com.example.thirdtool.Card.presentation.dto.CardRankInfoDto;
 import com.example.thirdtool.Card.presentation.dto.WriteCardDto;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Deck.domain.model.DeckMode;
@@ -59,16 +59,16 @@ public class CardController {
     // GET /api/cards/by-rank?deckId=1&rankName=SILVER
     // ✅ GET /api/cards/by-rank?deckId=1&rankName=SILVER&mode=THREE_DAY
     @GetMapping("/by-rank")
-    public ResponseEntity<Slice<CardInfoDto>> getCardsByRank(
+    public ResponseEntity<Slice<CardRankInfoDto>> getCardsByRank(
             @AuthenticationPrincipal UserEntity user,
             @RequestParam Long deckId,
             @RequestParam DeckMode mode,
             @RequestParam CardRankType rankName,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
-                                                            ) {
+                                                                ) {
         Long userId = user.getId();
-        Slice<CardInfoDto> cards = cardService.getCardsByRank(userId, deckId, mode, rankName, page, size);
+        Slice<CardRankInfoDto> cards = cardService.getCardsByRank(userId, deckId, mode, rankName, page, size);
 
         if (cards.isEmpty()) {
             // ✅ 카드가 없을 때 204 No Content로 응답

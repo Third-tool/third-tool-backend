@@ -24,6 +24,8 @@ public class QSm2LearningProfile extends EntityPathBase<Sm2LearningProfile> {
 
     public final QLearningProfile _super;
 
+    public final StringPath algorithmType = createString("algorithmType");
+
     //inherited
     public final NumberPath<Integer> badCount;
 

@@ -1,0 +1,22 @@
+# ✅ 실무 표준: 공식 Elasticsearch 최신 LTS 버전
+FROM docker.elastic.co/elasticsearch/elasticsearch:8.14.1
+
+# ✅ Nori 플러그인 사전 설치
+RUN elasticsearch-plugin install analysis-nori --batch
+
+# ✅ 환경 설정 (X-Pack 최소화)
+ENV discovery.type=single-node \
+    xpack.security.enabled=false \
+    xpack.security.enrollment.enabled=false \
+    xpack.ml.enabled=false \
+    xpack.watcher.enabled=false \
+    cluster.name=third-tool-cluster \
+    node.name=third-tool-node \
+    ES_JAVA_OPTS="-Xms1g -Xmx1g"
+
+# ✅ 포트 & 헬스체크
+EXPOSE 9200
+
+# ✅ 실행 유저 및 데이터 볼륨
+USER elasticsearch
+VOLUME ["/usr/share/elasticsearch/data"]

@@ -1,17 +1,17 @@
 package com.example.thirdtool.Card.application.service;
 
 
+import com.example.thirdtool.Card.Document.CardDocument;
 import com.example.thirdtool.Card.domain.model.*;
 import com.example.thirdtool.Card.domain.repository.CardRankRepository;
 import com.example.thirdtool.Card.domain.repository.CardRepository;
-import com.example.thirdtool.Card.presentation.dto.CardInfoDto;
+import com.example.thirdtool.Card.presentation.dto.CardRankInfoDto;
 import com.example.thirdtool.Card.presentation.dto.WriteCardDto;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.model.DeckMode;
 import com.example.thirdtool.Deck.domain.repository.DeckRepository;
-import com.example.thirdtool.infra.S3.S3StorageAdapter;
 import com.example.thirdtool.infra.adapter.FileStoragePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,25 +34,31 @@ public class CardService {
     private final DeckRepository deckRepository;
     private final FileStoragePort fileStoragePort;
     private final CardRankRepository cardRankRepository;
+    private final CardSearchService cardSearchService;
 
 
     //카드 만들기
     @Transactional
-    public void createCard(Long deckId, WriteCardDto writeCardDto) {
+    public Card createCard(Long deckId, WriteCardDto writeCardDto) {
+        log.info("[CardService] 🧩 createCard 호출 - deckId={}, DTO={}", deckId, writeCardDto);
 
         Deck deck = deckRepository.findById(deckId)
                                   .orElseThrow(() -> new BusinessException(ErrorCode.DECK_NOT_FOUND));
 
-        Card card = Card.of(
-                writeCardDto.question(),
-                writeCardDto.answer(),
-                deck);
+        String q = writeCardDto.getQuestion();
+        String a = writeCardDto.getAnswer();
+        log.info("[CardService] 🧠 DTO 값 확인 - question='{}', answer='{}'", q, a);
+
+        if (q == null || a == null) {
+            log.warn("[CardService] ⚠️ question 또는 answer가 null입니다. 클라이언트에서 전달 확인 필요!");
+        }
+
+        Card card = Card.of(q, a, deck);
 
         // ✅ 질문 이미지 여러 개 처리
-        if (writeCardDto.questionImages() != null && !writeCardDto.questionImages().isEmpty()) {
+        if (writeCardDto.getQuestionImages() != null && !writeCardDto.getQuestionImages().isEmpty()) {
             int sequence = 1;
-
-            for (MultipartFile file : writeCardDto.questionImages()) {
+            for (MultipartFile file : writeCardDto.getQuestionImages()) {
                 if (file != null && !file.isEmpty()) {
                     String uploadedUrl = fileStoragePort.uploadFile(file, "question");
                     CardImage questionImage = CardImage.of(card, uploadedUrl, ImageType.QUESTION, sequence++);
@@ -62,9 +68,9 @@ public class CardService {
         }
 
         // ✅ 답변 이미지 여러 개 처리
-        if (writeCardDto.answerImages() != null && !writeCardDto.answerImages().isEmpty()) {
+        if (writeCardDto.getAnswerImages() != null && !writeCardDto.getAnswerImages().isEmpty()) {
             int sequence = 1;
-            for (MultipartFile file : writeCardDto.answerImages()) {
+            for (MultipartFile file : writeCardDto.getAnswerImages()) {
                 if (file != null && !file.isEmpty()) {
                     String uploadedUrl = fileStoragePort.uploadFile(file, "answer");
                     CardImage answerImage = CardImage.of(card, uploadedUrl, ImageType.ANSWER, sequence++);
@@ -72,23 +78,34 @@ public class CardService {
                 }
             }
         }
-        // card 객체에 만들어서 한번에 다 집어넣었다.
-        cardRepository.save(card);
+
+        // ✅ DB 저장
+        Card savedCard = cardRepository.save(card);
+
+        // ✅ Elasticsearch 인덱싱 (실패해도 트랜잭션 영향 X)
+        try {
+            CardDocument doc = CardDocument.from(savedCard);
+            cardSearchService.indexCard(doc);
+        } catch (Exception e) {
+            log.error("[Elasticsearch] 인덱싱 실패 - cardId: {}, 이유: {}", savedCard.getId(), e.getMessage());
+        }
+
+        // 🔙 생성된 카드 반환
+        return savedCard;
     }
 
     @Transactional
-    public void createCards(Long deckId, List<WriteCardDto> dtos) {
+    public List<Card> createCards(Long deckId, List<WriteCardDto> dtos) {
         Deck deck = deckRepository.findById(deckId)
                                   .orElseThrow(() -> new BusinessException(ErrorCode.DECK_NOT_FOUND));
 
         List<Card> cards = dtos.stream()
                                .map(dto -> {
-                                   Card card = Card.of(dto.question(), dto.answer(), deck);
+                                   Card card = Card.of(dto.getQuestion(), dto.getAnswer(), deck);
 
-                                   // ✅ 질문 이미지 여러 개 처리
-                                   if (dto.questionImages() != null && !dto.questionImages().isEmpty()) {
+                                   if (dto.getQuestionImages() != null && !dto.getQuestionImages().isEmpty()) {
                                        int sequence = 1;
-                                       for (MultipartFile file : dto.questionImages()) {
+                                       for (MultipartFile file : dto.getQuestionImages()) {
                                            if (file != null && !file.isEmpty()) {
                                                String uploadedUrl = fileStoragePort.uploadFile(file, "question");
                                                CardImage questionImage = CardImage.of(card, uploadedUrl, ImageType.QUESTION, sequence++);
@@ -97,10 +114,9 @@ public class CardService {
                                        }
                                    }
 
-                                   // ✅ 답변 이미지 여러 개 처리
-                                   if (dto.answerImages() != null && !dto.answerImages().isEmpty()) {
+                                   if (dto.getAnswerImages() != null && !dto.getAnswerImages().isEmpty()) {
                                        int sequence = 1;
-                                       for (MultipartFile file : dto.answerImages()) {
+                                       for (MultipartFile file : dto.getAnswerImages()) {
                                            if (file != null && !file.isEmpty()) {
                                                String uploadedUrl = fileStoragePort.uploadFile(file, "answer");
                                                CardImage answerImage = CardImage.of(card, uploadedUrl, ImageType.ANSWER, sequence++);
@@ -113,7 +129,17 @@ public class CardService {
                                })
                                .toList();
 
-        cardRepository.saveAll(cards);
+        List<Card> savedCards = cardRepository.saveAll(cards);
+
+        savedCards.forEach(card -> {
+            try {
+                cardSearchService.indexCard(CardDocument.from(card));
+            } catch (Exception e) {
+                log.error("[Elasticsearch] 일괄 인덱싱 실패 - cardId: {}, 이유: {}", card.getId(), e.getMessage());
+            }
+        });
+
+        return savedCards;
     }
 
     // ✅ 카드 수정하기
@@ -123,12 +149,12 @@ public class CardService {
                                   .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
 
         // ✅ 텍스트 업데이트
-        card.updateCard(dto.question(), dto.answer());
+        card.updateCard(dto.getQuestion(), dto.getAnswer());
 
         // ✅ 질문 이미지 여러 개 처리
-        if (dto.questionImages() != null && !dto.questionImages().isEmpty()) {
+        if (dto.getQuestionImages() != null && !dto.getQuestionImages().isEmpty()) {
             int sequence = 1;
-            for (MultipartFile file : dto.questionImages()) {
+            for (MultipartFile file : dto.getQuestionImages()) {
                 if (file != null && !file.isEmpty()) {
                     String uploadedUrl = fileStoragePort.uploadFile(file, "question");
                     CardImage questionImage = CardImage.of(card, uploadedUrl, ImageType.QUESTION, sequence++);
@@ -138,15 +164,22 @@ public class CardService {
         }
 
         // ✅ 답변 이미지 여러 개 처리
-        if (dto.answerImages() != null && !dto.answerImages().isEmpty()) {
+        if (dto.getAnswerImages() != null && !dto.getAnswerImages().isEmpty()) {
             int sequence = 1;
-            for (MultipartFile file : dto.answerImages()) {
+            for (MultipartFile file : dto.getAnswerImages()) {
                 if (file != null && !file.isEmpty()) {
                     String uploadedUrl = fileStoragePort.uploadFile(file, "answer");
                     CardImage answerImage = CardImage.of(card, uploadedUrl, ImageType.ANSWER, sequence++);
                     card.addImage(answerImage);
                 }
             }
+        }
+
+        // ✅ Elasticsearch 문서도 갱신
+        try {
+            cardSearchService.indexCard(CardDocument.from(card));
+        } catch (Exception e) {
+            log.error("[Elasticsearch] 문서 업데이트 실패 - cardId: {}, 이유: {}", card.getId(), e.getMessage());
         }
     }
 
@@ -156,12 +189,19 @@ public class CardService {
 
         Card card = cardRepository.findById(cardId)
                                   .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
+        // ✅ 실제 삭제 대신 updatedDate를 null로 설정
+        card.markAsDeleted();
 
         // ✅ 카드에 연결된 이미지 S3 삭제
         card.getImages().forEach(image -> fileStoragePort.deleteFile(image.getImageUrl()));
 
-        // ✅ Cascade + orphanRemoval 로 DB 정리
-        cardRepository.delete(card);
+
+        // elasticSearch도 동기화
+        try {
+            cardSearchService.deleteIndex(cardId);
+        } catch (Exception e) {
+            log.warn("[Elasticsearch] 인덱스 삭제 실패 - cardId: {}", cardId);
+        }
     }
 
 
@@ -194,12 +234,12 @@ public class CardService {
 
 
     @Transactional(readOnly = true)
-    public Slice<CardInfoDto> getCardsByRank(Long userId,
-                                             Long deckId,
-                                             DeckMode mode,
-                                             CardRankType rankName,
-                                             int page,
-                                             int size) {
+    public Slice<CardRankInfoDto> getCardsByRank(Long userId,
+                                                 Long deckId,
+                                                 DeckMode mode,
+                                                 CardRankType rankName,
+                                                 int page,
+                                                 int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
         // ✅ 1️⃣ 유저의 랭크 범위 조회
         CardRank rank = cardRankRepository.findByUserIdAndName(userId, rankName.name())
@@ -207,7 +247,7 @@ public class CardService {
         int minScore = rank.getMinScore();
         int maxScore = rank.getMaxScore();
 
-        Slice<CardInfoDto> cards=cardRepository.findCardsByScoreRange(userId, deckId, mode, minScore, maxScore, pageable);
+        Slice<CardRankInfoDto> cards=cardRepository.findCardsByScoreRange(userId, deckId, mode, minScore, maxScore, pageable);
 
         return cards;
     }

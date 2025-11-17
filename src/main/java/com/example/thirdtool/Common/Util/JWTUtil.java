@@ -1,4 +1,4 @@
-package com.example.thirdtool.Common.security.Util;
+package com.example.thirdtool.Common.Util;
 
 
 import io.jsonwebtoken.Claims;

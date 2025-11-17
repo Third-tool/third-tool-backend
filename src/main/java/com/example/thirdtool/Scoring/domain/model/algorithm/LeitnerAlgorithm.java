@@ -4,13 +4,21 @@ package com.example.thirdtool.Scoring.domain.model.algorithm;
 import com.example.thirdtool.Card.domain.model.FeedbackType;
 import com.example.thirdtool.Scoring.domain.model.LearningProfile;
 import com.example.thirdtool.Scoring.domain.model.LeitnerLearningProfile;
+import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class LeitnerAlgorithm implements ScoringAlgorithm {
 
     @Override
     public void updateScore(LearningProfile profile, FeedbackType feedback) {
+        log.debug("[LeitnerAlgorithm] 입력 프로필 클래스: {}", profile.getClass().getName());
+        log.debug("[LeitnerAlgorithm] 알고리즘 타입: {}", profile.getAlgorithmType());
+        log.debug("[LeitnerAlgorithm] Hibernate 프록시 여부: {}", Hibernate.isInitialized(profile) ? "초기화됨" : "프록시 객체");
+
+
         if (!(profile instanceof LeitnerLearningProfile leitner)) {
             throw new IllegalArgumentException("Leitner 알고리즘은 LeitnerLearningProfile에만 적용 가능합니다.");
         }
@@ -45,5 +53,7 @@ public class LeitnerAlgorithm implements ScoringAlgorithm {
 
         // ✅ LeitnerLearningProfile 상태 갱신
         leitner.applyScore(newScore, newRepetition, newEasinessFactor);
+        log.debug("[LeitnerAlgorithm] ✅ update 완료 - newScore={}, repetition={}, EF={}",
+                newScore, newRepetition, newEasinessFactor);
     }
 }

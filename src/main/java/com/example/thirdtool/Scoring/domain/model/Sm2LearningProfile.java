@@ -46,4 +46,9 @@ public class Sm2LearningProfile extends LearningProfile {
         this.repetition = 0;
         this.easinessFactor = 2.5;
     }
+
+    @Override
+    public String getAlgorithmType() {
+        return "SM2";
+    }
 }

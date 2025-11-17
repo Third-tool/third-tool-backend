@@ -4,7 +4,7 @@ import com.example.thirdtool.Common.security.auth.RefreshEntity;
 import com.example.thirdtool.Common.security.auth.RefreshRepository;
 import com.example.thirdtool.Common.security.auth.dto.JWTResponseDTO;
 import com.example.thirdtool.Common.security.auth.dto.RefreshRequestDTO;
-import com.example.thirdtool.Common.security.Util.JWTUtil;
+import com.example.thirdtool.Common.Util.JWTUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

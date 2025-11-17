@@ -133,6 +133,8 @@ public class SecurityConfig {
                                 .requestMatchers(AUTH_ALLOWLIST).permitAll()
                                 .requestMatchers(
                                         "/swagger-ui/**",
+                                        "/oauth2/**",
+                                        "/social/**",
                                         "/health",
                                         "/swagger-ui.html",
                                         "/v3/api-docs/**",

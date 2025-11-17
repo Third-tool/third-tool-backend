@@ -1,8 +1,7 @@
 package com.example.thirdtool.Card.domain.repository;
 
 import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.model.CardRankType;
-import com.example.thirdtool.Card.presentation.dto.CardInfoDto;
+import com.example.thirdtool.Card.presentation.dto.CardRankInfoDto;
 import com.example.thirdtool.Deck.domain.model.DeckMode;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -11,12 +10,12 @@ import java.util.List;
 
 public interface CardRepositoryCustom {
 
-    public Slice<CardInfoDto> findCardsByScoreRange(Long userId,
-                                                    Long deckId,
-                                                    DeckMode mode,
-                                                    int minScore,
-                                                    int maxScore,
-                                                    Pageable pageable);
+    public Slice<CardRankInfoDto> findCardsByScoreRange(Long userId,
+                                                        Long deckId,
+                                                        DeckMode mode,
+                                                        int minScore,
+                                                        int maxScore,
+                                                        Pageable pageable);
 
     /**
      * ✅ 5️⃣ 랭크 + 모드 기반으로 상위 N개 카드 조회 (3Day용)

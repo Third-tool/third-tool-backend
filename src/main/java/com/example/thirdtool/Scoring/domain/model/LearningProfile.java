@@ -23,9 +23,9 @@ public abstract class LearningProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "card_id", nullable = false)
     @JsonBackReference
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // Hibernate Proxy 무시
-    @OneToOne(mappedBy = "learningProfile")
     private Card card;
 
     protected int score;
@@ -85,4 +85,6 @@ public abstract class LearningProfile {
     public void linkToCard(Card card) {
         this.card = card;
     }
+
+    public abstract String getAlgorithmType();
 }

@@ -4,6 +4,7 @@ import com.example.thirdtool.Card.domain.model.ImageType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.Collections;
 import java.util.List;
 
 @Getter
@@ -13,6 +14,11 @@ public class CardImageGroupDto {
     private List<CardImageDto> answerImages;
 
     public static CardImageGroupDto from(List<CardImageDto> allImages) {
+
+        if (allImages == null || allImages.isEmpty()) {
+            return new CardImageGroupDto(Collections.emptyList(), Collections.emptyList());
+        }
+
         List<CardImageDto> questionImages = allImages.stream()
                                                      .filter(img -> img.imageType() == ImageType.QUESTION)
                                                      .toList();

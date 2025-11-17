@@ -1,0 +1,23 @@
+services:
+  elasticsearch:
+    image: third-tool-elasticsearch-nori          # ✅ 로컬에서 직접 빌드한 이미지
+    container_name: third-tool-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false   # 보안 자동등록 비활성화
+      - xpack.ml.enabled=false
+      - xpack.watcher.enabled=false
+      - cluster.name=third-tool-cluster
+      - node.name=third-tool-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data      # ✅ 인덱스 데이터 영속화
+    deploy:
+      resources:
+        limits:
+          memory: 2g                              # Docker Desktop 환경 기준 안정적
+    networks:
+      - third-tool-net

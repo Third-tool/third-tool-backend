@@ -1,16 +1,14 @@
 package com.example.thirdtool.Deck.presentation.controller;
 
 import com.example.thirdtool.Deck.application.service.DeckQueryService;
+import com.example.thirdtool.Deck.presentation.dto.DeckRecentResponseDto;
 import com.example.thirdtool.Deck.presentation.dto.DeckResponseDto;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -46,4 +44,21 @@ public class DeckQueryController {
         log.info("[DeckQueryController] 최근 덱 조회 요청 - userId={}", user.getId());
         return ResponseEntity.ok(deckQueryService.getRecentDecks(user.getId()));
     }
+
+    // ✅ 가장 최근 덱 1개
+    @GetMapping("/recent/top")
+    public ResponseEntity<DeckRecentResponseDto> getRecentTop(@AuthenticationPrincipal UserEntity user) {
+        return deckQueryService.getMostRecentDeck(user.getId())
+                               .map(ResponseEntity::ok)
+                               .orElseGet(() -> ResponseEntity.noContent().build());
+
+    }
+    // ✅ lastAccessed 즉시 갱신(Continue 진입 시 호출)
+    @PostMapping("/{deckId}/touch")
+    public ResponseEntity<Void> touch(@AuthenticationPrincipal UserEntity user,
+                                      @PathVariable Long deckId) {
+        deckQueryService.touchLastAccessed(user.getId(), deckId);
+        return ResponseEntity.noContent().build();
+    }
+
 }

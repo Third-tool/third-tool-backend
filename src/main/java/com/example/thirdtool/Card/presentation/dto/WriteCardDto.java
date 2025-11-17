@@ -1,12 +1,18 @@
 package com.example.thirdtool.Card.presentation.dto;
 
+import lombok.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-public record WriteCardDto(
-        String question,
-        String answer,
-        List<MultipartFile> questionImages,  // 질문 이미지 여러 개
-        List<MultipartFile> answerImages     // 답변 이미지 여러 개
-) { }
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString
+public class WriteCardDto {
+    private String question;
+    private String answer;
+    private List<MultipartFile> questionImages;
+    private List<MultipartFile> answerImages;
+}

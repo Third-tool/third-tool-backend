@@ -44,6 +44,8 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+
+
       # 7️⃣ Docker 이미지 빌드 (우리 Dockerfile 기반)
       - name: Build Docker image
         run: docker build -t third-tool-server -f ./Dockerfile-dev .
@@ -55,6 +57,59 @@ jobs:
       # 9️⃣ ECR에 이미지 푸시
       - name: Push to Amazon ECR
         run: docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+
+      # ===================================================
+      # 🧩 Elasticsearch Docker 이미지 (Nori) — 변경 시에만 새로 빌드
+      # ===================================================
+
+      - name: Check if Elasticsearch Dockerfile changed
+        id: es-change
+        run: |
+          echo "🔍 Checking changes for Dockerfile-elasticsearch..."
+          
+          # github.event.before ~ github.sha 사이 변경 파일 확인
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} || true)
+          echo "Changed files between commits:"
+          echo "$CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -q "Dockerfile-elasticsearch"; then
+            echo "✅ Dockerfile-elasticsearch 변경 감지: 새 ES 이미지를 빌드합니다."
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ Dockerfile-elasticsearch 변경 없음: 기존 이미지 재사용 로직 사용."
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      # 9-2️⃣ ES 이미지 빌드/재사용 로직
+      - name: Build or Reuse Elasticsearch Docker image (Nori)
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ES_CHANGED: ${{ steps.es-change.outputs.changed }}
+        run: |
+          echo "ES_CHANGED flag = $ES_CHANGED"
+
+          build_and_push() {
+            echo "⚙️ Building new Elasticsearch (Nori) image..."
+            docker build -t third-tool-elasticsearch -f ./Dockerfile-elasticsearch .
+            docker tag third-tool-elasticsearch:latest "$ECR_REGISTRY/third-tool-elasticsearch:latest"
+            echo "🚀 Pushing new Elasticsearch image to ECR..."
+            docker push "$ECR_REGISTRY/third-tool-elasticsearch:latest"
+          }
+
+          if [ "$ES_CHANGED" = "true" ]; then
+            # 🔥 Dockerfile-elasticsearch가 변경된 경우: 무조건 새 빌드 + 푸시
+            echo "🔄 Dockerfile-elasticsearch 변경됨 → 새 이미지 빌드 & 푸시"
+            build_and_push
+          else
+            # 변경 없을 때: ECR에 기존 이미지가 있으면 그대로 사용, 없으면 최초 1회 빌드
+            echo "🔍 Dockerfile-elasticsearch 변경 없음 → 기존 이미지 존재 여부 확인"
+            if docker pull "$ECR_REGISTRY/third-tool-elasticsearch:latest"; then
+              echo "✅ Existing Elasticsearch image found in ECR. Reusing it."
+            else
+              echo "⚠️ No existing Elasticsearch image found in ECR. Building a new one..."
+              build_and_push
+            fi
+          fi
 
       # 🔟 EC2 배포 (SSH)
       - name: Deploy to EC2 via SSH

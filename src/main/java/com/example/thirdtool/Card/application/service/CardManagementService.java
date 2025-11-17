@@ -63,15 +63,5 @@ public class CardManagementService {
         return cardRepository.bulkMove(cardIds, toDeckId);
     }
 
-    // 검색/필터
-    @Transactional(readOnly = true)
-    public Page<Card> search(Long userId,
-                             Long deckId,
-                             DeckMode mode,
-                             String rankName,
-                             String q,
-                             Pageable pageable) {
-        return cardRepository.search(userId, deckId, mode, rankName, q, pageable);
-    }
 
 }

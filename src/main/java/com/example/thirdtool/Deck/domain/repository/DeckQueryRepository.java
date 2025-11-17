@@ -40,5 +40,6 @@ public class DeckQueryRepository {
                 .where(deck.user.eq(user))
                 .groupBy(deck.id, deck.name)
                 .fetch();
+
     }
 }

@@ -16,6 +16,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -29,8 +30,14 @@ public class Card extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Lob
     private String question;
+
+    @Lob
     private String answer;
+
+    private boolean deleted = false;
+    private LocalDateTime deletedAt;                // ✅ 삭제 시각 (optional)
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
@@ -41,10 +48,8 @@ public class Card extends BaseEntity {
     private List<CardImage> images = new ArrayList<>();
 
     // ✅ Card 하나당 반드시 하나의 LearningState 보유
+    @OneToOne(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // 프록시 무시
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "learning_state_id")
     private LearningProfile learningProfile;
 
 
@@ -56,30 +61,26 @@ public class Card extends BaseEntity {
         this.learningProfile = learningProfile;
     }
 
-    public void registerLearningProfile(LearningProfile profile) {
-        this.learningProfile = profile;
-        if (profile != null) {
-            profile.linkToCard(this);
-        }
-    }
 
     // ✅ 정적 팩토리 메서드
     public static Card of(String question, String answer, Deck deck) {
-        String algorithmType = deck.getScoringAlgorithmType();
+        String algorithmType = deck.getScoringAlgorithmType().trim().toUpperCase();
+
         LearningProfile profile = switch (algorithmType) {
             case "SM2"     -> Sm2LearningProfile.init();
             case "LEITNER" -> LeitnerLearningProfile.init();
             default -> throw new IllegalArgumentException("지원하지 않는 알고리즘: " + algorithmType);
         };
 
-        Card card=Card.builder()
-                   .question(question)
-                   .answer(answer)
-                   .deck(deck)
-                   .learningProfile(null)
-                   .build();
+        // 🔹 builder 시점부터 learningProfile 주입
+        Card card = Card.builder()
+                        .question(question)
+                        .answer(answer)
+                        .deck(deck)
+                        .learningProfile(profile)
+                        .build();
 
-        card.registerLearningProfile(profile);
+        profile.linkToCard(card);
         return card;
     }
 
@@ -144,6 +145,11 @@ public class Card extends BaseEntity {
                    .build();
     }
 
+    // ✅ Soft Delete 동작
+    public void markAsDeleted() {
+        this.deleted = true;
+        this.deletedAt = LocalDateTime.now();
+    }
 
 
 }

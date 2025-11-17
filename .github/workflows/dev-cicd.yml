@@ -1,4 +1,4 @@
-name: Deploy To EC2(dev 버전)
+name: Deploy To EC2 (dev-version)
 
 on:
   push:
@@ -6,9 +6,68 @@ on:
       - main
 
 jobs:
-  deploy:
+  # 1️⃣ 변경 사항 감지 Job
+  # 이 Job은 항상 실행되어 어떤 파일 그룹이 변경되었는지 확인합니다.
+  filter:
     runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      es: ${{ steps.filter.outputs.es }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      - name: Check for file changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # base: 'main' # 기본 브랜치와 비교
+          filters: |
+            # ⬇️ 'app' 그룹: 이 파일들이 변경되면 app=true가 됩니다.
+            app:
+              - 'src/**'
+              - 'build.gradle'
+              - 'gradlew'
+              - 'Dockerfile-dev'
+            
+            # ⬇️ 'es' 그룹: 이 파일이 변경되면 es=true가 됩니다.
+            es:
+              - 'Dockerfile-elasticsearch'
+
+  # 2️⃣ ES 이미지 빌드 Job
+  # 'filter' Job의 결과, 'es' 그룹이 변경되었을 때만 실행됩니다.
+  build-es-image:
+    runs-on: ubuntu-latest
+    needs: filter # 'filter' Job이 완료된 후에 실행
+    if: needs.filter.outputs.es == 'true' # 'es' 그룹이 변경되었을 때만!
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-northeast-2
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push ES Image
+        run: |
+          echo "✅ Dockerfile-elasticsearch 변경 감지: 새 ES 이미지를 빌드하고 ECR에 푸시합니다."
+          docker build -t third-tool-elasticsearch -f ./Dockerfile-elasticsearch .
+          docker tag third-tool-elasticsearch:latest ${{ steps.login-ecr.outputs.registry }}/third-tool-server:elasticsearch
+          docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:elasticsearch
+
+  # 3️⃣ Spring Boot 앱 빌드 및 배포 Job
+  # 'filter' Job의 결과, 'app' 그룹이 변경되었을 때만 실행됩니다.
+  deploy-app:
+    runs-on: ubuntu-latest
+    needs: filter # 'filter' Job이 완료된 후에 실행
+    if: needs.filter.outputs.app == 'true' # 'app' 그룹이 변경되었을 때만!
     steps:
       # 1️⃣ 소스 코드 체크아웃
       - name: Checkout repository
@@ -27,7 +86,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # 4️⃣ Gradle 빌드 (테스트 포함)
+      # 4️⃣ Gradle 빌드
       - name: Build with Gradle
         run: ./gradlew clean build -x test
 
@@ -44,8 +103,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-
-
       # 7️⃣ Docker 이미지 빌드 (우리 Dockerfile 기반)
       - name: Build Docker image
         run: docker build -t third-tool-server -f ./Dockerfile-dev .
@@ -58,60 +115,8 @@ jobs:
       - name: Push to Amazon ECR
         run: docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
-      # ===================================================
-      # 🧩 Elasticsearch Docker 이미지 (Nori) — 변경 시에만 새로 빌드
-      # ===================================================
-
-      - name: Check if Elasticsearch Dockerfile changed
-        id: es-change
-        run: |
-          echo "🔍 Checking changes for Dockerfile-elasticsearch..."
-          
-          # github.event.before ~ github.sha 사이 변경 파일 확인
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} || true)
-          echo "Changed files between commits:"
-          echo "$CHANGED_FILES"
-
-          if echo "$CHANGED_FILES" | grep -q "Dockerfile-elasticsearch"; then
-            echo "✅ Dockerfile-elasticsearch 변경 감지: 새 ES 이미지를 빌드합니다."
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️ Dockerfile-elasticsearch 변경 없음: 기존 이미지 재사용 로직 사용."
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      # 9-2️⃣ ES 이미지 빌드/재사용 로직
-      - name: Build or Reuse Elasticsearch Docker image (Nori)
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ES_CHANGED: ${{ steps.es-change.outputs.changed }}
-        run: |
-          echo "ES_CHANGED flag = $ES_CHANGED"
-
-          build_and_push() {
-            echo "⚙️ Building new Elasticsearch (Nori) image..."
-            docker build -t third-tool-elasticsearch -f ./Dockerfile-elasticsearch .
-            docker tag third-tool-elasticsearch:latest "$ECR_REGISTRY/third-tool-elasticsearch:latest"
-            echo "🚀 Pushing new Elasticsearch image to ECR..."
-            docker push "$ECR_REGISTRY/third-tool-elasticsearch:latest"
-          }
-
-          if [ "$ES_CHANGED" = "true" ]; then
-            # 🔥 Dockerfile-elasticsearch가 변경된 경우: 무조건 새 빌드 + 푸시
-            echo "🔄 Dockerfile-elasticsearch 변경됨 → 새 이미지 빌드 & 푸시"
-            build_and_push
-          else
-            # 변경 없을 때: ECR에 기존 이미지가 있으면 그대로 사용, 없으면 최초 1회 빌드
-            echo "🔍 Dockerfile-elasticsearch 변경 없음 → 기존 이미지 존재 여부 확인"
-            if docker pull "$ECR_REGISTRY/third-tool-elasticsearch:latest"; then
-              echo "✅ Existing Elasticsearch image found in ECR. Reusing it."
-            else
-              echo "⚠️ No existing Elasticsearch image found in ECR. Building a new one..."
-              build_and_push
-            fi
-          fi
-
       # 🔟 EC2 배포 (SSH)
+      # (기존 스크립트와 동일)
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -125,7 +130,7 @@ jobs:
             cd /home/ubuntu/third-tool || mkdir -p /home/ubuntu/third-tool
             cd /home/ubuntu/third-tool
             
-  
+            
             docker compose down || true
             docker compose up -d
             
@@ -144,8 +149,8 @@ jobs:
             echo "🧹 Stopping and removing old Spring container..."
             docker stop third-tool-server || true
             docker rm third-tool-server || true
-     
-
+            
+            
             # 2️⃣ 최신 ECR 이미지 pull
             echo "📦 Pulling latest Spring image from ECR..."
             docker pull ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest

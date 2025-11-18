@@ -16,32 +16,10 @@ on:
         type: boolean
 
 jobs:
-  # 1️⃣ 변경 사항 감지 Job (Spring용)
-  #  - push 이벤트일 때만 실행
-  filter:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    outputs:
-      app: ${{ steps.filter.outputs.app }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check for file changes
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            app:
-              - 'src/**'
-              - 'build.gradle'
-              - 'gradlew'
-              - 'Dockerfile-dev'
-
-  # 2️⃣ Elasticsearch(Nori) 이미지 빌드 Job (수동 전용)
-  #  - workflow_dispatch 이고 build_es == true 일 때만 실행
+  # 1️⃣ Elasticsearch(Nori) 이미지 빌드 Job (수동 전용)
   build-es-image:
     runs-on: ubuntu-latest
+    # 수동 실행 + build_es == true 일 때만 실행
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_es == 'true'
     steps:
       - name: Checkout repository
@@ -66,12 +44,11 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/third-tool-server:elasticsearch
           docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:elasticsearch
 
-  # 3️⃣ Spring Boot 앱 빌드 및 배포 Job (main push 전용)
+  # 2️⃣ Spring Boot 앱 빌드 및 배포 Job (main push 전용)
   deploy-app:
     runs-on: ubuntu-latest
-    needs: filter
-    # push 이면서, app 관련 파일이 변경된 경우에만 배포
-    if: github.event_name == 'push' && needs.filter.outputs.app == 'true'
+    # main 으로 push 된 경우에는 항상 실행
+    if: github.event_name == 'push'
     steps:
       # 1️⃣ 소스 코드 체크아웃
       - name: Checkout repository

@@ -113,11 +113,8 @@ jobs:
 
             # 🔐 EC2 → ECR 로그인
             ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
-            aws ecr get-login-password --region ap-northeast-2 \
-              | docker login --username AWS --password-stdin $ECR_REGISTRY
 
             # 📦 compose에 정의된 이미지들 최신 버전으로 pull
-            echo "📦 docker compose pull..."
             docker compose pull || true
 
             # 🧹 기존 compose 서비스 정리 후 재시작 (mysql, redis, elasticsearch 등)

@@ -91,8 +91,7 @@ jobs:
 
       # 7️⃣ Spring 이미지 태그 지정
       - name: Tag Docker image
-        run: docker tag third-tool-server:latest \
-          ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+        run: docker tag third-tool-server:latest ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
       # 8️⃣ Spring 이미지 ECR 푸시
       - name: Push to Amazon ECR

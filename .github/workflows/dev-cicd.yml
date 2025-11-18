@@ -40,9 +40,10 @@ jobs:
         run: |
           echo "✅ (ES) Manual trigger detected → ES 이미지 빌드 & ECR 푸시"
           docker build -t third-tool-elasticsearch -f ./Dockerfile-elasticsearch .
+          # 🔥 ES 전용 리포지토리로 푸시 (third-tool-elaticsearch)
           docker tag third-tool-elasticsearch:latest \
-            ${{ steps.login-ecr.outputs.registry }}/third-tool-server:elasticsearch
-          docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:elasticsearch
+            ${{ steps.login-ecr.outputs.registry }}/third-tool-elaticsearch:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-elaticsearch:latest
 
   # 2️⃣ Spring Boot 앱 빌드 및 배포 Job (main push 전용)
   deploy-app:
@@ -165,8 +166,6 @@ jobs:
               -e TZ=Asia/Seoul \
               $ECR_REGISTRY/third-tool-server:latest
 
-            # 🔍 상태 확인
             echo "🔍 Running containers..."
             docker ps
-
             echo "✅ Deployment completed successfully!"

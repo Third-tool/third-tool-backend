@@ -114,7 +114,6 @@ jobs:
 
             # 🔐 EC2 → ECR 로그인
             ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
-            echo "🔐 Logging in to ECR from EC2..."
             aws ecr get-login-password --region ap-northeast-2 \
               | docker login --username AWS --password-stdin $ECR_REGISTRY
 

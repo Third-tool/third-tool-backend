@@ -1,45 +1,48 @@
 name: Deploy To EC2 (dev-version)
 
 on:
+  # 👉 Spring 배포: main 브랜치 push 시 자동 실행
   push:
     branches:
       - main
 
+  # 👉 ES 이미지 빌드: Actions 탭에서 수동 실행
+  workflow_dispatch:
+    inputs:
+      build_es:
+        description: 'Build & push Elasticsearch (Nori) image to ECR'
+        required: true
+        default: false
+        type: boolean
+
 jobs:
-  # 1️⃣ 변경 사항 감지 Job
-  # 이 Job은 항상 실행되어 어떤 파일 그룹이 변경되었는지 확인합니다.
+  # 1️⃣ 변경 사항 감지 Job (Spring용)
+  #  - push 이벤트일 때만 실행
   filter:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       app: ${{ steps.filter.outputs.app }}
-      es: ${{ steps.filter.outputs.es }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Check for file changes
-        uses: dorny/paths-filter@v3
         id: filter
+        uses: dorny/paths-filter@v3
         with:
-          # base: 'main' # 기본 브랜치와 비교
           filters: |
-            # ⬇️ 'app' 그룹: 이 파일들이 변경되면 app=true가 됩니다.
             app:
               - 'src/**'
               - 'build.gradle'
               - 'gradlew'
               - 'Dockerfile-dev'
-            
-            # ⬇️ 'es' 그룹: 이 파일이 변경되면 es=true가 됩니다.
-            es:
-              - 'Dockerfile-elasticsearch'
 
-  # 2️⃣ ES 이미지 빌드 Job
-  # 'filter' Job의 결과, 'es' 그룹이 변경되었을 때만 실행됩니다.
+  # 2️⃣ Elasticsearch(Nori) 이미지 빌드 Job (수동 전용)
+  #  - workflow_dispatch 이고 build_es == true 일 때만 실행
   build-es-image:
     runs-on: ubuntu-latest
-    needs: filter # 'filter' Job이 완료된 후에 실행
-    if: needs.filter.outputs.es == 'true' # 'es' 그룹이 변경되었을 때만!
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_es == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,17 +60,18 @@ jobs:
 
       - name: Build and Push ES Image
         run: |
-          echo "✅ Dockerfile-elasticsearch 변경 감지: 새 ES 이미지를 빌드하고 ECR에 푸시합니다."
+          echo "✅ (ES) Manual trigger detected → ES 이미지 빌드 & ECR 푸시"
           docker build -t third-tool-elasticsearch -f ./Dockerfile-elasticsearch .
-          docker tag third-tool-elasticsearch:latest ${{ steps.login-ecr.outputs.registry }}/third-tool-server:elasticsearch
+          docker tag third-tool-elasticsearch:latest \
+            ${{ steps.login-ecr.outputs.registry }}/third-tool-server:elasticsearch
           docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:elasticsearch
 
-  # 3️⃣ Spring Boot 앱 빌드 및 배포 Job
-  # 'filter' Job의 결과, 'app' 그룹이 변경되었을 때만 실행됩니다.
+  # 3️⃣ Spring Boot 앱 빌드 및 배포 Job (main push 전용)
   deploy-app:
     runs-on: ubuntu-latest
-    needs: filter # 'filter' Job이 완료된 후에 실행
-    if: needs.filter.outputs.app == 'true' # 'app' 그룹이 변경되었을 때만!
+    needs: filter
+    # push 이면서, app 관련 파일이 변경된 경우에만 배포
+    if: github.event_name == 'push' && needs.filter.outputs.app == 'true'
     steps:
       # 1️⃣ 소스 코드 체크아웃
       - name: Checkout repository
@@ -86,11 +90,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # 4️⃣ Gradle 빌드
+      # 3️⃣ Gradle 빌드
       - name: Build with Gradle
         run: ./gradlew clean build -x test
 
-      # 5️⃣ AWS 접근 권한 설정
+      # 4️⃣ AWS 접근 권한 설정
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -98,25 +102,25 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      # 6️⃣ ECR 로그인
+      # 5️⃣ ECR 로그인
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 7️⃣ Docker 이미지 빌드 (우리 Dockerfile 기반)
+      # 6️⃣ Spring Docker 이미지 빌드
       - name: Build Docker image
         run: docker build -t third-tool-server -f ./Dockerfile-dev .
 
-      # 8️⃣ 이미지 태그 지정
+      # 7️⃣ Spring 이미지 태그 지정
       - name: Tag Docker image
-        run: docker tag third-tool-server:latest ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+        run: docker tag third-tool-server:latest \
+          ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
-      # 9️⃣ ECR에 이미지 푸시
+      # 8️⃣ Spring 이미지 ECR 푸시
       - name: Push to Amazon ECR
         run: docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
-      # 🔟 EC2 배포 (SSH)
-      # (기존 스크립트와 동일)
+      # 9️⃣ EC2 배포 (SSH)
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -129,54 +133,63 @@ jobs:
 
             cd /home/ubuntu/third-tool || mkdir -p /home/ubuntu/third-tool
             cd /home/ubuntu/third-tool
-            
-            
+
+            # 🔐 EC2 → ECR 로그인
+            ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+            echo "🔐 Logging in to ECR from EC2..."
+            aws ecr get-login-password --region ap-northeast-2 \
+              | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+            # 📦 compose에 정의된 이미지들 최신 버전으로 pull
+            echo "📦 docker compose pull..."
+            docker compose pull || true
+
+            # 🧹 기존 compose 서비스 정리 후 재시작 (mysql, redis, elasticsearch 등)
+            echo "🧹 docker compose 재시작..."
             docker compose down || true
             docker compose up -d
-            
-             # 2️⃣ DB 컨테이너가 완전히 준비될 때까지 대기
+
+            # ⏳ MySQL 준비 대기
             echo "⏳ Waiting for MySQL to be ready..."
             for i in {1..5}; do
               if docker exec local-mysql-db mysqladmin ping -h"localhost" --silent; then
                 echo "✅ MySQL is ready!"
                 break
               fi
-              echo "⏱️ MySQL not ready yet... ($i/15)"
+              echo "⏱️ MySQL not ready yet... ($i/5)"
               sleep 5
             done
 
-            # 1️⃣ 기존 컨테이너 정리
+            # 🧹 기존 Spring 컨테이너 정리
             echo "🧹 Stopping and removing old Spring container..."
             docker stop third-tool-server || true
             docker rm third-tool-server || true
-            
-            
-            # 2️⃣ 최신 ECR 이미지 pull
+
+            # 📦 최신 Spring 이미지 pull
             echo "📦 Pulling latest Spring image from ECR..."
-            docker pull ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+            docker pull $ECR_REGISTRY/third-tool-server:latest
 
-
-            # 5️⃣ Spring 서버 실행 (Compose 네트워크에 연결)
+            # ⚙️ Spring 서버 실행 (third-tool-net 네트워크에 연결)
             echo "⚙️ Running Spring Boot container..."
             docker run -d \
-            --name third-tool-server \
-            --network third-tool_default \
-            -p 8080:8080 \
-            -v /home/ubuntu/third-tool/application.yml:/app/config/application.yml \
-            -e SPRING_PROFILES_ACTIVE=dev \
-            -e DB_NAME=${{ secrets.DB_NAME }} \
-            -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
-            -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
-            -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-            -e KAKAO_CLIENT_ID="${{ secrets.KAKAO_CLIENT_ID }}" \
-            -e KAKAO_CLIENT_SECRET="${{ secrets.KAKAO_CLIENT_SECRET }}" \
-            -e NAVER_CLIENT_ID="${{ secrets.NAVER_CLIENT_ID }}" \
-            -e NAVER_CLIENT_SECRET="${{ secrets.NAVER_CLIENT_SECRET }}" \
-            -e TZ=Asia/Seoul \
-            ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+              --name third-tool-server \
+              --network third-tool-net \
+              -p 8080:8080 \
+              -v /home/ubuntu/third-tool/application.yml:/app/config/application.yml \
+              -e SPRING_PROFILES_ACTIVE=dev \
+              -e DB_NAME="${{ secrets.DB_NAME }}" \
+              -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+              -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+              -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+              -e KAKAO_CLIENT_ID="${{ secrets.KAKAO_CLIENT_ID }}" \
+              -e KAKAO_CLIENT_SECRET="${{ secrets.KAKAO_CLIENT_SECRET }}" \
+              -e NAVER_CLIENT_ID="${{ secrets.NAVER_CLIENT_ID }}" \
+              -e NAVER_CLIENT_SECRET="${{ secrets.NAVER_CLIENT_SECRET }}" \
+              -e TZ=Asia/Seoul \
+              $ECR_REGISTRY/third-tool-server:latest
 
-            # 6️⃣ 상태 확인
-            echo "🔍 Checking running containers..."
+            # 🔍 상태 확인
+            echo "🔍 Running containers..."
             docker ps
 
             echo "✅ Deployment completed successfully!"

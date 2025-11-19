@@ -1,12 +1,12 @@
 name: Deploy To EC2 (dev-version)
 
 on:
-  # 👉 Spring 배포: main 브랜치 push 시 자동 실행
+  # 👉 main 브랜치 push 시 Spring 서버 자동 배포
   push:
     branches:
       - main
 
-  # 👉 ES 이미지 빌드: Actions 탭에서 수동 실행
+  # 👉 수동 실행 시 ES 이미지 빌드 가능
   workflow_dispatch:
     inputs:
       build_es:
@@ -16,11 +16,13 @@ on:
         type: boolean
 
 jobs:
-  # 1️⃣ Elasticsearch(Nori) 이미지 빌드 Job (수동 전용)
+  # ======================================================
+  # 1️⃣ Elasticsearch(Nori) 이미지 빌드 (수동 전용)
+  # ======================================================
   build-es-image:
     runs-on: ubuntu-latest
-    # 수동 실행 + build_es == true 일 때만 실행
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_es == 'true'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,32 +40,30 @@ jobs:
 
       - name: Build and Push ES Image
         run: |
-          echo "✅ (ES) Manual trigger detected → ES 이미지 빌드 & ECR 푸시"
+          echo "🚀 Building Elasticsearch (Nori) Image..."
           docker build -t third-tool-elasticsearch -f ./Dockerfile-elasticsearch .
-          # 🔥 ES 전용 리포지토리로 푸시 (third-tool-elaticsearch)
           docker tag third-tool-elasticsearch:latest \
             ${{ steps.login-ecr.outputs.registry }}/third-tool-elaticsearch:latest
           docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-elaticsearch:latest
 
-  # 2️⃣ Spring Boot 앱 빌드 및 배포 Job (main push 전용)
+  # ======================================================
+  # 2️⃣ Spring Boot 서버 빌드 & EC2 배포
+  # ======================================================
   deploy-app:
     runs-on: ubuntu-latest
-    # main 으로 push 된 경우에는 항상 실행
     if: github.event_name == 'push'
+
     steps:
-      # 1️⃣ 소스 코드 체크아웃
+      # 1️⃣ 코드 체크아웃
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ JDK 21 설치
+      # 2️⃣ JDK 21 세팅
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-
-      - name: Check working directory
-        run: pwd && ls -R
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
@@ -72,7 +72,7 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean build -x test
 
-      # 4️⃣ AWS 접근 권한 설정
+      # 4️⃣ AWS 자격 증명
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -85,19 +85,19 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 6️⃣ Spring Docker 이미지 빌드
+      # 6️⃣ Spring Image Build
       - name: Build Docker image
         run: docker build -t third-tool-server -f ./Dockerfile-dev .
 
-      # 7️⃣ Spring 이미지 태그 지정
+      # 7️⃣ 태그 지정
       - name: Tag Docker image
         run: docker tag third-tool-server:latest ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
-      # 8️⃣ Spring 이미지 ECR 푸시
+      # 8️⃣ Push Image to ECR
       - name: Push to Amazon ECR
         run: docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
-      # 9️⃣ EC2 배포 (SSH)
+      # 9️⃣ EC2 SSH 배포
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -111,25 +111,21 @@ jobs:
             cd /home/ubuntu/third-tool || mkdir -p /home/ubuntu/third-tool
             cd /home/ubuntu/third-tool
 
-            # 🔐 EC2 → ECR 로그인
+            # ECR 로그인
             ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
 
-            # 📦 compose에 정의된 이미지들 최신 버전으로 pull
+            # compose 기반 infra 업데이트 (mysql, redis, es)
             docker compose pull || true
-
-            # 🧹 기존 compose 서비스 정리 후 재시작 (mysql, redis, elasticsearch 등)
-            echo "🧹 docker compose 재시작..."
             docker compose down || true
             docker compose up -d
 
-            # ⏳ MySQL 준비 대기
             echo "⏳ Waiting for MySQL to be ready..."
             for i in {1..5}; do
               if docker exec local-mysql-db mysqladmin ping -h"localhost" --silent; then
                 echo "✅ MySQL is ready!"
                 break
               fi
-              echo "⏱️ MySQL not ready yet... ($i/5)"
+              echo "⏱️ retry ($i/5)"
               sleep 5
             done
 
@@ -139,24 +135,22 @@ jobs:
                 echo "✅ Elasticsearch is ready!"
                 break
               fi
-              echo "⏱️ Elasticsearch not ready yet... ($i/12)"
+              echo "⏱️ retry ($i/12)"
               sleep 5
             done
-      
-  
-  # 🧹 기존 Spring 컨테이너 정리
-            echo "🧹 Stopping and removing old Spring container..."
+
+            # 기존 spring 컨테이너 삭제
             docker stop third-tool-server || true
             docker rm third-tool-server || true
 
-            # 📦 최신 Spring 이미지 pull
-            echo "📦 Pulling latest Spring image from ECR..."
+            echo "📦 Pulling latest Spring image..."
             docker pull $ECR_REGISTRY/third-tool-server:latest
-                    
+
+            # 🧹 쓰레기 이미지 자동 삭제
             echo "🧹 Cleaning unused Docker images..."
             docker image prune -af
 
-            # ⚙️ Spring 서버 실행 (third-tool-net 네트워크에 연결)
+            # Spring Boot 실행
             echo "⚙️ Running Spring Boot container..."
             docker run -d \
               --name third-tool-server \
@@ -175,6 +169,7 @@ jobs:
               -e TZ=Asia/Seoul \
               $ECR_REGISTRY/third-tool-server:latest
 
-            echo "🔍 Running containers..."
+            echo "🔍 Containers running:"
             docker ps
-            echo "✅ Deployment completed successfully!"
+
+            echo "🎉 Deployment Success!"

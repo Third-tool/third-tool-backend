@@ -28,6 +28,10 @@ public class CardController {
     private final CardService cardService;
     private final CardImageService cardImageService;
 
+    @GetMapping("/hello")
+    public String getHello() {
+        return "hello";
+    }
 
     //카드 단건 조회 api
     @GetMapping("/{cardId}")

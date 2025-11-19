@@ -148,7 +148,7 @@ jobs:
               --name third-tool-server \
               --network third-tool-net \
               -p 8080:8080 \
-              -v /home/ubuntu/third-tool/application.yml:/config/application.yml \
+              -v /home/ubuntu/third-tool/application.yml:/app/config/application.yml\
               -e SPRING_PROFILES_ACTIVE=dev \
               -e DB_NAME="${{ secrets.DB_NAME }}" \
               -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \

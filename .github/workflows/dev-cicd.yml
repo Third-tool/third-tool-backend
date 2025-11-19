@@ -19,7 +19,6 @@ jobs:
   # 1️⃣ Elasticsearch(Nori) 이미지 빌드 Job (수동 전용)
   build-es-image:
     runs-on: ubuntu-latest
-    # 수동 실행 + build_es == true 일 때만 실행
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_es == 'true'
     steps:
       - name: Checkout repository
@@ -29,6 +28,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ap-northeast-2
+          # ✅ 보안 강화: AWS 키는 Secrets 사용
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -40,7 +40,6 @@ jobs:
         run: |
           echo "✅ (ES) Manual trigger detected → ES 이미지 빌드 & ECR 푸시"
           docker build -t third-tool-elasticsearch -f ./Dockerfile-elasticsearch .
-          # 🔥 ES 전용 리포지토리로 푸시 (third-tool-elaticsearch)
           docker tag third-tool-elasticsearch:latest \
             ${{ steps.login-ecr.outputs.registry }}/third-tool-elaticsearch:latest
           docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-elaticsearch:latest
@@ -48,7 +47,6 @@ jobs:
   # 2️⃣ Spring Boot 앱 빌드 및 배포 Job (main push 전용)
   deploy-app:
     runs-on: ubuntu-latest
-    # main 으로 push 된 경우에는 항상 실행
     if: github.event_name == 'push'
     steps:
       # 1️⃣ 소스 코드 체크아웃
@@ -62,9 +60,6 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Check working directory
-        run: pwd && ls -R
-
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
@@ -72,7 +67,7 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean build -x test
 
-      # 4️⃣ AWS 접근 권한 설정
+      # 4️⃣ AWS 접근 권한 설정 (ECR 접속용)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -85,19 +80,17 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 6️⃣ Spring Docker 이미지 빌드
-      - name: Build Docker image
-        run: docker build -t third-tool-server -f ./Dockerfile-dev .
+      # 6️⃣ Spring Docker 이미지 빌드 및 태그 지정
+      - name: Build & Tag Docker image
+        run: |
+          docker build -t third-tool-server -f ./Dockerfile-dev .
+          docker tag third-tool-server:latest ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
-      # 7️⃣ Spring 이미지 태그 지정
-      - name: Tag Docker image
-        run: docker tag third-tool-server:latest ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
-
-      # 8️⃣ Spring 이미지 ECR 푸시
+      # 7️⃣ Spring 이미지 ECR 푸시
       - name: Push to Amazon ECR
         run: docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
-      # 9️⃣ EC2 배포 (SSH)
+      # 8️⃣ EC2 배포 (SSH)
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -111,18 +104,19 @@ jobs:
             cd /home/ubuntu/third-tool || mkdir -p /home/ubuntu/third-tool
             cd /home/ubuntu/third-tool
 
-            # 🔐 EC2 → ECR 로그인
+            # 🔐 ECR 레지스트리 로그인
             ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+            # EC2에서 ECR 로그인 (이 스텝은 configure aws credentials가 없으므로 수동 로그인 필요)
+            aws configure set default.region ap-northeast-2
+            aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin $ECR_REGISTRY
 
-            # 📦 compose에 정의된 이미지들 최신 버전으로 pull
-            docker compose pull || true
-
-            # 🧹 기존 compose 서비스 정리 후 재시작 (mysql, redis, elasticsearch 등)
+            # 📦 compose에 정의된 이미지들 최신 버전으로 pull & 재시작
             echo "🧹 docker compose 재시작..."
             docker compose down || true
+            docker compose pull || true # 최신 이미지 pull
             docker compose up -d
 
-            # ⏳ MySQL 준비 대기
+            # ⏳ 1단계: MySQL 준비 대기
             echo "⏳ Waiting for MySQL to be ready..."
             for i in {1..5}; do
               if docker exec local-mysql-db mysqladmin ping -h"localhost" --silent; then
@@ -132,7 +126,20 @@ jobs:
               echo "⏱️ MySQL not ready yet... ($i/5)"
               sleep 5
             done
-
+            
+            # ⏳ 2단계: Elasticsearch 준비 대기 (Connection refused 문제 해결)
+            echo "⏳ Waiting for Elasticsearch to be ready..."
+            # 최대 60초 대기 (5초 * 12회)
+            for i in {1..12}; do 
+              # curl -s --fail: 접속 실패 시 0이 아닌 값 반환
+              if curl -s --fail http://localhost:9200/_cluster/health >/dev/null; then
+                echo "✅ Elasticsearch is ready!"  
+                break
+              fi
+              echo "⏱️ Elasticsearch not ready yet... ($i/12)"
+              sleep 5
+            done
+            
             # 🧹 기존 Spring 컨테이너 정리
             echo "🧹 Stopping and removing old Spring container..."
             docker stop third-tool-server || true
@@ -150,6 +157,7 @@ jobs:
               -p 8080:8080 \
               -v /home/ubuntu/third-tool/application.yml:/app/config/application.yml \
               -e SPRING_PROFILES_ACTIVE=dev \
+              -e SPRING_CONFIG_LOCATION=file:/app/config/application.yml \
               -e DB_NAME="${{ secrets.DB_NAME }}" \
               -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
               -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \

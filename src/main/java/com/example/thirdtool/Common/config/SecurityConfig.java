@@ -132,6 +132,7 @@ public class SecurityConfig {
         // ==============================
         http
                 .authorizeHttpRequests(auth -> auth
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 // ✅ 인증 없이 접근 가능한 화이트리스트
                                 .requestMatchers(AUTH_ALLOWLIST).permitAll()
                                 .requestMatchers(

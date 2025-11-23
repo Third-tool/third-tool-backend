@@ -18,7 +18,7 @@ public class MvcConfig implements WebMvcConfigurer {
                             "https://thirdstool.com",       // ✅ FE 배포 도메인
                             "https://www.thirdstool.com" // www 쓰면 추가
                                    )
-                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                     .allowCredentials(true)
                     .allowedHeaders("*")
                     .exposedHeaders("Set-Cookie", "Authorization");

@@ -5,6 +5,8 @@ import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.repository.DeckRepository;
 import com.example.thirdtool.Deck.presentation.dto.DeckCreateRequestDto;
+import com.example.thirdtool.Deck.presentation.dto.DeckNameUpdateRequestDto;
+import com.example.thirdtool.Deck.presentation.dto.DeckNameUpdateResponseDto;
 import com.example.thirdtool.Deck.presentation.dto.DeckResponseDto;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.repository.UserRepository;
@@ -86,15 +88,15 @@ public class DeckCommandService {
                    .toList();
     }
 
-    // ✅ 덱 수정
+    // ✅ 덱 이름만 수정
     @Transactional
-    public DeckResponseDto updateDeck(Long deckId, DeckCreateRequestDto dto) {
+    public DeckNameUpdateResponseDto updateDeckName(Long deckId, DeckNameUpdateRequestDto dto) {
         Deck deck = deckRepository.findById(deckId)
                                   .orElseThrow(() -> new BusinessException(ErrorCode.DECK_NOT_FOUND));
 
-        deck.updateName(dto.name());
+        deck.updateName(dto.name()); // 엔티티 내부에서 검증/정규화 해도 좋음
 
-        return DeckResponseDto.from(deck);// 트랜잭션 종료 시 자동 반영
+        return DeckNameUpdateResponseDto.from(deck); // 트랜잭션 종료 시 자동 반영
     }
 
     // ✅ 덱 삭제

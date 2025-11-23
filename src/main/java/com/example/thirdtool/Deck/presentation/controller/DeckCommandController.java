@@ -2,7 +2,10 @@ package com.example.thirdtool.Deck.presentation.controller;
 
 import com.example.thirdtool.Deck.application.service.DeckCommandService;
 import com.example.thirdtool.Deck.application.service.DeckHierarchyService;
+import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.presentation.dto.DeckCreateRequestDto;
+import com.example.thirdtool.Deck.presentation.dto.DeckNameUpdateRequestDto;
+import com.example.thirdtool.Deck.presentation.dto.DeckNameUpdateResponseDto;
 import com.example.thirdtool.Deck.presentation.dto.DeckResponseDto;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import jakarta.validation.Valid;
@@ -46,14 +49,14 @@ public class DeckCommandController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responses);
     }
 
-    // ✅ 덱 수정
-    @PutMapping("/{deckId}")
-    public ResponseEntity<DeckResponseDto> updateDeck(
+    // ✅ 덱 이름만 수정 (우클릭 edit 전용)
+    @PatchMapping("/{deckId}/name")
+    public ResponseEntity<DeckNameUpdateResponseDto> updateDeckName(
             @PathVariable Long deckId,
-            @Valid @RequestBody DeckCreateRequestDto dto) {
-
-        log.info("[DeckCommandController] 덱 수정 요청 - deckId={}, name={}", deckId, dto.name());
-        return ResponseEntity.ok(deckCommandService.updateDeck(deckId, dto));
+            @Valid @RequestBody DeckNameUpdateRequestDto dto
+                                                                   ) {
+        DeckNameUpdateResponseDto deck = deckCommandService.updateDeckName(deckId, dto);
+        return ResponseEntity.ok(deck);
     }
 
     // ✅ 덱 삭제

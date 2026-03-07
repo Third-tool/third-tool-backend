@@ -1,15 +1,12 @@
 package com.example.thirdtool.Recommendation.application;
 
-import com.example.thirdtool.Card.domain.model.CardImage;
-import com.example.thirdtool.Card.domain.repository.CardImageRepository;
+import com.example.thirdtool.LegacyCard.Card.domain.model.CardImage;
+import com.example.thirdtool.LegacyCard.Card.domain.repository.CardImageRepository;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
-import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.repository.DeckQueryRepository;
-import com.example.thirdtool.Deck.domain.repository.DeckRepository;
 import com.example.thirdtool.Recommendation.domain.DeckAggResult;
 import com.example.thirdtool.Recommendation.domain.DeckRecommendation;
-import com.example.thirdtool.Recommendation.domain.dto.RecommendationExplainResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

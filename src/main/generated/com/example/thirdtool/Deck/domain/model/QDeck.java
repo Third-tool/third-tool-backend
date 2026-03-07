@@ -2,6 +2,7 @@ package com.example.thirdtool.Deck.domain.model;
 
 import static com.querydsl.core.types.PathMetadataFactory.*;
 
+import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
 import com.querydsl.core.types.dsl.*;
 
 import com.querydsl.core.types.PathMetadata;
@@ -22,7 +23,7 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public static final QDeck deck = new QDeck("deck");
 
-    public final ListPath<com.example.thirdtool.Card.domain.model.Card, com.example.thirdtool.Card.domain.model.QCard> cards = this.<com.example.thirdtool.Card.domain.model.Card, com.example.thirdtool.Card.domain.model.QCard>createList("cards", com.example.thirdtool.Card.domain.model.Card.class, com.example.thirdtool.Card.domain.model.QCard.class, PathInits.DIRECT2);
+    public final ListPath<Card, com.example.thirdtool.Card.domain.model.QCard> cards = this.<Card, com.example.thirdtool.Card.domain.model.QCard>createList("cards", Card.class, com.example.thirdtool.Card.domain.model.QCard.class, PathInits.DIRECT2);
 
     public final NumberPath<Integer> depth = createNumber("depth", Integer.class);
 

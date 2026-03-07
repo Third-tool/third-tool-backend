@@ -1,6 +1,6 @@
 package com.example.thirdtool.User.domain.model;
 
-import com.example.thirdtool.Card.domain.model.CardRank;
+import com.example.thirdtool.LegacyCard.Card.domain.model.CardRank;
 import com.example.thirdtool.Common.BaseEntity;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.User.infrastructure.Naver.NaverMember;

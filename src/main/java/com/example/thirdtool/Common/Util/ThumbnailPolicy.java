@@ -1,8 +1,8 @@
 package com.example.thirdtool.Common.Util;
 
-import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.model.CardImage;
-import com.example.thirdtool.Card.domain.model.ImageType;
+import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
+import com.example.thirdtool.LegacyCard.Card.domain.model.CardImage;
+import com.example.thirdtool.LegacyCard.Card.domain.model.ImageType;
 
 import java.util.Comparator;
 import java.util.Objects;

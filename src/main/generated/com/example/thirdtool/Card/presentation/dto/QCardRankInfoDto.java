@@ -1,5 +1,6 @@
 package com.example.thirdtool.Card.presentation.dto;
 
+import com.example.thirdtool.LegacyCard.Card.presentation.dto.CardRankInfoDto;
 import com.querydsl.core.types.dsl.*;
 
 import com.querydsl.core.types.ConstructorExpression;

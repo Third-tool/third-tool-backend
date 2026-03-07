@@ -2,6 +2,7 @@ package com.example.thirdtool.Card.domain.model;
 
 import static com.querydsl.core.types.PathMetadataFactory.*;
 
+import com.example.thirdtool.LegacyCard.Card.domain.model.CardRank;
 import com.querydsl.core.types.dsl.*;
 
 import com.querydsl.core.types.PathMetadata;

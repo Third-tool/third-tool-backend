@@ -1,15 +1,12 @@
 package com.example.thirdtool.DailyLearningProgress.application;
 
-import com.example.thirdtool.Card.domain.model.CardRankType;
+import com.example.thirdtool.LegacyCard.Card.domain.model.CardRankType;
 import com.example.thirdtool.DailyLearningProgress.domain.DailyLearningProgress;
 import com.example.thirdtool.DailyLearningProgress.domain.DailyLearningProgressRepository;
-import com.example.thirdtool.Deck.domain.model.DeckMode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor

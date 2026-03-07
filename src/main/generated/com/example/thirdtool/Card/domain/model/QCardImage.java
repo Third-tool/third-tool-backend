@@ -2,6 +2,8 @@ package com.example.thirdtool.Card.domain.model;
 
 import static com.querydsl.core.types.PathMetadataFactory.*;
 
+import com.example.thirdtool.LegacyCard.Card.domain.model.CardImage;
+import com.example.thirdtool.LegacyCard.Card.domain.model.ImageType;
 import com.querydsl.core.types.dsl.*;
 
 import com.querydsl.core.types.PathMetadata;

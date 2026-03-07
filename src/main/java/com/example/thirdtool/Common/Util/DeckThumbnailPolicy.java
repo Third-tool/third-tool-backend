@@ -1,12 +1,11 @@
 package com.example.thirdtool.Common.Util;
 
 
-import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.model.CardImage;
-import com.example.thirdtool.Card.domain.model.ImageType;
+import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
+import com.example.thirdtool.LegacyCard.Card.domain.model.CardImage;
+import com.example.thirdtool.LegacyCard.Card.domain.model.ImageType;
 import com.example.thirdtool.Deck.domain.model.Deck;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;

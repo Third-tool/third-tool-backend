@@ -1,7 +1,7 @@
 package com.example.thirdtool.Common.init;
 
-import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.repository.CardRepository;
+import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
+import com.example.thirdtool.LegacyCard.Card.domain.repository.CardRepository;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.repository.DeckRepository;
 import com.example.thirdtool.User.domain.model.UserEntity;

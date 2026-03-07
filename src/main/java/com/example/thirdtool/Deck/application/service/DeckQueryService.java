@@ -1,6 +1,6 @@
 package com.example.thirdtool.Deck.application.service;
 
-import com.example.thirdtool.Card.domain.repository.CardImageRepository;
+import com.example.thirdtool.LegacyCard.Card.domain.repository.CardImageRepository;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.repository.DeckRepository;
 import com.example.thirdtool.Deck.presentation.dto.DeckRecentResponseDto;

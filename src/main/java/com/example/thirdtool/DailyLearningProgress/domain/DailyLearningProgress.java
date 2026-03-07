@@ -1,13 +1,11 @@
 package com.example.thirdtool.DailyLearningProgress.domain;
 
-import com.example.thirdtool.Card.domain.model.CardRankType;
+import com.example.thirdtool.LegacyCard.Card.domain.model.CardRankType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDate;
 
 @Entity
 @Getter

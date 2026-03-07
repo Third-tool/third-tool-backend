@@ -1,0 +1,34 @@
+package com.example.thirdtool.LegacyCard.Card.presentation.controller;
+
+import com.example.thirdtool.LegacyCard.Card.application.service.CardFeedbackService;
+import com.example.thirdtool.LegacyCard.Card.application.service.CardService;
+import com.example.thirdtool.LegacyCard.Card.presentation.dto.request.FeedbackRequestDto;
+import com.example.thirdtool.User.domain.model.UserEntity;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/cards")
+public class CardFeedbackController {
+
+    private final CardService cardService;
+    private final CardFeedbackService cardFeedbackService;
+
+    @PostMapping("/feedback")
+    public ResponseEntity<Void> giveFeedback(@AuthenticationPrincipal UserEntity user
+                                                 , @RequestBody FeedbackRequestDto dto) {
+        var userId=user.getId();
+        cardFeedbackService.giveFeedback(userId, dto);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{cardId}/reset")
+    public ResponseEntity<Void> resetCardToSilver(@PathVariable Long cardId) {
+        cardFeedbackService.resetCardToSilverMin(cardId);
+        return ResponseEntity.ok().build();
+    }
+
+}

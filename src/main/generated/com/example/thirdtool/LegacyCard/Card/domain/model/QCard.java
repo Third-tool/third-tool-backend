@@ -1,9 +1,7 @@
-package com.example.thirdtool.Card.domain.model;
+package com.example.thirdtool.LegacyCard.Card.domain.model;
 
 import static com.querydsl.core.types.PathMetadataFactory.*;
 
-import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
-import com.example.thirdtool.LegacyCard.Card.domain.model.CardImage;
 import com.querydsl.core.types.dsl.*;
 
 import com.querydsl.core.types.PathMetadata;
@@ -18,7 +16,7 @@ import com.querydsl.core.types.dsl.PathInits;
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QCard extends EntityPathBase<Card> {
 
-    private static final long serialVersionUID = 29465633L;
+    private static final long serialVersionUID = 790954198L;
 
     private static final PathInits INITS = PathInits.DIRECT2;
 

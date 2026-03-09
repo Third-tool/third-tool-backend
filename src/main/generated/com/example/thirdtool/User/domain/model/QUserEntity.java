@@ -2,7 +2,6 @@ package com.example.thirdtool.User.domain.model;
 
 import static com.querydsl.core.types.PathMetadataFactory.*;
 
-import com.example.thirdtool.LegacyCard.Card.domain.model.CardRank;
 import com.querydsl.core.types.dsl.*;
 
 import com.querydsl.core.types.PathMetadata;
@@ -23,7 +22,7 @@ public class QUserEntity extends EntityPathBase<UserEntity> {
 
     public final com.example.thirdtool.Common.QBaseEntity _super = new com.example.thirdtool.Common.QBaseEntity(this);
 
-    public final ListPath<CardRank, com.example.thirdtool.Card.domain.model.QCardRank> cardRanks = this.<CardRank, com.example.thirdtool.Card.domain.model.QCardRank>createList("cardRanks", CardRank.class, com.example.thirdtool.Card.domain.model.QCardRank.class, PathInits.DIRECT2);
+    public final ListPath<com.example.thirdtool.LegacyCard.Card.domain.model.CardRank, com.example.thirdtool.LegacyCard.Card.domain.model.QCardRank> cardRanks = this.<com.example.thirdtool.LegacyCard.Card.domain.model.CardRank, com.example.thirdtool.LegacyCard.Card.domain.model.QCardRank>createList("cardRanks", com.example.thirdtool.LegacyCard.Card.domain.model.CardRank.class, com.example.thirdtool.LegacyCard.Card.domain.model.QCardRank.class, PathInits.DIRECT2);
 
     public final DateTimePath<java.time.LocalDateTime> createdDate = createDateTime("createdDate", java.time.LocalDateTime.class);
 

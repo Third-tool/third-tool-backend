@@ -61,8 +61,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-webflux:3.3.3'
 
-    //aws s3 세팅
-    // AWS S3 SDK
     implementation 'software.amazon.awssdk:s3:2.30.0'
 
     //elasticsearch + uuid 툴

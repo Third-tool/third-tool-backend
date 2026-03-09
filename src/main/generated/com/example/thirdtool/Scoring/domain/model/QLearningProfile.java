@@ -24,7 +24,7 @@ public class QLearningProfile extends EntityPathBase<LearningProfile> {
 
     public final NumberPath<Integer> badCount = createNumber("badCount", Integer.class);
 
-    public final com.example.thirdtool.Card.domain.model.QCard card;
+    public final com.example.thirdtool.LegacyCard.Card.domain.model.QCard card;
 
     public final NumberPath<Integer> goodCount = createNumber("goodCount", Integer.class);
 
@@ -56,7 +56,7 @@ public class QLearningProfile extends EntityPathBase<LearningProfile> {
 
     public QLearningProfile(Class<? extends LearningProfile> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.card = inits.isInitialized("card") ? new com.example.thirdtool.Card.domain.model.QCard(forProperty("card"), inits.get("card")) : null;
+        this.card = inits.isInitialized("card") ? new com.example.thirdtool.LegacyCard.Card.domain.model.QCard(forProperty("card"), inits.get("card")) : null;
     }
 
 }

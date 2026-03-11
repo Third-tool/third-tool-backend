@@ -1,6 +1,8 @@
 package com.example.thirdtool.Card.domain.model;
 
 
+import com.example.thirdtool.Card.domain.exception.CardDomainException;
+import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.Id;
 
@@ -34,7 +36,7 @@ public class Card {
         validateNotNull(keywordValues, "KeywordCues");
 
         if (keywordValues.isEmpty()) {
-            throw new CardDomainException("카드 생성 시 키워드는 최소 1개 이상이어야 합니다.");
+            throw CardDomainException.of(ErrorCode.CARD_KEYWORD_MIN_REQUIRED);
         }
 
         Card card = new Card(mainNote, summary);

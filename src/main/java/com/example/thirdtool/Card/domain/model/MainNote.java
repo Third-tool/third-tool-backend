@@ -27,11 +27,6 @@ public class MainNote {
         this.contentType = MainContentType.resolve(hasText(textContent), hasImage(imageUrl));
     }
 
-    /**
-     * MainNote 생성 팩토리 메서드.
-     *
-     * @throws CardDomainException textContent와 imageUrl이 모두 비어있을 때
-     */
     public static MainNote of(String textContent, String imageUrl) {
         String trimmedText  = trim(textContent);
         String trimmedImage = trim(imageUrl);
@@ -41,8 +36,6 @@ public class MainNote {
         }
         return new MainNote(trimmedText, trimmedImage);
     }
-
-
 
     public String          getTextContent() { return textContent; }
     public String          getImageUrl()    { return imageUrl; }

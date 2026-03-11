@@ -33,7 +33,13 @@ public enum ErrorCode {
     CARD_RANK_EMPTY("CARD003", "해당 랭크의 카드가 없습니다.", HttpStatus.NOT_FOUND),
     CARD_FEEDBACK_NOT_ALLOWED("CARD004", "해당 카드에는 피드백을 줄 수 없습니다.", HttpStatus.CONFLICT),
     CARD_RESET_NOT_ALLOWED("CARD005", "영구 모드 카드만 초기화할 수 있습니다.", HttpStatus.CONFLICT),
-
+    CARD_MAIN_NOTE_EMPTY("CARD010","MainNote는 텍스트 또는 이미지 중 최소 하나를 포함해야 합니다.",null),
+    CARD_SUMMARY_EMPTY("CARD020","Summary는 비어 있을 수 없습니다.",null),
+    CARD_SUMMARY_SENTENCE_OUT_OF_RANGE("CARD021","Summary는 1~3문장 범위여야 합니다.",null),
+    CARD_KEYWORD_BLANK("CARD030","키워드 단서는 비어 있을 수 없습니다.",null),
+    CARD_KEYWORD_MIN_REQUIRED("CARD031","카드는 키워드를 최소 1개 이상 가져야 합니다.",null),
+    CARD_KEYWORD_NOT_FOUND("CARD032","해당 키워드 단서를 찾을 수 없습니다.",null),
+    CARD_KEYWORD_LAST_CANNOT_REMOVE("CARD033","마지막 키워드는 제거할 수 없습니다. 카드는 최소 1개의 키워드를 유지해야 합니다.",null),
     // Rank
     RANK_NOT_FOUND("RANK001", "유저 랭크 값을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     CARD_RANK_NOT_FOUND("RANK002", "" , HttpStatus.NOT_FOUND ),
@@ -51,4 +57,11 @@ public enum ErrorCode {
     private final String code;
     private final String message;
     private final HttpStatus status;
+    ErrorCode(String code, String message, HttpStatus status) {
+        this.code = code; this.message = message; this.status = status;
+    }
+    public String getCode() { return code; }
+    public String getMessage() { return message; }
+    public HttpStatus getStatus() { return status; }
+
 }

@@ -1,6 +1,8 @@
 package com.example.thirdtool.Card.domain.model;
 
 
+import com.example.thirdtool.Card.domain.exception.CardDomainException;
+import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;
@@ -32,7 +34,7 @@ public class MainNote {
         String trimmedImage = trim(imageUrl);
 
         if (!hasText(trimmedText) && !hasImage(trimmedImage)) {
-            throw new CardDomainException("MainNote는 텍스트 또는 이미지 중 최소 하나를 포함해야 합니다.");
+            throw CardDomainException.of(ErrorCode.CARD_MAIN_NOTE_EMPTY);
         }
         return new MainNote(trimmedText, trimmedImage);
     }

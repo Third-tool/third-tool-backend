@@ -14,7 +14,7 @@ public class Card {
     private BigInteger id;
 
     @Embedded
-    private MainContext mainContext;
+    private MainNote mainNote;
 
     @Embedded
     private Summary summary;

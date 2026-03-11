@@ -28,8 +28,14 @@ public class GlobalExceptionHandler {
 
         ErrorCode ec = ex.getErrorCode();
 
-        return ResponseEntity.status(ec.getStatus())
-                             .body(new ErrorResponse(ec.getCode(), ec.getMessage(), req.getRequestURI(), OffsetDateTime.now()));
+        return ResponseEntity
+                .status(ec.getStatus())
+                .body(new ErrorResponse(
+                        ec.getCode(),
+                        ex.getMessage(),   // detail 포함된 메시지 사용
+                        req.getRequestURI(),
+                        OffsetDateTime.now()
+                ));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

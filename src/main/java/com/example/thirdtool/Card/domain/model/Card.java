@@ -1,155 +1,112 @@
 package com.example.thirdtool.Card.domain.model;
 
-import com.example.thirdtool.Common.BaseEntity;
-import com.example.thirdtool.Common.Exception.BusinessException;
-import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
-import com.example.thirdtool.Deck.domain.model.Deck;
-import com.example.thirdtool.Scoring.domain.model.LearningProfile;
-import com.example.thirdtool.Scoring.domain.model.LeitnerLearningProfile;
-import com.example.thirdtool.Scoring.domain.model.Sm2LearningProfile;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import com.example.thirdtool.Card.domain.exception.CardDomainException;
+import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import jakarta.persistence.*;
+
+
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 @Entity
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Card extends BaseEntity {
-
+@Table(name = "card")
+public class Card {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Lob
-    private String question;
+    @Embedded
+    private MainNote mainNote;
 
-    @Lob
-    private String answer;
+    @Embedded
+    private Summary summary;
 
-    private boolean deleted = false;
-    private LocalDateTime deletedAt;                // ✅ 삭제 시각 (optional)
+    @OneToMany(
+            mappedBy      = "card",
+            cascade       = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch         = FetchType.LAZY
+    )
+    private final List<KeywordCue> keywordCues = new ArrayList<>();
 
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "deck_id", nullable = false)
-    private Deck deck;
+    protected Card() {}
 
-    @OneToMany(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CardImage> images = new ArrayList<>();
-
-    // ✅ Card 하나당 반드시 하나의 LearningState 보유
-    @OneToOne(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
-    private LearningProfile learningProfile;
-
-
-    @Builder
-    private Card(String question, String answer, Deck deck, LearningProfile learningProfile) {
-        this.question = question;
-        this.answer = answer;
-        this.deck = deck;
-        this.learningProfile = learningProfile;
+    private Card(MainNote mainNote, Summary summary) {
+        this.mainNote = mainNote;
+        this.summary  = summary;
     }
 
+    public static Card create(MainNote mainNote, Summary summary, List<String> keywordValues) {
+        requireNonNull(mainNote,      "mainNote");
+        requireNonNull(summary,       "summary");
+        requireNonNull(keywordValues, "keywordValues");
 
-    // ✅ 정적 팩토리 메서드
-    public static Card of(String question, String answer, Deck deck) {
-        String algorithmType = deck.getScoringAlgorithmType().trim().toUpperCase();
+        if (keywordValues.isEmpty()) {
+            throw CardDomainException.of(ErrorCode.CARD_KEYWORD_MIN_REQUIRED);
+        }
 
-        LearningProfile profile = switch (algorithmType) {
-            case "SM2"     -> Sm2LearningProfile.init();
-            case "LEITNER" -> LeitnerLearningProfile.init();
-            default -> throw new IllegalArgumentException("지원하지 않는 알고리즘: " + algorithmType);
-        };
-
-        // 🔹 builder 시점부터 learningProfile 주입
-        Card card = Card.builder()
-                        .question(question)
-                        .answer(answer)
-                        .deck(deck)
-                        .learningProfile(profile)
-                        .build();
-
-        profile.linkToCard(card);
+        Card card = new Card(mainNote, summary);
+        keywordValues.forEach(v -> card.keywordCues.add(KeywordCue.create(card, v)));
         return card;
     }
 
+    // -------------------------------------------------------------------------
+    // 수정
+    // -------------------------------------------------------------------------
 
+    public void changeMainNote(String textContent, String imageUrl) {
+        this.mainNote = MainNote.of(textContent, imageUrl);
+    }
 
-    public void updateCard(String question, String answer) {
-        if (question == null || question.isBlank()) {
-            throw new BusinessException(ErrorCode.CARD_NOT_FOUND);
+    public void changeSummary(String value) {
+        this.summary = Summary.of(value);
+    }
+
+    public void replaceKeywords(List<String> values) {
+        requireNonNull(values, "values");
+        if (values.isEmpty()) {
+            throw CardDomainException.of(ErrorCode.CARD_KEYWORD_MIN_REQUIRED);
         }
-        if (answer == null || answer.isBlank()) {
-            throw new BusinessException(ErrorCode.CARD_NOT_FOUND);
+        this.keywordCues.clear();
+        values.forEach(v -> this.keywordCues.add(KeywordCue.create(this, v)));
+    }
+
+    public void addKeyword(String value) {
+        this.keywordCues.add(KeywordCue.create(this, value));
+    }
+
+
+    public void removeKeyword(Long keywordCueId) {
+        KeywordCue target = keywordCues.stream()
+                                       .filter(c -> keywordCueId.equals(c.getId()))
+                                       .findFirst()
+                                       .orElseThrow(() -> CardDomainException.of(
+                                               ErrorCode.CARD_KEYWORD_NOT_FOUND,
+                                               "keywordCueId=" + keywordCueId));
+
+        if (keywordCues.size() <= 1) {
+            throw CardDomainException.of(ErrorCode.CARD_KEYWORD_LAST_CANNOT_REMOVE);
         }
-        this.question = question;
-        this.answer = answer;
+        keywordCues.remove(target);
+    }
+
+    public Long             getId()          { return id; }
+    public MainNote         getMainNote()    { return mainNote; }
+    public Summary          getSummary()     { return summary; }
+
+    /** 수정 불가능한 뷰를 반환한다. Aggregate 외부에서 직접 컬렉션 조작 불가. */
+    public List<KeywordCue> getKeywordCues() {
+        return Collections.unmodifiableList(keywordCues);
     }
 
 
-    // 내 점수 묻는 메서드
-    public int currentScore() {
-        return this.learningProfile.getScore();
-    }
-
-    // 이미지 업데이트
-    public void updateImage(ImageType imageType, String newUrl, Integer sequence) {
-        // 해당 타입의 기존 이미지 찾기
-        Optional<CardImage> existingImage = this.images.stream()
-                                                       .filter(img -> img.getImageType() == imageType && img.getSequence().equals(sequence))
-                                                       .findFirst();
-
-        if (existingImage.isPresent()) {
-            existingImage.get().updateImage(newUrl, sequence);
-        } else {
-            // 없으면 새로 추가
-            this.images.add(CardImage.of(this, newUrl, imageType, sequence));
+    private static void requireNonNull(Object value, String fieldName) {
+        if (value == null) {
+            throw CardDomainException.of(ErrorCode.INVALID_INPUT, fieldName + "은(는) null일 수 없습니다.");
         }
     }
-
-    //사진 이미지 추가하기
-    public void addImage(CardImage image) {
-        this.images.add(image);
-    }
-
-
-    // ✅ 외부에서 알고리즘 타입을 가져올 때는 이 메서드만 쓰도록
-    public String getScoringAlgorithmType() {
-        if (deck == null) {
-            throw new BusinessException(ErrorCode.DECK_NOT_FOUND);
-        }
-        return deck.getScoringAlgorithmType();
-    }
-
-    public void moveTo(Deck newDeck) {
-        this.deck = newDeck;
-    }
-
-    public Card copyTo(Deck newDeck) {
-        return Card.builder()
-                   .question(this.question)
-                   .answer(this.answer)
-                   .deck(newDeck)
-                   .learningProfile(null)
-                   .build();
-    }
-
-    // ✅ Soft Delete 동작
-    public void markAsDeleted() {
-        this.deleted = true;
-        this.deletedAt = LocalDateTime.now();
-    }
-
 
 }

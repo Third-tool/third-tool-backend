@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @SpringBootApplication(scanBasePackages = "com.example.thirdtool")
 @EnableElasticsearchRepositories(basePackages = "com.example.thirdtool.Card.domain.repository")
 public class ThirdToolApplication {
-
     public static void main(String[] args) {
         SpringApplication.run(ThirdToolApplication.class, args);
     }

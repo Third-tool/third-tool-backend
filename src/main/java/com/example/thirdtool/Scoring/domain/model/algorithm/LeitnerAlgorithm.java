@@ -1,7 +1,7 @@
 package com.example.thirdtool.Scoring.domain.model.algorithm;
 
 
-import com.example.thirdtool.Card.domain.model.FeedbackType;
+import com.example.thirdtool.LegacyCard.Card.domain.model.FeedbackType;
 import com.example.thirdtool.Scoring.domain.model.LearningProfile;
 import com.example.thirdtool.Scoring.domain.model.LeitnerLearningProfile;
 import lombok.extern.slf4j.Slf4j;

@@ -1,7 +1,7 @@
 package com.example.thirdtool.Common.Util.mapper;
 
-import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.presentation.dto.RecommendedCardDto;
+import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
+import com.example.thirdtool.LegacyCard.Card.presentation.dto.RecommendedCardDto;
 import com.example.thirdtool.Common.Util.ThumbnailPolicy;
 import lombok.experimental.UtilityClass;
 

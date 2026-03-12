@@ -33,6 +33,7 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.mysql:mysql-connector-j'
     annotationProcessor 'org.projectlombok:lombok'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -60,8 +61,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-webflux:3.3.3'
 
-    //aws s3 세팅
-    // AWS S3 SDK
     implementation 'software.amazon.awssdk:s3:2.30.0'
 
     //elasticsearch + uuid 툴

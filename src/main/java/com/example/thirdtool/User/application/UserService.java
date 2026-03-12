@@ -1,6 +1,6 @@
 package com.example.thirdtool.User.application;
 
-import com.example.thirdtool.Card.application.service.CardRankService;
+import com.example.thirdtool.LegacyCard.Card.application.service.CardRankService;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.Util.JWTUtil;

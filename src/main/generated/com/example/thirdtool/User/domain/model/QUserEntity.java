@@ -22,7 +22,7 @@ public class QUserEntity extends EntityPathBase<UserEntity> {
 
     public final com.example.thirdtool.Common.QBaseEntity _super = new com.example.thirdtool.Common.QBaseEntity(this);
 
-    public final ListPath<com.example.thirdtool.Card.domain.model.CardRank, com.example.thirdtool.Card.domain.model.QCardRank> cardRanks = this.<com.example.thirdtool.Card.domain.model.CardRank, com.example.thirdtool.Card.domain.model.QCardRank>createList("cardRanks", com.example.thirdtool.Card.domain.model.CardRank.class, com.example.thirdtool.Card.domain.model.QCardRank.class, PathInits.DIRECT2);
+    public final ListPath<com.example.thirdtool.LegacyCard.Card.domain.model.CardRank, com.example.thirdtool.LegacyCard.Card.domain.model.QCardRank> cardRanks = this.<com.example.thirdtool.LegacyCard.Card.domain.model.CardRank, com.example.thirdtool.LegacyCard.Card.domain.model.QCardRank>createList("cardRanks", com.example.thirdtool.LegacyCard.Card.domain.model.CardRank.class, com.example.thirdtool.LegacyCard.Card.domain.model.QCardRank.class, PathInits.DIRECT2);
 
     public final DateTimePath<java.time.LocalDateTime> createdDate = createDateTime("createdDate", java.time.LocalDateTime.class);
 

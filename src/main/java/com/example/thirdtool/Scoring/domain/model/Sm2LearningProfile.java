@@ -1,7 +1,7 @@
 package com.example.thirdtool.Scoring.domain.model;
 
-import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.model.FeedbackType;
+import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
+import com.example.thirdtool.LegacyCard.Card.domain.model.FeedbackType;
 import com.example.thirdtool.Scoring.domain.model.algorithm.ScoringAlgorithm;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;

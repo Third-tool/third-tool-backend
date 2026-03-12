@@ -1,8 +1,8 @@
 package com.example.thirdtool.Common.init;
 
-import com.example.thirdtool.Card.application.service.CardService;
-import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.presentation.dto.WriteCardDto;
+import com.example.thirdtool.LegacyCard.Card.application.service.CardService;
+import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
+import com.example.thirdtool.LegacyCard.Card.presentation.dto.WriteCardDto;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.repository.DeckRepository;
 import com.example.thirdtool.User.domain.model.UserEntity;

@@ -1,9 +1,8 @@
 package com.example.thirdtool.DailyLearningProgress.presentation;
 
-import com.example.thirdtool.Card.domain.model.CardRankType;
+import com.example.thirdtool.LegacyCard.Card.domain.model.CardRankType;
 import com.example.thirdtool.DailyLearningProgress.application.DailyLearningProgressService;
 import com.example.thirdtool.DailyLearningProgress.domain.DailyLearningProgress;
-import com.example.thirdtool.Deck.domain.model.DeckMode;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

@@ -30,7 +30,7 @@ public class QLeitnerLearningProfile extends EntityPathBase<LeitnerLearningProfi
     public final NumberPath<Integer> badCount;
 
     // inherited
-    public final com.example.thirdtool.Card.domain.model.QCard card;
+    public final com.example.thirdtool.LegacyCard.Card.domain.model.QCard card;
 
     public final NumberPath<Double> easinessFactor = createNumber("easinessFactor", Double.class);
 

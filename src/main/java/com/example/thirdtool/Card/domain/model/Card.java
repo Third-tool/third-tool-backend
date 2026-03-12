@@ -4,9 +4,10 @@ package com.example.thirdtool.Card.domain.model;
 import com.example.thirdtool.Card.domain.exception.CardDomainException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import jakarta.persistence.*;
-import org.springframework.data.annotation.Id;
+
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -15,7 +16,7 @@ import java.util.List;
 public class Card {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private BigInteger id;
+    private Long id;
 
     @Embedded
     private MainNote mainNote;
@@ -23,6 +24,13 @@ public class Card {
     @Embedded
     private Summary summary;
 
+    @OneToMany(
+            mappedBy      = "card",
+            cascade       = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch         = FetchType.LAZY
+    )
+    private final List<KeywordCue> keywordCues = new ArrayList<>();
 
     protected Card() {}
 

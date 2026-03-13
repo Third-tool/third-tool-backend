@@ -273,6 +273,61 @@ class CardDomainTest {
     }
 
 
+    // =========================================================================
+    // Card 수정
+    // =========================================================================
+
+    @Nested
+    @DisplayName("Card.changeMainNote()")
+    class ChangeMainNote {
+
+        @Test
+        @DisplayName("유효한 값으로 MainNote를 수정할 수 있다")
+        void success() {
+            Card card = sampleCard();
+            card.changeMainNote("수정 내용", null);
+
+            assertThat(card.getMainNote().getTextContent()).isEqualTo("수정 내용");
+        }
+
+        @Test
+        @DisplayName("텍스트와 이미지가 모두 공백이면 CARD_MAIN_NOTE_EMPTY 예외가 발생한다")
+        void bothBlank() {
+            Card card = sampleCard();
+
+            CardDomainException ex = assertThrows(CardDomainException.class,
+                    () -> card.changeMainNote("", null));
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CARD_MAIN_NOTE_EMPTY);
+        }
+    }
+
+    @Nested
+    @DisplayName("Card.changeSummary()")
+    class ChangeSummary {
+
+        @Test
+        @DisplayName("유효한 값으로 Summary를 수정할 수 있다")
+        void success() {
+            Card card = sampleCard();
+            card.changeSummary("수정된 요약.");
+
+            assertThat(card.getSummary().getValue()).isEqualTo("수정된 요약.");
+        }
+
+        @Test
+        @DisplayName("4문장으로 수정하면 CARD_SUMMARY_SENTENCE_OUT_OF_RANGE 예외가 발생한다")
+        void moreThanThreeSentences() {
+            Card card = sampleCard();
+
+            CardDomainException ex = assertThrows(CardDomainException.class,
+                    () -> card.changeSummary("1. 2. 3. 4."));
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CARD_SUMMARY_SENTENCE_OUT_OF_RANGE);
+        }
+    }
+
+
 
 
 

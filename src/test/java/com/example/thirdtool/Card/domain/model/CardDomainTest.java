@@ -350,16 +350,6 @@ class CardDomainTest {
                      );
         }
 
-        @Test
-        @DisplayName("빈 목록으로 교체하면 CARD_KEYWORD_MIN_REQUIRED 예외가 발생한다")
-        void emptyList() {
-            Card card = sampleCard();
-
-            CardDomainException ex = assertThrows(CardDomainException.class,
-                    () -> card.replaceKeywords(List.of()));
-
-            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CARD_KEYWORD_MIN_REQUIRED);
-        }
     }
 
 

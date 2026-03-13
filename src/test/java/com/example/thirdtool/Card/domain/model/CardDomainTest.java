@@ -327,6 +327,41 @@ class CardDomainTest {
         }
     }
 
+    // =========================================================================
+    // Keywords 교체
+    // =========================================================================
+
+    @Nested
+    @DisplayName("Card.replaceKeywords()")
+    class ReplaceKeywords {
+
+        @Test
+        @DisplayName("새 목록으로 전체 교체되고 기존 키워드는 사라진다")
+        void success() {
+            Card card = sampleCard();
+            card.replaceKeywords(List.of("스택", "큐", "덱"));
+
+            assertAll(
+                    () -> assertThat(card.getKeywordCues()).hasSize(3),
+                    () -> assertThat(card.getKeywordCues())
+                            .extracting(KeywordCue::getValue)
+                            .containsExactly("스택", "큐", "덱")
+                            .doesNotContain("LIFO", "push", "pop")
+                     );
+        }
+
+        @Test
+        @DisplayName("빈 목록으로 교체하면 CARD_KEYWORD_MIN_REQUIRED 예외가 발생한다")
+        void emptyList() {
+            Card card = sampleCard();
+
+            CardDomainException ex = assertThrows(CardDomainException.class,
+                    () -> card.replaceKeywords(List.of()));
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CARD_KEYWORD_MIN_REQUIRED);
+        }
+    }
+
 
 
 

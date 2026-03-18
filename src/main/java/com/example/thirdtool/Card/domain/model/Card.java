@@ -67,7 +67,7 @@ public class Card {
         this.mainNote = mainNote;
         this.summary  = summary;
         for (int i = 0; i < cueContents.size(); i++) {
-            this.keywordCues.add(KeywordCue.of(this, cueContents.get(i), i));
+            this.keywordCues.add(KeywordCue.create(this, cueContents.get(i), i));
         }
     }
 

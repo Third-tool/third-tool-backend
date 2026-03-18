@@ -1,6 +1,5 @@
 package com.example.thirdtool.DailyLearningProgress.domain;
 
-import com.example.thirdtool.LegacyCard.Card.domain.model.CardRankType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

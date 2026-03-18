@@ -1,6 +1,5 @@
 package com.example.thirdtool.Deck.domain.model;
 
-import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;

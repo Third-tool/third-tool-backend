@@ -1,9 +1,7 @@
 package com.example.thirdtool.Common.Util;
 
 
-import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
-import com.example.thirdtool.LegacyCard.Card.domain.model.CardImage;
-import com.example.thirdtool.LegacyCard.Card.domain.model.ImageType;
+
 import com.example.thirdtool.Deck.domain.model.Deck;
 
 import java.util.Collection;

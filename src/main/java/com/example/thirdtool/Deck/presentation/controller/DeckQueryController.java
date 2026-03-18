@@ -1,7 +1,7 @@
 package com.example.thirdtool.Deck.presentation.controller;
 
 import com.example.thirdtool.Deck.application.service.DeckQueryService;
-import com.example.thirdtool.Deck.presentation.dto.DeckRecentResponseDto;
+
 import com.example.thirdtool.Deck.presentation.dto.DeckResponseDto;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
@@ -45,20 +45,5 @@ public class DeckQueryController {
         return ResponseEntity.ok(deckQueryService.getRecentDecks(user.getId()));
     }
 
-    // ✅ 가장 최근 덱 1개
-    @GetMapping("/recent/top")
-    public ResponseEntity<DeckRecentResponseDto> getRecentTop(@AuthenticationPrincipal UserEntity user) {
-        return deckQueryService.getMostRecentDeck(user.getId())
-                               .map(ResponseEntity::ok)
-                               .orElseGet(() -> ResponseEntity.noContent().build());
-
-    }
-    // ✅ lastAccessed 즉시 갱신(Continue 진입 시 호출)
-    @PostMapping("/{deckId}/touch")
-    public ResponseEntity<Void> touch(@AuthenticationPrincipal UserEntity user,
-                                      @PathVariable Long deckId) {
-        deckQueryService.touchLastAccessed(user.getId(), deckId);
-        return ResponseEntity.noContent().build();
-    }
 
 }

@@ -1,6 +1,5 @@
 package com.example.thirdtool.User.application;
 
-import com.example.thirdtool.LegacyCard.Card.application.service.CardRankService;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.Util.JWTUtil;
@@ -34,20 +33,17 @@ public class UserService extends DefaultOAuth2UserService {
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
-    private final CardRankService cardRankService;
     private final JwtService jwtService;
     private final KakaoMemberRepository kakaoMemberRepository;
     private final NaverMemberRepository naverMemberRepository;
 
     public UserService(PasswordEncoder passwordEncoder,
                        UserRepository userRepository,
-                       CardRankService cardRankService,
                        JwtService jwtService,
                        KakaoMemberRepository kakaoMemberRepository,
                        NaverMemberRepository naverMemberRepository) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
-        this.cardRankService = cardRankService;
         this.jwtService = jwtService;
         this.kakaoMemberRepository = kakaoMemberRepository;
         this.naverMemberRepository = naverMemberRepository;
@@ -86,7 +82,6 @@ public class UserService extends DefaultOAuth2UserService {
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
-        cardRankService.createDefaultRanksIfAbsent(user.getId());
         return user;
     }
 
@@ -151,8 +146,6 @@ public class UserService extends DefaultOAuth2UserService {
         // Refresh 토큰 DB 저장
         jwtService.addRefresh(user.getUsername(), refreshToken);
 
-        cardRankService.createDefaultRanksIfAbsent(user.getId());
-
         return new TokenResponse(accessToken, refreshToken);
     }
 
@@ -210,6 +203,5 @@ public class UserService extends DefaultOAuth2UserService {
         // 반환: UserEntity를 래핑한 CustomOAuth2User
         return new CustomOAuth2User(user, attributes);
     }
-
 
 }

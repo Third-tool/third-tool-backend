@@ -29,8 +29,4 @@ public class RefreshEntity extends BaseEntity {
     @Column(name = "refresh", nullable = false, length = 512)
     private String refresh;
 
-    @CreatedDate
-    @Column(name = "created_date", updatable = false)
-    private LocalDateTime createdDate;
-
 }

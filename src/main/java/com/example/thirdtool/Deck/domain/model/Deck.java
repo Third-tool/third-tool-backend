@@ -1,6 +1,6 @@
 package com.example.thirdtool.Deck.domain.model;
 
-import com.example.thirdtool.LegacyCard.Card.domain.model.Card;
+import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -28,7 +28,7 @@ public class Deck {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private BigInteger id;
+    private Long id;
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -54,12 +54,11 @@ public class Deck {
     @Column(nullable = false)
     private int depth;
 
-
     @JsonIgnore
     @OneToMany(mappedBy = "parentDeck")
     private List<Deck> subDecks = new ArrayList<>();
 
-    @OneToMany(mappedBy = "deck", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "deck", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Card> cards = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY) // ✅ User 엔티티와의 다대일 관계
@@ -76,11 +75,7 @@ public class Deck {
         this.scoringAlgorithmType = scoringAlgorithmType;
         this.user = user; // ✅ user 필드 초기화
         // ✅ depth 계산
-        if (parentDeck == null) {
-            this.depth = 0; // root
-        } else {
-            this.depth = parentDeck.getDepth() + 1;
-        }
+        this.depth = (parentDeck == null) ? 0 : parentDeck.getDepth() + 1;
     }
 
     public static Deck of(String name, Deck parentDeck, String scoringAlgorithmType, UserEntity user) { // ✅ User 인자 추가
@@ -112,6 +107,5 @@ public class Deck {
     public void changeParent(Deck newParent) {
         updateParent(newParent); // 기존 로직 재사용 (depth 재계산)
     }
-
 
 }

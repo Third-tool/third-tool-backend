@@ -22,8 +22,6 @@ public class QUserEntity extends EntityPathBase<UserEntity> {
 
     public final com.example.thirdtool.Common.QBaseEntity _super = new com.example.thirdtool.Common.QBaseEntity(this);
 
-    public final ListPath<CardRank, NumberPath<CardRank>> cardRanks = this.<CardRank, NumberPath<CardRank>>createList("cardRanks", CardRank.class, NumberPath.class, PathInits.DIRECT2);
-
     public final DateTimePath<java.time.LocalDateTime> createdDate = createDateTime("createdDate", java.time.LocalDateTime.class);
 
     public final ListPath<com.example.thirdtool.Deck.domain.model.Deck, com.example.thirdtool.Deck.domain.model.QDeck> decks = this.<com.example.thirdtool.Deck.domain.model.Deck, com.example.thirdtool.Deck.domain.model.QDeck>createList("decks", com.example.thirdtool.Deck.domain.model.Deck.class, com.example.thirdtool.Deck.domain.model.QDeck.class, PathInits.DIRECT2);

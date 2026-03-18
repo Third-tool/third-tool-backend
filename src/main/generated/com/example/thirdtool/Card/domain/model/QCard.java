@@ -22,6 +22,12 @@ public class QCard extends EntityPathBase<Card> {
 
     public static final QCard card = new QCard("card");
 
+    public final DateTimePath<java.time.LocalDateTime> createdDate = createDateTime("createdDate", java.time.LocalDateTime.class);
+
+    public final com.example.thirdtool.Deck.domain.model.QDeck deck;
+
+    public final BooleanPath deleted = createBoolean("deleted");
+
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final ListPath<KeywordCue, QKeywordCue> keywordCues = this.<KeywordCue, QKeywordCue>createList("keywordCues", KeywordCue.class, QKeywordCue.class, PathInits.DIRECT2);
@@ -29,6 +35,8 @@ public class QCard extends EntityPathBase<Card> {
     public final QMainNote mainNote;
 
     public final QSummary summary;
+
+    public final DateTimePath<java.time.LocalDateTime> updatedDate = createDateTime("updatedDate", java.time.LocalDateTime.class);
 
     public QCard(String variable) {
         this(Card.class, forVariable(variable), INITS);
@@ -48,6 +56,7 @@ public class QCard extends EntityPathBase<Card> {
 
     public QCard(Class<? extends Card> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
+        this.deck = inits.isInitialized("deck") ? new com.example.thirdtool.Deck.domain.model.QDeck(forProperty("deck"), inits.get("deck")) : null;
         this.mainNote = inits.isInitialized("mainNote") ? new QMainNote(forProperty("mainNote")) : null;
         this.summary = inits.isInitialized("summary") ? new QSummary(forProperty("summary")) : null;
     }

@@ -21,7 +21,8 @@ public class QRefreshEntity extends EntityPathBase<RefreshEntity> {
 
     public final com.example.thirdtool.Common.QBaseEntity _super = new com.example.thirdtool.Common.QBaseEntity(this);
 
-    public final DateTimePath<java.time.LocalDateTime> createdDate = createDateTime("createdDate", java.time.LocalDateTime.class);
+    //inherited
+    public final DateTimePath<java.time.LocalDateTime> createdDate = _super.createdDate;
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 

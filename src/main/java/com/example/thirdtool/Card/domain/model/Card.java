@@ -4,13 +4,11 @@ package com.example.thirdtool.Card.domain.model;
 import com.example.thirdtool.Card.domain.exception.CardDomainException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
-import com.example.thirdtool.Scoring.domain.model.LearningProfile;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 
-import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,10 +43,6 @@ public class Card {
     )
     private final List<KeywordCue> keywordCues = new ArrayList<>();
 
-    // ─── Learning Profile (역방향 참조) ──────────────────────
-    @OneToOne(mappedBy = "card", fetch = FetchType.LAZY)
-    private LearningProfile learningProfile;
-
     // ─── Soft Delete ─────────────────────────────────────────
     @Column(nullable = false)
     private boolean deleted = false;
@@ -67,7 +61,7 @@ public class Card {
         this.mainNote = mainNote;
         this.summary  = summary;
         for (int i = 0; i < cueContents.size(); i++) {
-            this.keywordCues.add(KeywordCue.create(this, cueContents.get(i), i));
+            this.keywordCues.add(KeywordCue.create(this, cueContents.get(i)));
         }
     }
 
@@ -144,7 +138,6 @@ public class Card {
     public Deck            getDeck()            { return deck; }
     public MainNote        getMainNote()        { return mainNote; }
     public Summary         getSummary()         { return summary; }
-    public LearningProfile getLearningProfile() { return learningProfile; }
     public boolean         isDeleted()          { return deleted; }
     public LocalDateTime   getCreatedDate()     { return createdDate; }   // ✅ Sm2Algorithm 참조
     public LocalDateTime   getUpdatedDate()     { return updatedDate; }   // ✅ Sm2Algorithm

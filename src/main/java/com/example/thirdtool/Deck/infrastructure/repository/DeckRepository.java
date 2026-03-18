@@ -1,4 +1,4 @@
-package com.example.thirdtool.Deck.domain.repository;
+package com.example.thirdtool.Deck.infrastructure.repository;
 
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.User.domain.model.UserEntity;
@@ -30,12 +30,6 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
         @Query("UPDATE Deck d SET d.lastAccessed = :lastAccessed WHERE d.id = :deckId")
         void updateLastAccessed(@Param("deckId") Long deckId, @Param("lastAccessed") LocalDateTime lastAccessed);
 
-        @Query("""
-        select avg(lp.score) from Card c
-        join c.learningProfile lp
-        where c.deck.id = :deckId
-    """)
-        Double findAvgScore(@Param("deckId") Long deckId);
 
         List<Deck> findByUser(UserEntity user);
 

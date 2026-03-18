@@ -3,27 +3,28 @@ package com.example.thirdtool.Card.infrastructure.persistence;
 import com.example.thirdtool.Card.domain.model.MainContentType;
 import com.example.thirdtool.Card.domain.model.QCard;
 import com.example.thirdtool.Card.domain.model.QKeywordCue;
+import com.example.thirdtool.Card.infrastructure.dto.CardSearchCondition;
+import com.example.thirdtool.Card.infrastructure.dto.CardSummaryRow;
+import com.example.thirdtool.Card.infrastructure.dto.QCardSummaryRow;
+import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 @RequiredArgsConstructor
-public class CardRepositoryImpl implements CardRepositoryCustom {
+public class CardJpaRepositoryImpl implements CardRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 
-    private static final QCard card       = QCard.card;
+    private static final QCard       card       = QCard.card;
     private static final QKeywordCue keywordCue = QKeywordCue.keywordCue;
 
-    /**
-     * 동적 조건 기반 카드 요약 목록을 페이징 조회한다.
-     *
-     * <p>keywordCount를 구하기 위해 서브쿼리를 사용한다.
-     * 목록 조회이므로 KeywordCue 전체를 페치하지 않고 개수만 가져온다.
-     */
     @Override
     public Page<CardSummaryRow> searchCards(CardSearchCondition condition, Pageable pageable) {
 
@@ -32,12 +33,7 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
                         card.id,
                         card.summary.value,
                         card.mainNote.contentType,
-                        card.mainNote.textContent,
-                        // 서브쿼리로 키워드 개수만 조회 - 서브 쿼리로 관리
-                        JPAExpressions
-                                .select(keywordCue.count().intValue())
-                                .from(keywordCue)
-                                .where(keywordCue.card.eq(card))
+                        keywordCountSubquery()
                 ))
                 .from(card)
                 .where(
@@ -59,6 +55,16 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
+    }
+
+    // -------------------------------------------------------------------------
+    // 서브쿼리
+    // -------------------------------------------------------------------------
+    private Expression<Long> keywordCountSubquery() {
+        return JPAExpressions
+                .select(keywordCue.count())
+                .from(keywordCue)
+                .where(keywordCue.card.eq(card));
     }
 
     // -------------------------------------------------------------------------

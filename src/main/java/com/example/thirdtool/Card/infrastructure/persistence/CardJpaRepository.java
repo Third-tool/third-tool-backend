@@ -10,11 +10,6 @@ import java.util.Optional;
 
 public interface CardJpaRepository extends JpaRepository<Card, Long>, CardRepositoryCustom {
 
-    /**
-     * KeywordCue를 함께 페치해 N+1 문제를 방지한다.
-     *
-     * <p>keywordCues는 LAZY이므로 필요한 경우에만 이 메서드를 사용한다.
-     */
     @Query("""
             SELECT DISTINCT c FROM Card c
             LEFT JOIN FETCH c.keywordCues

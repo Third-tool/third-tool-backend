@@ -3,7 +3,7 @@ package com.example.thirdtool.Deck.application.service;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
-import com.example.thirdtool.Deck.domain.repository.DeckRepository;
+import com.example.thirdtool.Deck.infrastructure.repository.DeckRepository;
 import com.example.thirdtool.Deck.presentation.dto.DeckCreateRequestDto;
 import com.example.thirdtool.Deck.presentation.dto.DeckNameUpdateRequestDto;
 import com.example.thirdtool.Deck.presentation.dto.DeckNameUpdateResponseDto;

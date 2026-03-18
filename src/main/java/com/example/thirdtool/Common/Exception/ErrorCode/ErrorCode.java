@@ -60,4 +60,4 @@ public enum ErrorCode {
     private final String     message;
     private final HttpStatus status;
     // ✅ getter는 @Getter가 자동 생성 — 수동 정의 불필요
-}}
+}

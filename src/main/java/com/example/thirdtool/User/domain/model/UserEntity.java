@@ -1,6 +1,6 @@
 package com.example.thirdtool.User.domain.model;
 
-import com.example.thirdtool.LegacyCard.Card.domain.model.CardRank;
+
 import com.example.thirdtool.Common.BaseEntity;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.User.infrastructure.Naver.NaverMember;
@@ -70,12 +70,6 @@ public class UserEntity extends BaseEntity {
     // ✅ 연관관계 (소셜 로그인 전용)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<NaverMember> naverMembers = new ArrayList<>();
-
-    // ✅ CardRankService의 createDefaultRanksForUser() 메서드에서 사용하기 위해
-    //    양방향 연관 관계를 설정합니다.
-    // 당연히 리스트라고 매핑이 바로되는거 아님
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CardRank> cardRanks = new ArrayList<>();
 
     @OneToMany(mappedBy = "user")
     private List<Deck> decks = new ArrayList<>();

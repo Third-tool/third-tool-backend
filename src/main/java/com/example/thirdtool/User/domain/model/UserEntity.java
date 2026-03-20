@@ -71,9 +71,6 @@ public class UserEntity extends BaseEntity {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<NaverMember> naverMembers = new ArrayList<>();
 
-    @OneToMany(mappedBy = "user")
-    private List<Deck> decks = new ArrayList<>();
-
     public void updateUser(UserUpdateRequestDTO dto) {
         this.email = dto.getEmail();
         this.nickname = dto.getNickname();

@@ -36,9 +36,6 @@ public class Deck {
     // ✅ lastAccessed 필드 추가
     private LocalDateTime lastAccessed;
 
-    // ✅ scoringAlgorithmType 필드 추가
-    @Column(nullable = false, length = 50)
-    private String scoringAlgorithmType;
 
     @Column(nullable = false)
     private boolean onLibrary = false;   // 공개 라이브러리 등록 여부
@@ -66,13 +63,11 @@ public class Deck {
     private UserEntity user;
 
 
-
     @Builder(builderMethodName = "internalBuilder")
-    private Deck(String name, Deck parentDeck, String scoringAlgorithmType, UserEntity user) { // ✅ User 인자 추가
+    private Deck(String name, Deck parentDeck, UserEntity user) { // ✅ User 인자 추가
         this.name = name;
         this.parentDeck = parentDeck;
         this.lastAccessed = LocalDateTime.now();
-        this.scoringAlgorithmType = scoringAlgorithmType;
         this.user = user; // ✅ user 필드 초기화
         // ✅ depth 계산
         this.depth = (parentDeck == null) ? 0 : parentDeck.getDepth() + 1;
@@ -82,7 +77,6 @@ public class Deck {
         return internalBuilder()
                 .name(name)
                 .parentDeck(parentDeck)
-                .scoringAlgorithmType(scoringAlgorithmType)
                 .user(user) // ✅ user 전달
                 .build();
     }

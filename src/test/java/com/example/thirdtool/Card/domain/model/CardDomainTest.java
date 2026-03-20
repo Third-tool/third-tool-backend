@@ -2,6 +2,7 @@ package com.example.thirdtool.Card.domain.model;
 
 import com.example.thirdtool.Card.domain.exception.CardDomainException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.Deck.domain.model.Deck;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -248,7 +249,7 @@ class CardDomainTest {
         @DisplayName("mainNote가 null이면 INVALID_INPUT 예외가 발생한다")
         void nullMainNote() {
             CardDomainException ex = assertThrows(CardDomainException.class,
-                    () -> Card.create(null, Summary.of("요약."), List.of("키워드")));
+                    () -> Card.create(null,MainNote.of("내용", null), Summary.of("요약."),List.of("키워드")));
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
         }
@@ -257,7 +258,7 @@ class CardDomainTest {
         @DisplayName("summary가 null이면 INVALID_INPUT 예외가 발생한다")
         void nullSummary() {
             CardDomainException ex = assertThrows(CardDomainException.class,
-                    () -> Card.create(MainNote.of("내용", null), null, List.of("키워드")));
+                    () -> Card.create(Deck.of(),MainNote.of("내용", null), null, List.of("키워드")));
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
         }
@@ -365,17 +366,16 @@ class CardDomainTest {
 
 
 
-
     // =========================================================================
     // 메서드 추출 - 헬퍼
     // =========================================================================
 
     private Card sampleCard() {
         return Card.create(
+                Deck.of("mock덱")
                 MainNote.of("스택은 LIFO 자료구조다.", null),
                 Summary.of("스택은 마지막에 넣은 것이 먼저 나온다."),
-                List.of("LIFO", "push", "pop")
-                          );
+                List.of("LIFO", "push", "pop");
     }
 
 

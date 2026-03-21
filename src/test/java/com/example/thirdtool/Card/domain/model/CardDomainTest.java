@@ -3,6 +3,7 @@ package com.example.thirdtool.Card.domain.model;
 import com.example.thirdtool.Card.domain.exception.CardDomainException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
+import static com.example.thirdtool.support.DomainFixture.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -259,7 +260,7 @@ class CardDomainTest {
         @DisplayName("summary가 null이면 INVALID_INPUT 예외가 발생한다")
         void nullSummary() {
             CardDomainException ex = assertThrows(CardDomainException.class,
-                    () -> Card.create(Deck.of(),MainNote.of("내용", null), null, List.of("키워드")));
+                    () -> Card.create(com.example.thirdtool.support.DomainFixture.sampleDeck(),MainNote.of("내용", null), null, List.of("키워드")));
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
         }
@@ -268,7 +269,7 @@ class CardDomainTest {
         @DisplayName("키워드 목록이 비어있으면 CARD_KEYWORD_MIN_REQUIRED 예외가 발생한다")
         void emptyKeywords() {
             CardDomainException ex = assertThrows(CardDomainException.class,
-                    () -> Card.create(MainNote.of("내용", null), Summary.of("요약."), List.of()));
+                    () -> Card.create(com.example.thirdtool.support.DomainFixture.sampleDeck(),MainNote.of("내용", null), Summary.of("요약."), List.of()));
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CARD_KEYWORD_MIN_REQUIRED);
         }

@@ -1,6 +1,8 @@
 package com.example.thirdtool.Deck.domain.model;
 
 import com.example.thirdtool.Card.domain.model.Card;
+import com.example.thirdtool.Common.Exception.BusinessException;
+import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -8,6 +10,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
@@ -62,6 +66,19 @@ public class Deck {
     @JoinColumn(name = "user_id", nullable = false) // ✅ 외래 키 설정
     private UserEntity user;
 
+    // ─── Soft Delete ──────────────────────────────────────
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdDate;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedDate;
+
 
     @Builder(builderMethodName = "internalBuilder")
     private Deck(String name, Deck parentDeck, UserEntity user) { // ✅ User 인자 추가
@@ -69,11 +86,10 @@ public class Deck {
         this.parentDeck = parentDeck;
         this.lastAccessed = LocalDateTime.now();
         this.user = user; // ✅ user 필드 초기화
-        // ✅ depth 계산
         this.depth = (parentDeck == null) ? 0 : parentDeck.getDepth() + 1;
     }
 
-    public static Deck of(String name, Deck parentDeck, String scoringAlgorithmType, UserEntity user) { // ✅ User 인자 추가
+    public static Deck of(String name, Deck parentDeck, UserEntity user) { // ✅ User 인자 추가
         return internalBuilder()
                 .name(name)
                 .parentDeck(parentDeck)
@@ -92,14 +108,47 @@ public class Deck {
         this.lastAccessed = LocalDateTime.now();
     }
 
-    // ✅ 부모 변경 시 depth도 다시 계산
-    public void updateParent(Deck newParent) {
+    public void changeParent(Deck newParent) {
         this.parentDeck = newParent;
-        this.depth = (newParent == null) ? 0 : newParent.getDepth() + 1;
+        this.depth      = (newParent == null) ? 0 : newParent.getDepth() + 1;
     }
 
-    public void changeParent(Deck newParent) {
-        updateParent(newParent); // 기존 로직 재사용 (depth 재계산)
+    // ─── Soft Delete ──────────────────────────────────────
+
+    /**
+     * 덱 논리 삭제.
+     * 덱에 속한 Card 전체도 연쇄 논리 삭제한다.
+     */
+    public void softDelete() {
+        if (this.deleted) {
+            throw new BusinessException(ErrorCode.DECK_ALREADY_DELETED);
+        }
+        this.deleted   = true;
+        this.deletedAt = LocalDateTime.now();
+
+        this.cards.forEach(Card::softDelete);
+    }
+
+    /**
+     * 덱 복구.
+     * 덱 삭제 시점과 동일하게 삭제된 Card만 함께 복구한다.
+     * 덱 삭제 이전에 개별 삭제된 Card는 복구하지 않는다.
+     */
+    public void restore() {
+        if (!this.deleted) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "삭제되지 않은 덱은 복구할 수 없습니다.");
+        }
+        LocalDateTime deckDeletedAt = this.deletedAt;
+
+        this.deleted   = false;
+        this.deletedAt = null;
+
+        // deletedAt이 덱 삭제 시점 이후인 Card만 복구 (덱과 함께 삭제된 Card)
+        this.cards.stream()
+                  .filter(card -> card.isDeleted()
+                          && card.getDeletedAt() != null
+                          && !card.getDeletedAt().isBefore(deckDeletedAt))
+                  .forEach(Card::restore);
     }
 
 }

@@ -3,6 +3,7 @@ package com.example.thirdtool.Card.domain.model;
 import com.example.thirdtool.Card.domain.exception.CardDomainException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
+import static com.example.thirdtool.support.DomainFixture.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("Card 도메인 모델")
 class CardDomainTest {
+    com.example.thirdtool.support.DomainFixture domainFixture = new com.example.thirdtool.support.DomainFixture();
 
     // =========================================================================
     // MainNote - 순수 자바 객체로 테스트
@@ -194,7 +196,7 @@ class CardDomainTest {
         @DisplayName("value가 공백이면 CARD_KEYWORD_BLANK 예외가 발생한다")
         void blankValue() {
             //given
-            Card card = sampleCard();
+            Card card = com.example.thirdtool.support.DomainFixture.sampleCard();
 
             CardDomainException ex = assertThrows(CardDomainException.class,
                     () -> KeywordCue.create(card, "  "));
@@ -224,7 +226,7 @@ class CardDomainTest {
         @DisplayName("유효한 입력이면 카드가 생긴다.")
         void success() {
             //given
-            Card card = sampleCard();
+            Card card = com.example.thirdtool.support.DomainFixture.sampleCard();
             //when
             //Then
             assertAll(
@@ -239,7 +241,7 @@ class CardDomainTest {
         @Test
         @DisplayName("생성된 KeywordCue는 해당 Card 인스턴스를 참조한다")
         void keywordCueBelongsToCard() {
-            Card card = sampleCard();
+            Card card = com.example.thirdtool.support.DomainFixture.sampleCard();
 
             assertThat(card.getKeywordCues())
                     .allSatisfy(cue -> assertThat(cue.getCard()).isSameAs(card));
@@ -258,7 +260,7 @@ class CardDomainTest {
         @DisplayName("summary가 null이면 INVALID_INPUT 예외가 발생한다")
         void nullSummary() {
             CardDomainException ex = assertThrows(CardDomainException.class,
-                    () -> Card.create(Deck.of(),MainNote.of("내용", null), null, List.of("키워드")));
+                    () -> Card.create(com.example.thirdtool.support.DomainFixture.sampleDeck(),MainNote.of("내용", null), null, List.of("키워드")));
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
         }
@@ -267,7 +269,7 @@ class CardDomainTest {
         @DisplayName("키워드 목록이 비어있으면 CARD_KEYWORD_MIN_REQUIRED 예외가 발생한다")
         void emptyKeywords() {
             CardDomainException ex = assertThrows(CardDomainException.class,
-                    () -> Card.create(MainNote.of("내용", null), Summary.of("요약."), List.of()));
+                    () -> Card.create(com.example.thirdtool.support.DomainFixture.sampleDeck(),MainNote.of("내용", null), Summary.of("요약."), List.of()));
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CARD_KEYWORD_MIN_REQUIRED);
         }
@@ -285,7 +287,7 @@ class CardDomainTest {
         @Test
         @DisplayName("유효한 값으로 MainNote를 수정할 수 있다")
         void success() {
-            Card card = sampleCard();
+            Card card = com.example.thirdtool.support.DomainFixture.sampleCard();
             card.changeMainNote("수정 내용", null);
 
             assertThat(card.getMainNote().getTextContent()).isEqualTo("수정 내용");
@@ -294,7 +296,7 @@ class CardDomainTest {
         @Test
         @DisplayName("텍스트와 이미지가 모두 공백이면 CARD_MAIN_NOTE_EMPTY 예외가 발생한다")
         void bothBlank() {
-            Card card = sampleCard();
+            Card card = com.example.thirdtool.support.DomainFixture.sampleCard();
 
             CardDomainException ex = assertThrows(CardDomainException.class,
                     () -> card.changeMainNote("", null));
@@ -310,7 +312,7 @@ class CardDomainTest {
         @Test
         @DisplayName("유효한 값으로 Summary를 수정할 수 있다")
         void success() {
-            Card card = sampleCard();
+            Card card = com.example.thirdtool.support.DomainFixture.sampleCard();
             card.changeSummary("수정된 요약.");
 
             assertThat(card.getSummary().getValue()).isEqualTo("수정된 요약.");
@@ -319,7 +321,7 @@ class CardDomainTest {
         @Test
         @DisplayName("4문장으로 수정하면 CARD_SUMMARY_SENTENCE_OUT_OF_RANGE 예외가 발생한다")
         void moreThanThreeSentences() {
-            Card card = sampleCard();
+            Card card = com.example.thirdtool.support.DomainFixture.sampleCard();
 
             CardDomainException ex = assertThrows(CardDomainException.class,
                     () -> card.changeSummary("1. 2. 3. 4."));
@@ -339,7 +341,7 @@ class CardDomainTest {
         @Test
         @DisplayName("새 목록으로 전체 교체되고 기존 키워드는 사라진다")
         void success() {
-            Card card = sampleCard();
+            Card card = com.example.thirdtool.support.DomainFixture.sampleCard();
             card.replaceKeywords(List.of("스택", "큐", "덱"));
 
             assertAll(
@@ -354,7 +356,7 @@ class CardDomainTest {
         @Test
         @DisplayName("빈 목록으로 교체하면 CARD_KEYWORD_MIN_REQUIRED 예외가 발생한다")
         void emptyList() {
-            Card card = sampleCard();
+            Card card = com.example.thirdtool.support.DomainFixture.sampleCard();
 
             CardDomainException ex = assertThrows(CardDomainException.class,
                     () -> card.replaceKeywords(List.of()));
@@ -363,20 +365,6 @@ class CardDomainTest {
         }
     }
 
-
-
-
-    // =========================================================================
-    // 메서드 추출 - 헬퍼
-    // =========================================================================
-
-    private Card sampleCard() {
-        return Card.create(
-                Deck.of("mock덱")
-                MainNote.of("스택은 LIFO 자료구조다.", null),
-                Summary.of("스택은 마지막에 넣은 것이 먼저 나온다."),
-                List.of("LIFO", "push", "pop");
-    }
 
 
 

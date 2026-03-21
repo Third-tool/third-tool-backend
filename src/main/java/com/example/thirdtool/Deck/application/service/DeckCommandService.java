@@ -62,7 +62,7 @@ public class DeckCommandService {
      */
     public void delete(Long deckId) {
         Deck deck = deckQueryService.getActiveDeck(deckId);
-        deck.delete();
+        deck.softDelete();
     }
 
     /**
@@ -76,5 +76,9 @@ public class DeckCommandService {
     }
 
     // ─── private ─────────────────────────────────────────
+    private Deck resolveParent(Long parentDeckId) {
+        if (parentDeckId == null) return null;
+        return deckQueryService.getActiveDeck(parentDeckId);
+    }
 
 }

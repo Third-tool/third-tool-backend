@@ -11,38 +11,48 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
-@Transactional
+@Transactional(readOnly = true)
 public class DeckHierarchyService {
 
-    private final DeckRepository deckRepository;
+    private final DeckQueryService deckQueryService;
 
-    public void changeParent(Long deckId, Long newParentId) {
-        Deck deck = deckRepository.findById(deckId)
-                                  .orElseThrow(() -> new BusinessException(ErrorCode.DECK_NOT_FOUND));
-
-        Deck newParent = (newParentId == null) ? null :
-                deckRepository.findById(newParentId)
-                              .orElseThrow(() -> new BusinessException(ErrorCode.DECK_PARENT_NOT_FOUND));
-
-        // ✅ 순환 참조 방지
-        if (newParent != null && isCycle(deck, newParent)) {
-            throw new BusinessException(ErrorCode.DECK_HIERARCHY_CYCLE);
+    /**
+     * 부모 덱 변경.
+     * - newParentDeckId == null → 루트 덱으로 이동
+     * - 순환 참조 감지 시 DECK_HIERARCHY_CYCLE 예외
+     *
+     * @param deck            이동할 대상 덱 (이미 getActiveDeck()으로 검증된 상태)
+     * @param newParentDeckId 새 부모 덱 ID (null 허용)
+     */
+    @Transactional
+    public void changeParent(Deck deck, Long newParentDeckId) {
+        if (newParentDeckId == null) {
+            deck.changeParent(null);
+            return;
         }
 
+        Deck newParent = deckQueryService.getActiveDeck(newParentDeckId);
+        validateNoCycle(deck, newParent);
         deck.changeParent(newParent);
-        log.info("[DeckHierarchyService] 덱 부모 변경 완료 - deckId={}, newParentId={}",
-                deckId, newParentId);
     }
 
-    private boolean isCycle(Deck deck, Deck potentialParent) {
-        Deck current = potentialParent;
-        while (current != null) {
-            if (current.equals(deck)) {
-                return true;
+    // ─── private ──────────────────────────────────────────
+
+    /**
+     * 순환 참조 검증.
+     * newParent의 조상을 루트까지 따라 올라가며
+     * deck 자신이 포함되어 있으면 순환으로 판단.
+     *
+     * <p>예: A → B → C 구조에서 A의 부모를 C로 변경하려 하면
+     * C의 조상(B → A)에 A가 포함되므로 순환 감지.
+     */
+    private void validateNoCycle(Deck deck, Deck newParent) {
+        Deck cursor = newParent;
+        while (cursor != null) {
+            if (cursor.getId().equals(deck.getId())) {
+                throw new BusinessException(ErrorCode.DECK_HIERARCHY_CYCLE);
             }
-            current = current.getParentDeck();
+            cursor = cursor.getParentDeck();
         }
-        return false;
     }
 }

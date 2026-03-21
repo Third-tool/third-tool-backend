@@ -10,8 +10,7 @@ public class DeckRequest {
             @Size(max = 100)
             String name,
 
-            Long parentDeckId,      // null = 루트 덱
-            String algorithmType    // 루트 덱 생성 시 필수
+            Long parentDeckId     // null = 루트 덱
     ) {}
 
     public record UpdateName(

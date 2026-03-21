@@ -5,6 +5,7 @@ import com.example.thirdtool.Card.domain.exception.CardDomainException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import jakarta.persistence.*;
+import lombok.Getter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@Getter
 @Entity
 @Table(name = "card")
 public class Card {
@@ -46,6 +48,8 @@ public class Card {
     // ─── Soft Delete ─────────────────────────────────────────
     @Column(nullable = false)
     private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -134,13 +138,32 @@ public class Card {
         keywordCues.remove(target);
     }
 
-    public Long            getId()              { return id; }
+    // ─── Soft Delete ──────────────────────────────────────
+
+    /**
+     * 카드 논리 삭제.
+     * 덱의 softDelete()에서 연쇄 호출되거나 개별 삭제 시 직접 호출된다.
+     * 이미 삭제된 카드에 대한 중복 호출은 무시한다 (멱등성 보장).
+     */
+    public void softDelete() {
+        if (this.deleted) return;   // 이미 삭제된 경우 무시 (멱등)
+        this.deleted   = true;
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 카드 복구.
+     * Deck.restore()에서 덱 삭제 시점 기준으로 필터링된 Card에 대해서만 호출된다.
+     */
+    public void restore() {
+        this.deleted   = false;
+        this.deletedAt = null;
+    }
+
     public Deck            getDeck()            { return deck; }
     public MainNote        getMainNote()        { return mainNote; }
     public Summary         getSummary()         { return summary; }
     public boolean         isDeleted()          { return deleted; }
-    public LocalDateTime   getCreatedDate()     { return createdDate; }   // ✅ Sm2Algorithm 참조
-    public LocalDateTime   getUpdatedDate()     { return updatedDate; }   // ✅ Sm2Algorithm
 
     /** 수정 불가능한 뷰를 반환한다. Aggregate 외부에서 직접 컬렉션 조작 불가. */
     public List<KeywordCue> getKeywordCues() {
@@ -153,5 +176,7 @@ public class Card {
             throw CardDomainException.of(ErrorCode.INVALID_INPUT, fieldName + "은(는) null일 수 없습니다.");
         }
     }
+
+
 
 }

@@ -1,6 +1,11 @@
 package com.example.thirdtool.Card.presentation.dto;
 
+import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.KeywordCue;
+import com.example.thirdtool.Card.domain.model.MainContentType;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 public class CardResponse {
 
@@ -25,7 +30,7 @@ public class CardResponse {
         }
     }
 
-    // ─── 카드 단건 조회 응답 ──────────────────────────────
+    // ─── 카드 단건 조회 응답- 내부 디테일 ──────────────────────────────
     public record Detail(
             Long cardId,
             Long deckId,

@@ -24,8 +24,6 @@ public class QUserEntity extends EntityPathBase<UserEntity> {
 
     public final DateTimePath<java.time.LocalDateTime> createdDate = createDateTime("createdDate", java.time.LocalDateTime.class);
 
-    public final ListPath<com.example.thirdtool.Deck.domain.model.Deck, com.example.thirdtool.Deck.domain.model.QDeck> decks = this.<com.example.thirdtool.Deck.domain.model.Deck, com.example.thirdtool.Deck.domain.model.QDeck>createList("decks", com.example.thirdtool.Deck.domain.model.Deck.class, com.example.thirdtool.Deck.domain.model.QDeck.class, PathInits.DIRECT2);
-
     public final StringPath email = createString("email");
 
     public final NumberPath<Long> id = createNumber("id", Long.class);

@@ -24,6 +24,12 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public final ListPath<com.example.thirdtool.Card.domain.model.Card, com.example.thirdtool.Card.domain.model.QCard> cards = this.<com.example.thirdtool.Card.domain.model.Card, com.example.thirdtool.Card.domain.model.QCard>createList("cards", com.example.thirdtool.Card.domain.model.Card.class, com.example.thirdtool.Card.domain.model.QCard.class, PathInits.DIRECT2);
 
+    public final DateTimePath<java.time.LocalDateTime> createdDate = createDateTime("createdDate", java.time.LocalDateTime.class);
+
+    public final BooleanPath deleted = createBoolean("deleted");
+
+    public final DateTimePath<java.time.LocalDateTime> deletedAt = createDateTime("deletedAt", java.time.LocalDateTime.class);
+
     public final NumberPath<Integer> depth = createNumber("depth", Integer.class);
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
@@ -38,9 +44,9 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public final DateTimePath<java.time.LocalDateTime> publishedAt = createDateTime("publishedAt", java.time.LocalDateTime.class);
 
-    public final StringPath scoringAlgorithmType = createString("scoringAlgorithmType");
-
     public final ListPath<Deck, QDeck> subDecks = this.<Deck, QDeck>createList("subDecks", Deck.class, QDeck.class, PathInits.DIRECT2);
+
+    public final DateTimePath<java.time.LocalDateTime> updatedDate = createDateTime("updatedDate", java.time.LocalDateTime.class);
 
     public final com.example.thirdtool.User.domain.model.QUserEntity user;
 

@@ -28,6 +28,8 @@ public class QCard extends EntityPathBase<Card> {
 
     public final BooleanPath deleted = createBoolean("deleted");
 
+    public final DateTimePath<java.time.LocalDateTime> deletedAt = createDateTime("deletedAt", java.time.LocalDateTime.class);
+
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final ListPath<KeywordCue, QKeywordCue> keywordCues = this.<KeywordCue, QKeywordCue>createList("keywordCues", KeywordCue.class, QKeywordCue.class, PathInits.DIRECT2);

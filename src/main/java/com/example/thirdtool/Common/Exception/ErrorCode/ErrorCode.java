@@ -40,6 +40,12 @@ public enum ErrorCode {
     CARD_KEYWORD_NOT_FOUND("CARD032",          "해당 키워드 단서를 찾을 수 없습니다.",                                        HttpStatus.NOT_FOUND),
     CARD_KEYWORD_LAST_CANNOT_REMOVE("CARD033", "마지막 키워드는 제거할 수 없습니다. 카드는 최소 1개의 키워드를 유지해야 합니다.", HttpStatus.BAD_REQUEST),
 
+    // ─── Tag ──────────────────────────────────────────────
+    TAG_VALUE_BLANK("TAG001",           "태그 이름은 비어 있을 수 없습니다.",                    HttpStatus.BAD_REQUEST),
+    CARD_TAG_LIMIT_EXCEEDED("TAG002",   "카드당 태그는 최대 3개까지만 연결할 수 있습니다.",      HttpStatus.BAD_REQUEST),
+    CARD_TAG_NOT_FOUND("TAG003",        "해당 태그를 카드에서 찾을 수 없습니다.",                HttpStatus.NOT_FOUND),
+    CARD_TAG_ALREADY_EXISTS("TAG004",   "이미 연결된 태그입니다.",                              HttpStatus.CONFLICT),
+
     // ─── Rank ─────────────────────────────────────────────
     RANK_NOT_FOUND("RANK001",       "유저 랭크 값을 찾을 수 없습니다.",    HttpStatus.NOT_FOUND),
     CARD_RANK_NOT_FOUND("RANK002",  "카드 랭크를 찾을 수 없습니다.",       HttpStatus.NOT_FOUND),

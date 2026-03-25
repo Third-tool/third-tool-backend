@@ -19,6 +19,8 @@ import java.util.List;
 @Entity
 @Table(name = "card")
 public class Card {
+    // static 영역
+    private static final int MAX_TAG_COUNT = 3;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,6 +46,17 @@ public class Card {
             fetch         = FetchType.LAZY
     )
     private final List<KeywordCue> keywordCues = new ArrayList<>();
+
+    // ─── 연결 태그 (Tag) ─────────────────────────────────────
+    // Tag는 카드에 종속되지 않는다. 카드가 삭제돼도 Tag 자체는 유지된다.
+    // 중간 테이블(card_tag)을 통한 N:M 관계.
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name               = "card_tag",
+            joinColumns        = @JoinColumn(name = "card_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private final List<Tag> tags = new ArrayList<>();
 
     // ─── Soft Delete ─────────────────────────────────────────
     @Column(nullable = false)
@@ -82,7 +95,13 @@ public class Card {
         return new Card(deck, mainNote, cueContents == null ? Collections.emptyList() : cueContents, summary);
     }
 
-    public static Card create(Deck deck, MainNote mainNote, Summary summary, List<String> keywordValues) {
+    public static Card create(
+            Deck deck,
+            MainNote mainNote,
+            Summary summary,
+            List<String> keywordValues,
+            List<Tag> tagList
+                             ) {
         requireNonNull(deck,          "deck");
         requireNonNull(mainNote,      "mainNote");
         requireNonNull(summary,       "summary");
@@ -92,9 +111,18 @@ public class Card {
             throw CardDomainException.of(ErrorCode.CARD_KEYWORD_MIN_REQUIRED);
         }
 
+        List<Tag> resolvedTags = tagList == null ? Collections.emptyList() : tagList;
+        if (resolvedTags.size() > MAX_TAG_COUNT) {
+            throw CardDomainException.of(
+                    ErrorCode.CARD_TAG_LIMIT_EXCEEDED,
+                    "생성 시 태그는 최대 " + MAX_TAG_COUNT + "개까지 허용됩니다."
+                                        );
+        }
+
         Card card = new Card(mainNote, summary);
         card.deck = deck;
         keywordValues.forEach(v -> card.keywordCues.add(KeywordCue.create(card, v)));
+        card.tags.addAll(resolvedTags);
         return card;
     }
 

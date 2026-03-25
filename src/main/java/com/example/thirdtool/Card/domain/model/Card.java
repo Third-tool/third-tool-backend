@@ -47,16 +47,16 @@ public class Card {
     )
     private final List<KeywordCue> keywordCues = new ArrayList<>();
 
-    // ─── 연결 태그 (Tag) ─────────────────────────────────────
-    // Tag는 카드에 종속되지 않는다. 카드가 삭제돼도 Tag 자체는 유지된다.
-    // 중간 테이블(card_tag)을 통한 N:M 관계.
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name               = "card_tag",
-            joinColumns        = @JoinColumn(name = "card_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    // ─── 연결 태그 (CardTag) ──────────────────────────────────
+    // @ManyToMany 대신 명시적 중간 엔티티로 관리한다.
+    // 이유: linkedAt 보존, 역방향 조회 효율화, 태그 통계 확장 가능성
+    @OneToMany(
+            mappedBy      = "card",
+            cascade       = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch         = FetchType.LAZY
     )
-    private final List<Tag> tags = new ArrayList<>();
+    private final List<CardTag> cardTags = new ArrayList<>();
 
     // ─── Soft Delete ─────────────────────────────────────────
     @Column(nullable = false)
@@ -122,8 +122,20 @@ public class Card {
         Card card = new Card(mainNote, summary);
         card.deck = deck;
         keywordValues.forEach(v -> card.keywordCues.add(KeywordCue.create(card, v)));
-        card.tags.addAll(resolvedTags);
+        resolvedTags.forEach(tag -> card.cardTags.add(CardTag.link(card,tag)));
         return card;
+    }
+
+    /**
+     * 태그 없이 카드를 생성한다. (기존 코드 호환용)
+     */
+    public static Card create(
+            Deck deck,
+            MainNote mainNote,
+            Summary summary,
+            List<String> keywordValues
+                             ) {
+        return create(deck, mainNote, summary, keywordValues, null);
     }
 
     // -------------------------------------------------------------------------
@@ -165,6 +177,67 @@ public class Card {
         }
         keywordCues.remove(target);
     }
+
+
+    // -------------------------------------------------------------------------
+    // 수정 — Tags
+    // -------------------------------------------------------------------------
+
+    /**
+     * 태그를 단건 추가한다.
+     * 이미 3개이면 예외를 발생시킨다.
+     * 이미 연결된 태그를 다시 추가하면 예외를 발생시킨다.
+     */
+    public void addTag(Tag tag) {
+        requireNonNull(tag, "tag");
+        if (cardTags.size() >= MAX_TAG_COUNT) {
+            throw CardDomainException.of(
+                    ErrorCode.CARD_TAG_LIMIT_EXCEEDED,
+                    "현재 " + cardTags.size() + "개 연결됨. 최대 " + MAX_TAG_COUNT + "개까지 허용됩니다."
+                                        );
+        }
+        boolean alreadyLinked = cardTags.stream()
+                                        .anyMatch(ct -> ct.getTag().getId().equals(tag.getId()));
+        if (alreadyLinked) {
+            throw CardDomainException.of(
+                    ErrorCode.CARD_TAG_ALREADY_EXISTS,
+                    "tagId=" + tag.getId()
+                                        );
+        }
+        cardTags.add(CardTag.link(this, tag));
+    }
+
+    /**
+     * 태그를 단건 제거한다.
+     * 연결되지 않은 tagId이면 예외를 발생시킨다.
+     */
+    public void removeTag(Long tagId) {
+        CardTag target = cardTags.stream()
+                                 .filter(ct -> ct.getTag().getId().equals(tagId))
+                                 .findFirst()
+                                 .orElseThrow(() -> CardDomainException.of(
+                                         ErrorCode.CARD_TAG_NOT_FOUND,
+                                         "tagId=" + tagId));
+        cardTags.remove(target);
+    }
+
+    /**
+     * 태그 목록을 전체 교체한다.
+     * 4개 이상의 목록으로 교체할 수 없다.
+     * null이면 빈 목록으로 교체한다.
+     */
+    public void replaceTags(List<Tag> newTags) {
+        List<Tag> resolved = newTags == null ? Collections.emptyList() : newTags;
+        if (resolved.size() > MAX_TAG_COUNT) {
+            throw CardDomainException.of(
+                    ErrorCode.CARD_TAG_LIMIT_EXCEEDED,
+                    "교체 시 태그는 최대 " + MAX_TAG_COUNT + "개까지 허용됩니다."
+                                        );
+        }
+        cardTags.clear();
+        resolved.forEach(tag -> cardTags.add(CardTag.link(this, tag)));
+    }
+
 
     // ─── Soft Delete ──────────────────────────────────────
 

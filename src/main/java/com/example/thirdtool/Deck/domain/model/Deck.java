@@ -16,6 +16,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Getter
@@ -37,7 +38,7 @@ public class Deck {
     @Column(nullable = false, length = 100)
     private String name;
 
-    // ✅ lastAccessed 필드 추가
+    // ✅ lastAccessed 필드 추가e
     private LocalDateTime lastAccessed;
 
 
@@ -46,12 +47,16 @@ public class Deck {
 
     private LocalDateTime publishedAt;   // 공개 시각 (정렬용)
 
+    /** 덱 운영 모드. 기본값 ON_FIELD(활성 학습 모드). */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DeckMode mode = DeckMode.ON_FIELD;
+
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_deck_id")
     private Deck parentDeck;
 
-    // ✅ depth 추가- 자기참조 관련 관리 로직
     @Column(nullable = false)
     private int depth;
 
@@ -89,12 +94,20 @@ public class Deck {
         this.depth = (parentDeck == null) ? 0 : parentDeck.getDepth() + 1;
     }
 
-    public static Deck of(String name, Deck parentDeck, UserEntity user) { // ✅ User 인자 추가
-        return internalBuilder()
-                .name(name)
-                .parentDeck(parentDeck)
-                .user(user) // ✅ user 전달
-                .build();
+    public static Deck of(String name, Deck parentDeck, UserEntity user) {
+        validateName(name);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: user는 null일 수 없습니다.");
+        }
+
+        Deck deck = new Deck();
+        deck.name         = name.trim();
+        deck.parentDeck   = parentDeck;
+        deck.user         = user;
+        deck.depth        = (parentDeck == null) ? 0 : parentDeck.getDepth() + 1;
+        deck.lastAccessed = LocalDateTime.now();
+        deck.mode         = DeckMode.ON_FIELD;
+        return deck;
     }
 
     public void updateName(String name) {
@@ -108,9 +121,32 @@ public class Deck {
         this.lastAccessed = LocalDateTime.now();
     }
 
+
+    /**
+     * 부모 덱을 변경하고 자신의 depth를 재계산한다.
+     *
+     * <p>⚠️ 하위 덱의 depth는 재귀적으로 갱신되지 않는다.
+     * 호출자(DeckCommandService)가 {@code getSubDecks()}를 순회하며
+     * 하위 덱 전체의 depth를 재귀 갱신할 책임을 가진다.
+     */
     public void changeParent(Deck newParent) {
         this.parentDeck = newParent;
         this.depth      = (newParent == null) ? 0 : newParent.getDepth() + 1;
+    }
+
+    /**
+     * 덱 운영 모드를 변경한다.
+     */
+    public void changeMode(DeckMode mode) {
+        if (mode == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: mode는 null일 수 없습니다.");
+        }
+        this.mode = mode;
+    }
+
+    // 권한 검증용
+    public boolean isOwner(Long userId) {
+        return this.user.getId().equals(userId);
     }
 
     // ─── Soft Delete ──────────────────────────────────────
@@ -149,6 +185,29 @@ public class Deck {
                           && card.getDeletedAt() != null
                           && !card.getDeletedAt().isBefore(deckDeletedAt))
                   .forEach(Card::restore);
+    }
+    // -------------------------------------------------------
+    // 읽기 전용 뷰
+    // -------------------------------------------------------
+
+    /** 수정 불가능한 카드 목록 뷰를 반환한다. */
+    public List<Card> getCards() {
+        return Collections.unmodifiableList(cards);
+    }
+
+    /** 수정 불가능한 하위 덱 목록 뷰를 반환한다. */
+    public List<Deck> getSubDecks() {
+        return Collections.unmodifiableList(subDecks);
+    }
+
+    // -------------------------------------------------------
+    // 내부 검증
+    // -------------------------------------------------------
+
+    private static void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new BusinessException(ErrorCode.DECK_NAME_BLANK);
+        }
     }
 
 }

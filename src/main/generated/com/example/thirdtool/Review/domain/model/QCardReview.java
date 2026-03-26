@@ -26,9 +26,9 @@ public class QCardReview extends EntityPathBase<CardReview> {
 
     public final NumberPath<Integer> cardOrder = createNumber("cardOrder", Integer.class);
 
-    public final NumberPath<Long> id = createNumber("id", Long.class);
+    public final DateTimePath<java.time.LocalDateTime> comparingStartedAt = createDateTime("comparingStartedAt", java.time.LocalDateTime.class);
 
-    public final DateTimePath<java.time.LocalDateTime> revealedAt = createDateTime("revealedAt", java.time.LocalDateTime.class);
+    public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final QReviewSession reviewSession;
 

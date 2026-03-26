@@ -4,6 +4,7 @@ import com.example.thirdtool.Deck.domain.model.QDeck;
 import com.example.thirdtool.Review.domain.model.QReviewSession;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
 import com.example.thirdtool.Review.infrastructure.dto.QReviewSessionSummaryRow;
+import com.example.thirdtool.Review.infrastructure.dto.ReviewSessionSearchCondition;
 import com.example.thirdtool.Review.infrastructure.dto.ReviewSessionSummaryRow;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;

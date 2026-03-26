@@ -22,6 +22,8 @@ public class QCard extends EntityPathBase<Card> {
 
     public static final QCard card = new QCard("card");
 
+    public final ListPath<CardTag, QCardTag> cardTags = this.<CardTag, QCardTag>createList("cardTags", CardTag.class, QCardTag.class, PathInits.DIRECT2);
+
     public final DateTimePath<java.time.LocalDateTime> createdDate = createDateTime("createdDate", java.time.LocalDateTime.class);
 
     public final com.example.thirdtool.Deck.domain.model.QDeck deck;

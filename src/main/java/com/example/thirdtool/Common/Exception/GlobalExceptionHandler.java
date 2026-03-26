@@ -38,6 +38,7 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    //파일 관련 예외 처리
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> handleMaxSizeException(MaxUploadSizeExceededException e) {
         Map<String, String> response = new HashMap<>();

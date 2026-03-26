@@ -16,15 +16,11 @@ public enum ErrorCode {
     UNAUTHORIZED("USER002",    "인증이 필요합니다.",          HttpStatus.UNAUTHORIZED),
 
     // ─── Deck ─────────────────────────────────────────────
-    DECK_NOT_FOUND("DECK001",           "덱을 찾을 수 없습니다.",                                                              HttpStatus.NOT_FOUND),
-    DECK_ALREADY_DELETED("DECK002",     "이미 삭제된 덱입니다.",                                                               HttpStatus.BAD_REQUEST),
-    DECK_PARENT_NOT_FOUND("DECK003",    "부모 덱이 존재하지 않습니다.",                                                        HttpStatus.NOT_FOUND),
-    DECK_ALGORITHM_REQUIRED("DECK004",  "덱에 알고리즘이 필요합니다.",                                                         HttpStatus.BAD_REQUEST),
-    INVALID_REQUEST("INVALID001",       "하위 덱은 알고리즘을 직접 지정할 수 없습니다. 부모 덱의 알고리즘을 상속받습니다.",    HttpStatus.BAD_REQUEST),
-    DECK_ALGORITHM_NOT_SET("DECK005",   "Deck의 알고리즘 타입이 설정되지 않았습니다. Deck 생성 시 알고리즘을 반드시 지정하세요.", HttpStatus.BAD_REQUEST),
-    UNSUPPORTED_ALGORITHM("DECK006",    "지원하지 않는 알고리즘 타입입니다.",                                                  HttpStatus.BAD_REQUEST),
-    ALGORITHM_BEAN_NOT_FOUND("DECK007", "스프링 컨텍스트에서 해당 알고리즘 빈을 찾을 수 없습니다.",                            HttpStatus.INTERNAL_SERVER_ERROR),
-    DECK_HIERARCHY_CYCLE("DECK008",     "덱 계층 관계에 순환이 발생했습니다.",                                                 HttpStatus.BAD_REQUEST),
+    DECK_NOT_FOUND("DECK001", "덱을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    DECK_ALREADY_DELETED("DECK002", "이미 삭제된 덱입니다.", HttpStatus.BAD_REQUEST),
+    DECK_NAME_DUPLICATE("DECK003", "이미 존재하는 덱 이름입니다.", HttpStatus.CONFLICT),
+    DECK_NAME_BLANK("DECK004", "덱 이름은 비어 있을 수 없습니다.", HttpStatus.BAD_REQUEST),
+    DECK_FORBIDDEN("DECK005", "본인의 덱이 아닙니다.", HttpStatus.FORBIDDEN),
 
     // ─── Card ─────────────────────────────────────────────
     CARD_NOT_FOUND("CARD001",                  "카드를 찾을 수 없습니다.",                                                     HttpStatus.NOT_FOUND),
@@ -40,10 +36,18 @@ public enum ErrorCode {
     CARD_KEYWORD_NOT_FOUND("CARD032",          "해당 키워드 단서를 찾을 수 없습니다.",                                        HttpStatus.NOT_FOUND),
     CARD_KEYWORD_LAST_CANNOT_REMOVE("CARD033", "마지막 키워드는 제거할 수 없습니다. 카드는 최소 1개의 키워드를 유지해야 합니다.", HttpStatus.BAD_REQUEST),
 
-    // ─── Rank ─────────────────────────────────────────────
-    RANK_NOT_FOUND("RANK001",       "유저 랭크 값을 찾을 수 없습니다.",    HttpStatus.NOT_FOUND),
-    CARD_RANK_NOT_FOUND("RANK002",  "카드 랭크를 찾을 수 없습니다.",       HttpStatus.NOT_FOUND),
-    INVALID_RANK_RANGE("RANK003",   "랭크 구간이 겹치거나 연결되지 않았습니다.", HttpStatus.BAD_REQUEST),
+    // ─── Tag ──────────────────────────────────────────────
+    TAG_VALUE_BLANK("TAG001",           "태그 이름은 비어 있을 수 없습니다.",                    HttpStatus.BAD_REQUEST),
+    CARD_TAG_LIMIT_EXCEEDED("TAG002",   "카드당 태그는 최대 3개까지만 연결할 수 있습니다.",      HttpStatus.BAD_REQUEST),
+    CARD_TAG_NOT_FOUND("TAG003",        "해당 태그를 카드에서 찾을 수 없습니다.",                HttpStatus.NOT_FOUND),
+    CARD_TAG_ALREADY_EXISTS("TAG004",   "이미 연결된 태그입니다.",                              HttpStatus.CONFLICT),
+
+    // ─── Review ───────────────────────────────────────────
+    REVIEW_SESSION_NOT_FOUND("REVIEW001", "리뷰 세션을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    REVIEW_DECK_HAS_NO_CARDS("REVIEW002", "카드가 없는 덱으로는 리뷰 세션을 시작할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    REVIEW_SESSION_ALREADY_FINISHED("REVIEW003", "이미 종료된 리뷰 세션입니다.", HttpStatus.BAD_REQUEST),
+    REVIEW_NEXT_REQUIRES_COMPARING("REVIEW004", "현재 카드를 먼저 비교(COMPARING) 단계로 전환해야 다음으로 이동할 수 있습니다.", HttpStatus.BAD_REQUEST),
+    REVIEW_SESSION_FORBIDDEN("REVIEW005", "본인의 리뷰 세션이 아닙니다.", HttpStatus.FORBIDDEN),
 
     // ─── 파일 / 스토리지 ──────────────────────────────────
     FILE_EMPTY("FILE001",                   "파일이 비어있습니다.",               HttpStatus.BAD_REQUEST),

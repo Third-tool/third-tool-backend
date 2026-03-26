@@ -30,9 +30,8 @@ public class CardReview {
     @Column(name = "review_step", nullable = false)
     private ReviewStep reviewStep;
 
-    // Keywords·Summary가 공개된 시각. RECALLING 상태이면 null.
-    @Column(name = "revealed_at")
-    private LocalDateTime revealedAt;
+    @Column(name = "comparing_started_at")
+    private LocalDateTime comparingStartedAt;
 
     // 순서 보장을 위한 인덱스
     @Column(name = "card_order", nullable = false)
@@ -54,8 +53,8 @@ public class CardReview {
         cardReview.card = card;
         cardReview.reviewSession = reviewSession;
         cardReview.reviewStep = ReviewStep.RECALLING;
+        cardReview.comparingStartedAt = null;
         cardReview.cardOrder = cardOrder;
-        cardReview.revealedAt = null;
         return cardReview;
     }
 
@@ -64,23 +63,24 @@ public class CardReview {
     // -------------------------------------------------------
 
     /**
-     * REVEALED 상태로 전환하고 공개 시각을 기록한다.
-     * 이미 REVEALED 상태이면 무시한다. (멱등성 보장)
-     * RECALLING → REVEALED 단방향 전환만 허용한다.
+     * COMPARING 상태로 전환하고 비교 시작 시각을 기록한다.
+     * 이미 COMPARING 상태이면 무시한다. (멱등성 보장)
+     * comparingStartedAt은 최초 전환 시각을 보존하며 덮어쓰지 않는다.
      */
-    public void reveal() {
-        if (isRevealed()) {
+    public void startComparing() {
+        if (isComparing()) {
             return;
         }
-        this.reviewStep = ReviewStep.REVEALED;
-        this.revealedAt = LocalDateTime.now();
+        this.reviewStep = ReviewStep.COMPARING;
+        this.comparingStartedAt = LocalDateTime.now();
     }
 
+
     /**
-     * REVEALED 상태 여부를 반환한다.
+     * COMPARING 상태 여부를 반환한다.
      */
-    public boolean isRevealed() {
-        return this.reviewStep == ReviewStep.REVEALED;
+    public boolean isComparing() {
+        return this.reviewStep == ReviewStep.COMPARING;
     }
 
     /**
@@ -97,7 +97,18 @@ public class CardReview {
      * 외부에서 공개 여부를 직접 주입할 수 없다.
      */
     public boolean isAnswerVisible() {
-        return this.reviewStep == ReviewStep.REVEALED;
+        return this.reviewStep == ReviewStep.COMPARING;
+    }
+
+    public CardVisibleContent visibleContent() {
+        if (isComparing()) {
+            return CardVisibleContent.comparing(
+                    card.getMainNote(),
+                    card.getKeywordCues(),
+                    card.getSummary()
+                                               );
+        }
+        return CardVisibleContent.recalling(card.getMainNote());
     }
 
     // -------------------------------------------------------

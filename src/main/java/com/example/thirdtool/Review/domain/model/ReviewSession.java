@@ -1,6 +1,8 @@
 package com.example.thirdtool.Review.domain.model;
 
 import com.example.thirdtool.Card.domain.model.Card;
+import com.example.thirdtool.Common.Exception.BusinessException;
+import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Review.domain.exception.ReviewSessionException;
 import com.example.thirdtool.User.domain.model.UserEntity;
@@ -76,9 +78,6 @@ public class ReviewSession {
     // 행위
     // -------------------------------------------------------
 
-    /**
-     * 현재 리뷰 중인 CardReview를 반환한다.
-     */
     public CardReview currentCardReview() {
         return cardReviews.get(currentIndex);
     }
@@ -87,8 +86,9 @@ public class ReviewSession {
      * 현재 카드를 REVEALED 상태로 전환한다.
      * Keywords·Summary가 공개된다.
      */
-    public void revealCurrentCard() {
-        currentCardReview().reveal();
+    public void startComparingCurrentCard() {
+        validateNotFinished();
+        currentCardReview().startComparing();
     }
 
     /**
@@ -100,7 +100,7 @@ public class ReviewSession {
         if (isFinished()) {
             throw new ReviewSessionException("이미 모든 카드 리뷰가 완료된 세션입니다.");
         }
-        if (!currentCardReview().isRevealed()) {
+        if (!currentCardReview().isComparing()) {
             throw new ReviewSessionException("현재 카드를 확인(REVEALED)한 후에 다음 카드로 이동할 수 있습니다.");
         }
         this.currentIndex++;
@@ -113,9 +113,18 @@ public class ReviewSession {
         return currentIndex >= cardReviews.size();
     }
 
+    public boolean isOwner(Long userId) {
+        return this.user.getId().equals(userId);
+    }
+
     // -------------------------------------------------------
     // 검증
     // -------------------------------------------------------
+    private void validateNotFinished() {
+        if (isFinished()) {
+            throw new BusinessException(ErrorCode.REVIEW_SESSION_ALREADY_FINISHED);
+        }
+    }
 
     private static void validateDeck(Deck deck) {
         if (deck == null) {

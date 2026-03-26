@@ -46,10 +46,12 @@ public enum ErrorCode {
     CARD_TAG_NOT_FOUND("TAG003",        "해당 태그를 카드에서 찾을 수 없습니다.",                HttpStatus.NOT_FOUND),
     CARD_TAG_ALREADY_EXISTS("TAG004",   "이미 연결된 태그입니다.",                              HttpStatus.CONFLICT),
 
-    // ─── Rank ─────────────────────────────────────────────
-    RANK_NOT_FOUND("RANK001",       "유저 랭크 값을 찾을 수 없습니다.",    HttpStatus.NOT_FOUND),
-    CARD_RANK_NOT_FOUND("RANK002",  "카드 랭크를 찾을 수 없습니다.",       HttpStatus.NOT_FOUND),
-    INVALID_RANK_RANGE("RANK003",   "랭크 구간이 겹치거나 연결되지 않았습니다.", HttpStatus.BAD_REQUEST),
+    // ─── Review ───────────────────────────────────────────
+    REVIEW_SESSION_NOT_FOUND("REVIEW001", "리뷰 세션을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    REVIEW_DECK_HAS_NO_CARDS("REVIEW002", "카드가 없는 덱으로는 리뷰 세션을 시작할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    REVIEW_SESSION_ALREADY_FINISHED("REVIEW003", "이미 종료된 리뷰 세션입니다.", HttpStatus.BAD_REQUEST),
+    REVIEW_NEXT_REQUIRES_COMPARING("REVIEW004", "현재 카드를 먼저 비교(COMPARING) 단계로 전환해야 다음으로 이동할 수 있습니다.", HttpStatus.BAD_REQUEST),
+    REVIEW_SESSION_FORBIDDEN("REVIEW005", "본인의 리뷰 세션이 아닙니다.", HttpStatus.FORBIDDEN),
 
     // ─── 파일 / 스토리지 ──────────────────────────────────
     FILE_EMPTY("FILE001",                   "파일이 비어있습니다.",               HttpStatus.BAD_REQUEST),

@@ -2,7 +2,7 @@ package com.example.thirdtool.Review.domain.model;
 
 public enum ReviewStep {
     RECALLING("회상중"),
-    REVEALED("공개됨");
+    COMPARING("비교 중");
 
     private final String label;
 

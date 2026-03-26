@@ -1,6 +1,7 @@
 package com.example.thirdtool.Review.infrastructure;
 
 import com.example.thirdtool.Review.domain.model.ReviewSession;
+import com.example.thirdtool.Review.infrastructure.dto.ReviewSessionSearchCondition;
 import com.example.thirdtool.Review.infrastructure.dto.ReviewSessionSummaryRow;
 
 import java.util.List;

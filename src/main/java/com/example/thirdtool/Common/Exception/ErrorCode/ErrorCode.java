@@ -16,15 +16,11 @@ public enum ErrorCode {
     UNAUTHORIZED("USER002",    "인증이 필요합니다.",          HttpStatus.UNAUTHORIZED),
 
     // ─── Deck ─────────────────────────────────────────────
-    DECK_NOT_FOUND("DECK001",           "덱을 찾을 수 없습니다.",                                                              HttpStatus.NOT_FOUND),
-    DECK_ALREADY_DELETED("DECK002",     "이미 삭제된 덱입니다.",                                                               HttpStatus.BAD_REQUEST),
-    DECK_PARENT_NOT_FOUND("DECK003",    "부모 덱이 존재하지 않습니다.",                                                        HttpStatus.NOT_FOUND),
-    DECK_ALGORITHM_REQUIRED("DECK004",  "덱에 알고리즘이 필요합니다.",                                                         HttpStatus.BAD_REQUEST),
-    INVALID_REQUEST("INVALID001",       "하위 덱은 알고리즘을 직접 지정할 수 없습니다. 부모 덱의 알고리즘을 상속받습니다.",    HttpStatus.BAD_REQUEST),
-    DECK_ALGORITHM_NOT_SET("DECK005",   "Deck의 알고리즘 타입이 설정되지 않았습니다. Deck 생성 시 알고리즘을 반드시 지정하세요.", HttpStatus.BAD_REQUEST),
-    UNSUPPORTED_ALGORITHM("DECK006",    "지원하지 않는 알고리즘 타입입니다.",                                                  HttpStatus.BAD_REQUEST),
-    ALGORITHM_BEAN_NOT_FOUND("DECK007", "스프링 컨텍스트에서 해당 알고리즘 빈을 찾을 수 없습니다.",                            HttpStatus.INTERNAL_SERVER_ERROR),
-    DECK_HIERARCHY_CYCLE("DECK008",     "덱 계층 관계에 순환이 발생했습니다.",                                                 HttpStatus.BAD_REQUEST),
+    DECK_NOT_FOUND("DECK001", "덱을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    DECK_ALREADY_DELETED("DECK002", "이미 삭제된 덱입니다.", HttpStatus.BAD_REQUEST),
+    DECK_NAME_DUPLICATE("DECK003", "이미 존재하는 덱 이름입니다.", HttpStatus.CONFLICT),
+    DECK_NAME_BLANK("DECK004", "덱 이름은 비어 있을 수 없습니다.", HttpStatus.BAD_REQUEST),
+    DECK_FORBIDDEN("DECK005", "본인의 덱이 아닙니다.", HttpStatus.FORBIDDEN),
 
     // ─── Card ─────────────────────────────────────────────
     CARD_NOT_FOUND("CARD001",                  "카드를 찾을 수 없습니다.",                                                     HttpStatus.NOT_FOUND),

@@ -36,6 +36,8 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public final DateTimePath<java.time.LocalDateTime> lastAccessed = createDateTime("lastAccessed", java.time.LocalDateTime.class);
 
+    public final EnumPath<DeckMode> mode = createEnum("mode", DeckMode.class);
+
     public final StringPath name = createString("name");
 
     public final BooleanPath onLibrary = createBoolean("onLibrary");

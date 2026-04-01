@@ -13,12 +13,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
 @RestController
 @RequiredArgsConstructor
 public class CardController {
 
     private final CardCommandService cardCommandService;
-    private final CardQueryService cardQueryService;
+    private final CardQueryService   cardQueryService;
 
     // ─── 1. 카드 생성 ─────────────────────────────────────
     @PostMapping("/api/v1/decks/{deckId}/cards")
@@ -94,7 +95,44 @@ public class CardController {
         return ResponseEntity.ok(cardCommandService.removeKeyword(cardId, keywordCueId));
     }
 
-    // ─── 9. 카드 삭제 (Soft Delete) ───────────────────────
+    // ─── 9. 태그 단건 추가 ────────────────────────────────
+    @PostMapping("/api/v1/cards/{cardId}/tags")
+    public ResponseEntity<CardResponse.Tags> addTag(
+            @PathVariable Long cardId,
+            @Valid @RequestBody CardRequest.AddTag request
+                                                   ) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(cardCommandService.addTag(cardId, request));
+    }
+
+    // ─── 10. 태그 단건 제거 ───────────────────────────────
+    @DeleteMapping("/api/v1/cards/{cardId}/tags/{tagId}")
+    public ResponseEntity<CardResponse.Tags> removeTag(
+            @PathVariable Long cardId,
+            @PathVariable Long tagId
+                                                      ) {
+        return ResponseEntity.ok(cardCommandService.removeTag(cardId, tagId));
+    }
+
+    // ─── 11. 태그 전체 교체 ───────────────────────────────
+    @PutMapping("/api/v1/cards/{cardId}/tags")
+    public ResponseEntity<CardResponse.Tags> replaceTags(
+            @PathVariable Long cardId,
+            @Valid @RequestBody CardRequest.ReplaceTags request
+                                                        ) {
+        return ResponseEntity.ok(cardCommandService.replaceTags(cardId, request));
+    }
+
+    // ─── 12. 관련 카드 후보 조회 ──────────────────────────
+    @GetMapping("/api/v1/cards/{cardId}/related")
+    public ResponseEntity<List<CardResponse.RelatedCard>> findRelated(
+            @PathVariable Long cardId
+                                                                     ) {
+        return ResponseEntity.ok(cardQueryService.findRelated(cardId));
+    }
+
+    // ─── 13. 카드 삭제 (Soft Delete) ──────────────────────
     @DeleteMapping("/api/v1/cards/{cardId}")
     public ResponseEntity<Void> softDelete(
             @PathVariable Long cardId

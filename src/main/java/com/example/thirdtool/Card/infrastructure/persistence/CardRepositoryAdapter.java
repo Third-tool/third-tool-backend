@@ -1,6 +1,7 @@
 package com.example.thirdtool.Card.infrastructure.persistence;
 
 import com.example.thirdtool.Card.domain.model.Card;
+import com.example.thirdtool.Card.domain.model.CardStatus;
 import com.example.thirdtool.Card.infrastructure.dto.CardSearchCondition;
 import com.example.thirdtool.Card.infrastructure.dto.CardSummaryRow;
 import lombok.RequiredArgsConstructor;
@@ -49,4 +50,16 @@ public class CardRepositoryAdapter implements CardRepository {
     public Page<CardSummaryRow> searchCards(CardSearchCondition condition, Pageable pageable) {
         return cardJpaRepository.searchCards(condition, pageable);
     }
+
+    @Override
+    public List<Card> findBySharedTagIds(List<Long> tagIds, Long excludeCardId) {
+        if (tagIds == null || tagIds.isEmpty()) return List.of();
+        return cardJpaRepository.findBySharedTagIds(tagIds, excludeCardId);
+    }
+
+    @Override
+    public List<Card> findAllByStatus(CardStatus status) {
+        return cardJpaRepository.findAllByStatusAndDeletedFalse(status);
+    }
+
 }

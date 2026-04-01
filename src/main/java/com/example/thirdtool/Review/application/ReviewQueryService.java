@@ -1,5 +1,6 @@
 package com.example.thirdtool.Review.application;
 
+import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
@@ -18,17 +19,15 @@ import java.util.List;
 public class ReviewQueryService {
 
     private final ReviewSessionRepository reviewSessionRepository;
+    private final OnFieldBudget systemBudget;
 
     // ─── 1. 세션 단건 조회 ────────────────────────────────
-    /**
-     * 세션 단건 조회.
-     * 존재하지 않는 세션 → REVIEW_SESSION_NOT_FOUND
-     * 본인 세션이 아님 → REVIEW_SESSION_FORBIDDEN
-     */
     public ReviewResponse.SessionDetail findById(Long sessionId, Long userId) {
         ReviewSession session = getSessionByOwner(sessionId, userId);
-        return ReviewResponse.SessionDetail.of(session);
+        boolean isLastView = resolveIsLastView(session);
+        return ReviewResponse.SessionDetail.of(session, isLastView);
     }
+
 
     // ─── 2. 세션 목록 조회 ────────────────────────────────
     /**
@@ -60,5 +59,10 @@ public class ReviewQueryService {
         }
 
         return session;
+    }
+
+    private boolean resolveIsLastView(ReviewSession session) {
+        if (session.isFinished()) return false;
+        return session.currentCardReview().getCard().isLastView(systemBudget.getMaxView());
     }
 }

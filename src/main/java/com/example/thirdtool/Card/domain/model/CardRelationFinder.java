@@ -11,13 +11,6 @@ import java.util.stream.Collectors;
 @Component
 public class CardRelationFinder {
 
-    /**
-     * 현재 카드와 공유 태그를 가진 카드 목록을 관련 카드 후보로 변환한다.(미리 대기- 임시 세션)
-     *
-     * @param currentCard  기준 카드 (자기 자신은 후보에서 제외됨)
-     * @param taggedCards  Repository에서 조회한 태그 공유 카드 목록
-     * @return sharedTagCount 내림차순으로 정렬된 후보 목록
-     */
     public List<RelatedCardCandidate> findCandidates(
             Card currentCard,
             List<Card> taggedCards

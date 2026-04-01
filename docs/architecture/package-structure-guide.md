@@ -26,6 +26,7 @@ com.example.thirdtool
 ## BC별 내부 구조 규칙
 
 모든 BC는 아래 레이어 구조를 따른다.
+
 ```
 {BC}/
 ├── application/
@@ -44,7 +45,8 @@ com.example.thirdtool
 ---
 
 <details>
-<summary><strong>Card BC</strong> — 회상 가능한 학습 단위의 생성·수정·상태 전환·관계 탐색</summary>
+<summary>Card BC — 회상 가능한 학습 단위의 생성·수정·상태 전환·관계 탐색</summary>
+
 ```
 Card/
 ├── application/
@@ -138,7 +140,8 @@ Deck/
 ---
 
 <details>
-<summary><strong>Review BC</strong> — ReviewSession 생성·진행·종료 및 카드 노출 흐름 관리</summary>
+<summary> Review BC — ReviewSession 생성·진행·종료 및 카드 노출 흐름 관리</summary>
+
 ```
 Review/
 ├── application/
@@ -179,7 +182,8 @@ Review/
 ---
 
 <details>
-<summary><strong>User BC</strong> — 소셜 로그인 기반 사용자 가입·인증·정보 관리</summary>
+<summary> User BC — 소셜 로그인 기반 사용자 가입·인증·정보 관리</summary>
+
 ```
 User/
 ├── application/
@@ -311,13 +315,3 @@ test/
 
 ---
 
-## 패키지 추가 체크리스트
-
-새 클래스·패키지 추가 시 아래를 확인한다.
-
-- [ ] 어느 BC에 속하는가? 또는 Common인가?
-- [ ] domain / application / infrastructure / presentation 중 어느 레이어인가?
-- [ ] BC 간 의존 방향을 역전시키지 않는가?
-- [ ] Common에 BC 의존이 생기지 않는가?
-- [ ] DTO가 올바른 레이어(presentation/dto 또는 infrastructure/dto)에 위치하는가?
-- [ ] 이 문서에 반영했는가?

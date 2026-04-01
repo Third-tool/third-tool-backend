@@ -42,16 +42,28 @@ public class CardStatusHistory {
     @Column(name = "changed_at", nullable = false, updatable = false)
     private LocalDateTime changedAt;
 
+    //Archive에 대한 기록 축적
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reason", updatable = false, length = 20)
+    private ArchiveReason reason;
+
+
     /** JPA 전용 기본 생성자. 외부에서 직접 사용 금지. */
     protected CardStatusHistory() {}
 
-    private CardStatusHistory(Card card, CardStatus fromStatus, CardStatus toStatus) {
+    private CardStatusHistory(Card card, CardStatus fromStatus, CardStatus toStatus, ArchiveReason reason) {
         this.card       = card;
         this.fromStatus = fromStatus;
         this.toStatus   = toStatus;
+        this.reason     = reason;
     }
 
-    static CardStatusHistory of(Card card, CardStatus fromStatus, CardStatus toStatus) {
+    static CardStatusHistory of(
+            Card card,
+            CardStatus fromStatus,
+            CardStatus toStatus,
+            ArchiveReason reason
+                               ) {
         if (card == null) {
             throw CardDomainException.of(
                     ErrorCode.INVALID_INPUT, "CardStatusHistory: card는 null일 수 없습니다.");
@@ -67,8 +79,21 @@ public class CardStatusHistory {
         if (fromStatus == toStatus) {
             throw CardDomainException.of(
                     ErrorCode.INVALID_INPUT,
-                    "CardStatusHistory: fromStatus와 toStatus가 동일합니다. 전환 이력은 상태가 달라야 합니다. status=" + fromStatus);
+                    "CardStatusHistory: fromStatus와 toStatus가 동일합니다. status=" + fromStatus);
         }
-        return new CardStatusHistory(card, fromStatus, toStatus);
+
+        // 방향별 reason 검증
+        if (toStatus == CardStatus.ARCHIVE && reason == null) {
+            throw CardDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "CardStatusHistory: ON_FIELD → ARCHIVE 이력에는 reason이 필수입니다.");
+        }
+        if (toStatus == CardStatus.ON_FIELD && reason != null) {
+            throw CardDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "CardStatusHistory: ARCHIVE → ON_FIELD 복귀 이력에는 reason을 기록하지 않습니다. reason=" + reason);
+        }
+
+        return new CardStatusHistory(card, fromStatus, toStatus, reason);
     }
 }

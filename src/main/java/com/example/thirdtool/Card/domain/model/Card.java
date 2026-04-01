@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,7 +21,7 @@ import java.util.List;
 @Table(name = "card")
 public class Card {
 
-    // ─── 상수 ────────────────────────────────────────────────
+    // ─── 매직 넘버 ────────────────────────────────────────────────
     private static final int MAX_TAG_COUNT = 3;
 
     // ─── 식별자 ──────────────────────────────────────────────
@@ -67,6 +68,22 @@ public class Card {
     @Column(name = "status", nullable = false, length = 20)
     private CardStatus status = CardStatus.ON_FIELD;
 
+    // ─── ON_FIELD 체류 추적 ───────────────────────────────────
+    // enteredFieldAt: 현재 ON_FIELD 구간 진입 시각.
+    //   - 생성 시 현재 시각으로 초기화.
+    //   - ARCHIVE → ON_FIELD 복귀 시 재기록.
+    //   - archive() 시 보존. (마지막 ON_FIELD 구간 통계 근거 유지)
+    @Column(name = "entered_field_at")
+    private LocalDateTime enteredFieldAt;
+
+    // viewCount: 현재 ON_FIELD 구간에서의 리뷰 세션 노출 횟수.
+    //   - 생성 시 0으로 초기화.
+    //   - ON_FIELD 복귀 시 0으로 초기화.
+    //   - incrementViewCount() 호출로만 증가.
+    //   - archive() 시 보존.
+    @Column(name = "view_count", nullable = false)
+    private int viewCount = 0;
+
     // ─── Soft Delete ─────────────────────────────────────────
     @Column(nullable = false)
     private boolean deleted = false;
@@ -85,9 +102,11 @@ public class Card {
 
     /** create() 내부 전용 생성자. */
     private Card(MainNote mainNote, Summary summary) {
-        this.mainNote = mainNote;
-        this.summary  = summary;
-        this.status   = CardStatus.ON_FIELD;
+        this.mainNote       = mainNote;
+        this.summary        = summary;
+        this.status         = CardStatus.ON_FIELD;
+        this.enteredFieldAt = LocalDateTime.now();
+        this.viewCount      = 0;
     }
 
     // -------------------------------------------------------------------------
@@ -98,13 +117,6 @@ public class Card {
      * Card를 생성한다.
      *
      * <p>생성 시 운영 위치는 {@link CardStatus#ON_FIELD}로 초기화된다.
-     *
-     * @param deck          소속 덱
-     * @param mainNote      학습 맥락 영역
-     * @param summary       핵심 압축 영역
-     * @param keywordValues 회상 단서 목록 (최소 1개 이상)
-     * @param tagList       연결 태그 목록 (null이면 빈 목록으로 처리. 최대 3개)
-     * @throws CardDomainException keywordValues가 비어 있거나 tagList가 4개 이상이면
      */
     public static Card create(
             Deck deck,
@@ -123,6 +135,7 @@ public class Card {
         }
 
         List<Tag> resolvedTags = tagList == null ? Collections.emptyList() : tagList;
+
         if (resolvedTags.size() > MAX_TAG_COUNT) {
             throw CardDomainException.of(
                     ErrorCode.CARD_TAG_LIMIT_EXCEEDED,
@@ -144,15 +157,6 @@ public class Card {
             List<String> keywordValues
                              ) {
         return create(deck, mainNote, summary, keywordValues, null);
-    }
-
-
-    @Deprecated(forRemoval = true)
-    public static Card of(Deck deck, MainNote mainNote, List<String> cueContents, Summary summary) {
-        if (deck == null)     throw new IllegalArgumentException("Card: Deck은 필수입니다.");
-        if (mainNote == null) throw new IllegalArgumentException("Card: MainNote는 필수입니다.");
-        if (summary == null)  throw new IllegalArgumentException("Card: Summary는 필수입니다.");
-        return create(deck, mainNote, summary, cueContents == null ? Collections.emptyList() : cueContents);
     }
 
     // -------------------------------------------------------------------------
@@ -194,7 +198,7 @@ public class Card {
     }
 
     // -------------------------------------------------------------------------
-    // 수정 — 태그
+    // 태그
     // -------------------------------------------------------------------------
 
     /**
@@ -260,6 +264,46 @@ public class Card {
         this.status = CardStatus.ON_FIELD;
     }
 
+    /**
+     * ON_FIELD 상태일 때 viewCount를 1 증가시킨다.
+     *
+     * <p>ARCHIVE 상태에서 호출 시 무시한다.
+     * 리뷰 세션에서 카드가 RECALLING 단계로 진입할 때 Application Service가 호출한다.
+     */
+    public void incrementViewCount() {
+        if (this.status == CardStatus.ARCHIVE) return;
+        this.viewCount++;
+    }
+
+    /**
+     * viewCount가 maxView 이상인지 확인한다.
+     */
+    public boolean isMaxViewReached(int maxView) {
+        if (maxView <= 0) return false;
+        return this.viewCount >= maxView;
+    }
+
+    /**
+     * enteredFieldAt 기준 체류 기간이 maxDuration을 초과했는지 확인한다.
+     *
+     * @param maxDuration enteredFieldAt이 null이면 항상 false를 반환한다.
+     */
+    public boolean isDurationExceeded(Duration maxDuration) {
+        if (this.enteredFieldAt == null) return false;
+        return Duration.between(this.enteredFieldAt, LocalDateTime.now()).compareTo(maxDuration) >= 0;
+    }
+
+    //
+    public boolean isLastView(int maxView) {
+        if (maxView <= 0) return false;
+        return this.viewCount == maxView;
+    }
+
+    // -------------------------------------------------------------------------
+    // 상태 조회
+    // -------------------------------------------------------------------------
+
+
     public boolean isOnField() {
         return this.status == CardStatus.ON_FIELD;
     }
@@ -296,10 +340,12 @@ public class Card {
     // 조회
     // -------------------------------------------------------------------------
 
-    public Deck       getDeck()     { return deck; }
-    public MainNote   getMainNote() { return mainNote; }
-    public Summary    getSummary()  { return summary; }
-    public boolean    isDeleted()   { return deleted; }
+    public Deck          getDeck()          { return deck; }
+    public MainNote      getMainNote()      { return mainNote; }
+    public Summary       getSummary()       { return summary; }
+    public boolean       isDeleted()        { return deleted; }
+    public LocalDateTime getEnteredFieldAt(){ return enteredFieldAt; }
+    public int           getViewCount()     { return viewCount; }
 
     /** 수정 불가능한 뷰를 반환한다. Aggregate 외부에서 직접 컬렉션 조작 불가. */
     public List<KeywordCue> getKeywordCues() {

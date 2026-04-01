@@ -1,6 +1,7 @@
 package com.example.thirdtool.Review.config;
 
 import com.example.thirdtool.Card.domain.model.OnFieldBudget;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

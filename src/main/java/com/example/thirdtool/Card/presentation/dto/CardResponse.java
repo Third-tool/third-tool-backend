@@ -169,7 +169,6 @@ public class CardResponse {
 
     /**
      * 카드에 연결된 태그 응답 DTO.
-     * {@code linkedAt}: 해당 카드에 태그가 연결된 시각.
      */
     public record TagDto(
             Long id,
@@ -193,7 +192,6 @@ public class CardResponse {
 
     /**
      * 관련 카드 후보에서 공유된 태그 응답 DTO.
-     * {@code linkedAt} 없이 태그 식별자와 이름만 반환한다.
      */
     public record SharedTagDto(
             Long id,

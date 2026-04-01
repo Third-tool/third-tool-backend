@@ -136,11 +136,7 @@ public class Card {
         return card;
     }
 
-    /**
-     * 태그 없이 Card를 생성한다.
-     *
-     * @see #create(Deck, MainNote, Summary, List, List)
-     */
+
     public static Card create(
             Deck deck,
             MainNote mainNote,
@@ -150,10 +146,7 @@ public class Card {
         return create(deck, mainNote, summary, keywordValues, null);
     }
 
-    /**
-     * @deprecated {@link #create(Deck, MainNote, List, Summary)} 대신 사용하라.
-     *             Keyword 최소 개수 검증이 누락되어 있다.
-     */
+
     @Deprecated(forRemoval = true)
     public static Card of(Deck deck, MainNote mainNote, List<String> cueContents, Summary summary) {
         if (deck == null)     throw new IllegalArgumentException("Card: Deck은 필수입니다.");

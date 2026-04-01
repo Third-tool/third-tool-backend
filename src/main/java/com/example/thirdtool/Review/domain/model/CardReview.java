@@ -61,12 +61,6 @@ public class CardReview {
     // -------------------------------------------------------
     // 행위
     // -------------------------------------------------------
-
-    /**
-     * COMPARING 상태로 전환하고 비교 시작 시각을 기록한다.
-     * 이미 COMPARING 상태이면 무시한다. (멱등성 보장)
-     * comparingStartedAt은 최초 전환 시각을 보존하며 덮어쓰지 않는다.
-     */
     public void startComparing() {
         if (isComparing()) {
             return;
@@ -75,27 +69,15 @@ public class CardReview {
         this.comparingStartedAt = LocalDateTime.now();
     }
 
-
-    /**
-     * COMPARING 상태 여부를 반환한다.
-     */
     public boolean isComparing() {
         return this.reviewStep == ReviewStep.COMPARING;
     }
 
-    /**
-     * Main 노출 여부를 반환한다.
-     * Main은 RECALLING / REVEALED 모두에서 항상 노출된다.
-     */
     public boolean isMainVisible() {
         return true;
     }
 
-    /**
-     * Keywords·Summary 노출 여부를 반환한다.
-     * REVEALED 상태일 때만 노출된다.
-     * 외부에서 공개 여부를 직접 주입할 수 없다.
-     */
+
     public boolean isAnswerVisible() {
         return this.reviewStep == ReviewStep.COMPARING;
     }

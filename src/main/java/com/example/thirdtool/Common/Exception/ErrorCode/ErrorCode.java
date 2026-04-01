@@ -46,7 +46,7 @@ public enum ErrorCode {
     REVIEW_SESSION_NOT_FOUND("REVIEW001", "리뷰 세션을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     REVIEW_DECK_HAS_NO_CARDS("REVIEW002", "카드가 없는 덱으로는 리뷰 세션을 시작할 수 없습니다.", HttpStatus.BAD_REQUEST),
     REVIEW_SESSION_ALREADY_FINISHED("REVIEW003", "이미 종료된 리뷰 세션입니다.", HttpStatus.BAD_REQUEST),
-    REVIEW_NEXT_REQUIRES_COMPARING("REVIEW004", "현재 카드를 먼저 비교(COMPARING) 단계로 전환해야 다음으로 이동할 수 있습니다.", HttpStatus.BAD_REQUEST),
+    REVIEW_COMPARING_REQUIRED("REVIEW004", "현재 카드를 먼저 비교(COMPARING) 단계로 전환해야 다음으로 이동할 수 있습니다.", HttpStatus.BAD_REQUEST),
     REVIEW_SESSION_FORBIDDEN("REVIEW005", "본인의 리뷰 세션이 아닙니다.", HttpStatus.FORBIDDEN),
 
     // ─── 파일 / 스토리지 ──────────────────────────────────

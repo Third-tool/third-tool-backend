@@ -1,9 +1,12 @@
 package com.example.thirdtool.Review.application;
 
+import com.example.thirdtool.Card.domain.model.*;
+import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.application.service.DeckQueryService;
 import com.example.thirdtool.Deck.domain.model.Deck;
+import com.example.thirdtool.Review.domain.exception.ReviewSessionException;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
 import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
 import com.example.thirdtool.Review.presentation.dto.ReviewRequest;
@@ -14,65 +17,97 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class ReviewCommandService {
 
     private final ReviewSessionRepository reviewSessionRepository;
-    private final ReviewQueryService reviewQueryService;
-    private final DeckQueryService deckQueryService;
-    private final UserRepository userRepository;
+    private final ReviewQueryService      reviewQueryService;
+    private final DeckQueryService        deckQueryService;
+    private final UserRepository          userRepository;
+
+    // Card BC 의존 — port interface를 통한 접근 (ADR-006)
+    private final CardRepository cardRepository;
+    private final CardStatusHistoryAppender historyAppender;
+
+    // 시스템 수준 ON_FIELD 체류 예산 (SystemBudgetConfig에서 주입)
+    private final OnFieldBudget systemBudget;
 
     // ─── 1. 리뷰 세션 시작 ───────────────────────────────
+
     public ReviewResponse.StartSession startReview(ReviewRequest.StartSession request, Long userId) {
-        // 덱 존재·삭제 여부 검증은 DeckQueryService에 위임
         Deck deck = deckQueryService.getActiveDeck(request.deckId());
 
-        // 본인 덱 여부 검증
         if (!deck.getUser().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.REVIEW_SESSION_FORBIDDEN);
+            throw ReviewSessionException.of(ErrorCode.REVIEW_SESSION_FORBIDDEN);
         }
 
         UserEntity user = userRepository.findById(userId)
-                                        .orElseThrow(() -> new IllegalStateException("인증된 사용자를 찾을 수 없습니다: " + userId));
+                                        .orElseThrow(() -> new IllegalStateException(
+                                                "인증된 사용자를 찾을 수 없습니다: " + userId));
 
-        // 카드 0개 검증은 ReviewSession.start() 도메인 내부에서 처리
-        ReviewSession session = ReviewSession.start(deck, user);
+        // 카드 목록을 Application Service에서 조회해 ReviewSession에 전달한다.
+        // ReviewSession이 deck.getCards()를 직접 호출하지 않도록 해 N+1 제어권을 유지한다.
+        List<Card> cards = cardRepository.findAllByDeckIdAndDeletedFalse(deck.getId());
+
+        // 카드 0개 검증은 ReviewSession.of() 도메인 내부에서 처리 (REVIEW002)
+        ReviewSession session = ReviewSession.of(deck, cards, user);
         reviewSessionRepository.save(session);
 
-        return ReviewResponse.StartSession.of(session);
+        // 첫 번째 카드 진입 처리 (viewCount 증가 + maxView 도달 시 즉시 ARCHIVE)
+        boolean isLastView = incrementViewAndHandleMaxView(session.currentCardReview().getCard());
+
+        return ReviewResponse.StartSession.of(session, isLastView);
     }
 
     // ─── 2. 현재 카드 COMPARING 전환 ─────────────────────
-    /**
-     * 현재 카드를 RECALLING → COMPARING 단계로 전환한다.
-     */
+
     public ReviewResponse.CardReviewDto startComparing(Long sessionId, Long userId) {
         ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, userId);
-
-        // 종료 여부 + COMPARING 전환은 도메인 내부에서 처리
         session.startComparingCurrentCard();
 
-        return ReviewResponse.CardReviewDto.of(session.currentCardReview());
+        // isLastView는 카드 진입 시 이미 결정된 viewCount 상태를 그대로 읽는다.
+        boolean isLastView = resolveIsLastView(session);
+        return ReviewResponse.CardReviewDto.of(session.currentCardReview(), isLastView);
     }
 
     // ─── 3. 다음 카드로 이동 ──────────────────────────────
-    /**
-     * 현재 카드가 COMPARING 상태일 때만 다음 카드로 이동할 수 있다.
-     * 마지막 카드에서 호출 시 isFinished = true, currentCard = null을 반환한다.
-     *
-     * <p>세션 없음 → REVIEW_SESSION_NOT_FOUND
-     * <p>본인 세션 아님 → REVIEW_SESSION_FORBIDDEN
-     * <p>이미 종료된 세션 → REVIEW_SESSION_ALREADY_FINISHED
-     * <p>RECALLING 상태에서 호출 → REVIEW_NEXT_REQUIRES_COMPARING
-     */
+
     public ReviewResponse.NextCard moveToNext(Long sessionId, Long userId) {
         ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, userId);
 
-        // 종료 여부 + COMPARING 검증은 ReviewSession.nextCard() 도메인 내부에서 처리
-        session.nextCard();
+        // 종료 여부 + COMPARING 검증은 도메인 내부에서 처리
+        session.moveToNext();
 
-        return ReviewResponse.NextCard.of(session);
+        boolean isLastView = false;
+        if (!session.isFinished()) {
+            isLastView = incrementViewAndHandleMaxView(session.currentCardReview().getCard());
+        }
+
+        return ReviewResponse.NextCard.of(session, isLastView);
+    }
+
+    // ─── 내부 처리 ────────────────────────────────────────
+    private boolean incrementViewAndHandleMaxView(Card card) {
+        card.incrementViewCount();
+
+        boolean isLastView = card.isLastView(systemBudget.getMaxView());
+        if (isLastView) {
+            // viewCount가 maxView에 도달 → 즉시 ARCHIVE 전환
+            CardStatus before = card.getStatus();  // 항상 ON_FIELD (incrementViewCount는 ARCHIVE 무시)
+            card.archive();
+            CardStatus after = card.getStatus();
+            historyAppender.append(card, before, after, ArchiveReason.MAX_VIEW);
+        }
+        cardRepository.save(card);
+        return isLastView;
+    }
+
+    private boolean resolveIsLastView(ReviewSession session) {
+        if (session.isFinished()) return false;
+        return session.currentCardReview().getCard().isLastView(systemBudget.getMaxView());
     }
 }

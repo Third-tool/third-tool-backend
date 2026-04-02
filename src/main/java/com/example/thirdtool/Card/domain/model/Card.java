@@ -97,6 +97,9 @@ public class Card {
     @UpdateTimestamp
     private LocalDateTime updatedDate;
 
+    @Column(name = "last_viewed_at")
+    private LocalDateTime lastViewedAt;
+
     /** JPA 전용 기본 생성자. 외부에서 직접 사용 금지. */
     protected Card() {}
 
@@ -221,10 +224,6 @@ public class Card {
         cardTags.add(CardTag.link(this, tag));
     }
 
-    /**
-     * 태그를 단건 제거한다.
-     * 연결되지 않은 tagId이면 예외를 발생시킨다.
-     */
     public void removeTag(Long tagId) {
         CardTag target = cardTags.stream()
                                  .filter(ct -> ct.getTag().getId().equals(tagId))
@@ -234,11 +233,6 @@ public class Card {
         cardTags.remove(target);
     }
 
-    /**
-     * 태그 목록을 전체 교체한다.
-     * null이면 빈 목록으로 교체한다.
-     * 4개 이상의 목록으로 교체할 수 없다.
-     */
     public void replaceTags(List<Tag> newTags) {
         List<Tag> resolved = newTags == null ? Collections.emptyList() : newTags;
         if (resolved.size() > MAX_TAG_COUNT) {
@@ -261,33 +255,23 @@ public class Card {
 
     public void returnToField() {
         if (this.status == CardStatus.ON_FIELD) return;
-        this.status = CardStatus.ON_FIELD;
+        this.status         = CardStatus.ON_FIELD;
+        this.enteredFieldAt = LocalDateTime.now();  // 새 ON_FIELD 구간 진입 시각 재기록
+        this.viewCount      = 0;                    // 새 구간 노출 횟수 초기화
+        this.lastViewedAt   = null;                 // 이전 구간 열람 시각은 schedule 판단 대상 아님
     }
 
-    /**
-     * ON_FIELD 상태일 때 viewCount를 1 증가시킨다.
-     *
-     * <p>ARCHIVE 상태에서 호출 시 무시한다.
-     * 리뷰 세션에서 카드가 RECALLING 단계로 진입할 때 Application Service가 호출한다.
-     */
-    public void incrementViewCount() {
+    public void recordView() {
         if (this.status == CardStatus.ARCHIVE) return;
         this.viewCount++;
+        this.lastViewedAt = LocalDateTime.now();
     }
 
-    /**
-     * viewCount가 maxView 이상인지 확인한다.
-     */
     public boolean isMaxViewReached(int maxView) {
         if (maxView <= 0) return false;
         return this.viewCount >= maxView;
     }
 
-    /**
-     * enteredFieldAt 기준 체류 기간이 maxDuration을 초과했는지 확인한다.
-     *
-     * @param maxDuration enteredFieldAt이 null이면 항상 false를 반환한다.
-     */
     public boolean isDurationExceeded(Duration maxDuration) {
         if (this.enteredFieldAt == null) return false;
         return Duration.between(this.enteredFieldAt, LocalDateTime.now()).compareTo(maxDuration) >= 0;
@@ -299,10 +283,15 @@ public class Card {
         return this.viewCount == maxView;
     }
 
+    public boolean isScheduleAvailable(Duration minInterval) {
+        if (minInterval == null || minInterval.isZero() || minInterval.isNegative()) return true;
+        if (this.lastViewedAt == null) return true;
+        return Duration.between(this.lastViewedAt, LocalDateTime.now()).compareTo(minInterval) >= 0;
+    }
+
     // -------------------------------------------------------------------------
     // 상태 조회
     // -------------------------------------------------------------------------
-
 
     public boolean isOnField() {
         return this.status == CardStatus.ON_FIELD;
@@ -315,22 +304,12 @@ public class Card {
     // -------------------------------------------------------------------------
     // Soft Delete
     // -------------------------------------------------------------------------
-
-    /**
-     * 카드 논리 삭제.
-     * 덱의 softDelete()에서 연쇄 호출되거나 개별 삭제 시 직접 호출된다.
-     * 이미 삭제된 카드에 대한 중복 호출은 무시한다. (멱등성 보장)
-     */
     public void softDelete() {
         if (this.deleted) return;
         this.deleted   = true;
         this.deletedAt = LocalDateTime.now();
     }
 
-    /**
-     * 카드 복구.
-     * Deck.restore()에서 덱 삭제 시점 기준으로 필터링된 Card에 대해서만 호출된다.
-     */
     public void restore() {
         this.deleted   = false;
         this.deletedAt = null;

@@ -9,51 +9,61 @@ import java.util.List;
 
 public enum LearningMode {
 
-    MODE_10D,
-    MODE_20D,
-    MODE_30D;
+    MODE_10D(10, 3, "10일 모드", List.of(
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(1), SoftScheduleState.INTERVAL_1D),
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(3), SoftScheduleState.INTERVAL_3D),
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(7), SoftScheduleState.INTERVAL_7D)
+                                     )),
+
+    MODE_20D(20, 5, "20일 모드", List.of(
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(1),  SoftScheduleState.INTERVAL_1D),
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(3),  SoftScheduleState.INTERVAL_3D),
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(7),  SoftScheduleState.INTERVAL_7D),
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(14), SoftScheduleState.INTERVAL_14D)
+                                     )),
+
+    MODE_30D(30, 7, "30일 모드", List.of(
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(1),  SoftScheduleState.INTERVAL_1D),
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(3),  SoftScheduleState.INTERVAL_3D),
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(7),  SoftScheduleState.INTERVAL_7D),
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(14), SoftScheduleState.INTERVAL_14D),
+            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(21), SoftScheduleState.INTERVAL_21D)
+                                     ));
+
+    // ─── 모드 속성 ────────────────────────────────────────────────
+
+    private final int durationDays;
+    private final int maxView;
+    private final String displayName;
+
+    private final List<SoftScheduleTemplate.IntervalStep> intervalSteps;
+
+    LearningMode(
+            int durationDays,
+            int maxView,
+            String displayName,
+            List<SoftScheduleTemplate.IntervalStep> intervalSteps
+                ) {
+        this.durationDays  = durationDays;
+        this.maxView       = maxView;
+        this.displayName   = displayName;
+        this.intervalSteps = intervalSteps;
+    }
+
+    // ─── 행위 ─────────────────────────────────────────────────────
 
     public OnFieldBudget toOnFieldBudget() {
-        return switch (this) {
-            case MODE_10D -> OnFieldBudget.of(3, Duration.ofDays(10));
-            case MODE_20D -> OnFieldBudget.of(5, Duration.ofDays(20));
-            case MODE_30D -> OnFieldBudget.of(7, Duration.ofDays(30));
-        };
+        return OnFieldBudget.of(maxView, Duration.ofDays(durationDays));
     }
 
     public SoftScheduleTemplate toSoftScheduleTemplate() {
-        return switch (this) {
-            case MODE_10D -> SoftScheduleTemplate.of(List.of(
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(1),  SoftScheduleState.INTERVAL_1D),
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(3),  SoftScheduleState.INTERVAL_3D),
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(7),  SoftScheduleState.INTERVAL_7D)
-                                                            ));
-            case MODE_20D -> SoftScheduleTemplate.of(List.of(
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(1),  SoftScheduleState.INTERVAL_1D),
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(3),  SoftScheduleState.INTERVAL_3D),
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(7),  SoftScheduleState.INTERVAL_7D),
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(14), SoftScheduleState.INTERVAL_14D)
-                                                            ));
-            case MODE_30D -> SoftScheduleTemplate.of(List.of(
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(1),  SoftScheduleState.INTERVAL_1D),
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(3),  SoftScheduleState.INTERVAL_3D),
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(7),  SoftScheduleState.INTERVAL_7D),
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(14), SoftScheduleState.INTERVAL_14D),
-                    new SoftScheduleTemplate.IntervalStep(Duration.ofDays(21), SoftScheduleState.INTERVAL_21D)
-                                                            ));
-        };
+        return SoftScheduleTemplate.of(intervalSteps);
     }
 
-    /**
-     * 유저에게 표시할 모드 이름을 반환한다.
-     *
-     * <p>default 분기 없음 — 새 모드 추가 시 반드시 케이스를 추가해야 컴파일된다.
-     */
     public String getDisplayName() {
-        return switch (this) {
-            case MODE_10D -> "10일 모드";
-            case MODE_20D -> "20일 모드";
-            case MODE_30D -> "30일 모드";
-        };
+        return displayName;
     }
+
+    public int getDurationDays() { return durationDays; }
+    public int getMaxView()      { return maxView; }
 }

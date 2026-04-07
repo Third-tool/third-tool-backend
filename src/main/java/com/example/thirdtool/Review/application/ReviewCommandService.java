@@ -92,7 +92,7 @@ public class ReviewCommandService {
 
     // ─── 내부 처리 ────────────────────────────────────────
     private boolean incrementViewAndHandleMaxView(Card card) {
-        card.incrementViewCount();
+        card.recordView();
 
         boolean isLastView = card.isLastView(systemBudget.getMaxView());
         if (isLastView) {

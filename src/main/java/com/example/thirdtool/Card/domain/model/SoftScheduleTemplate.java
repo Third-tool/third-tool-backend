@@ -41,12 +41,6 @@ public class SoftScheduleTemplate {
 
     // ─── 생성 ──────────────────────────────────────────────────────
 
-    /**
-     * 간격 단계 목록으로 템플릿을 생성한다.
-     * 내부에서 minDuration 기준 오름차순으로 정렬한다.
-     *
-     * @param steps 1개 이상의 IntervalStep 목록
-     */
     public static SoftScheduleTemplate of(List<IntervalStep> steps) {
         if (steps == null || steps.isEmpty()) {
             throw new IllegalArgumentException(
@@ -60,17 +54,6 @@ public class SoftScheduleTemplate {
 
     // ─── 핵심 행위 ─────────────────────────────────────────────────
 
-    /**
-     * 카드의 현재 간격 단계 상태를 계산한다.
-     *
-     * <ul>
-     *   <li>lastViewedAt == null → {@link SoftScheduleState#FRESH}
-     *   <li>elapsed < 최소 간격   → {@link SoftScheduleState#NOT_YET}
-     *   <li>그 외                 → elapsed 기준으로 도달한 가장 높은 단계
-     * </ul>
-     *
-     * <p>ARCHIVE 상태 카드에 대해서도 호출 가능하다. 상태 필터링은 호출자 책임이다.
-     */
     public SoftScheduleState resolveState(Card card) {
         if (card == null) {
             throw new IllegalArgumentException(
@@ -100,10 +83,6 @@ public class SoftScheduleTemplate {
         return SoftScheduleState.NOT_YET;
     }
 
-    /**
-     * 노출 후보 포함 여부만 필요한 호출자를 위한 편의 메서드.
-     * {@code resolveState(card) != NOT_YET}에 위임한다.
-     */
     public boolean isAvailable(Card card) {
         return resolveState(card).isAvailable();
     }

@@ -1,7 +1,7 @@
 package com.example.thirdtool.Review.domain.model;
 
 import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Common.Exception.BusinessException;
+import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Review.domain.exception.ReviewSessionException;
@@ -25,7 +25,6 @@ public class ReviewSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Deck BC → 읽기 전용 참조 (cascade 없음, 소유하지 않음)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "deck_id", nullable = false)
     private Deck deck;
@@ -34,13 +33,21 @@ public class ReviewSession {
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
 
-    // CardReview는 ReviewSession이 소유한다.
     @OneToMany(mappedBy = "reviewSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("cardOrder ASC")
     private List<CardReview> cardReviews = new ArrayList<>();
 
     @Column(name = "current_index", nullable = false)
     private int currentIndex;
+
+    @Column(name = "is_finished", nullable = false)
+    private boolean finished = false;
+
+    @Column(name = "total_card_count", nullable = false)
+    private int totalCardCount;
+
+    @Column(name = "available_card_count", nullable = false)
+    private int availableCardCount;
 
     @Column(name = "started_at", nullable = false, updatable = false)
     private LocalDateTime startedAt;
@@ -49,35 +56,22 @@ public class ReviewSession {
     // 정적 팩토리
     // -------------------------------------------------------
 
-    /**
-     * 리뷰 세션을 생성하고 CardReview 목록을 초기화한다.
-     *
-     * <p>카드 목록은 Application Service가 Repository에서 조회해 전달한다.
-     * ReviewSession이 {@code deck.getCards()}를 직접 호출하지 않는다.
-     * (Deck Aggregate와의 직접 의존 방지, N+1 제어권을 Application Service에 위임)
-     *
-     * <p>첫 번째 카드는 자동으로 RECALLING 상태로 초기화된다.
-     *
-     * @param deck   리뷰 대상 덱
-     * @param cards  덱에 속한 활성 카드 목록 (등록 순). 비어 있으면 예외 발생
-     * @param user   세션 소유 사용자
-     * @throws ReviewSessionException 카드 목록이 비어 있으면
-     */
-    public static ReviewSession of(Deck deck, List<Card> cards, UserEntity user) {
+    public static ReviewSession of(Deck deck, List<Card> availableCards, UserEntity user, int totalCardCount) {
         validateDeck(deck);
         validateUser(user);
-        validateCards(cards);
+        validateCards(availableCards);
 
-        ReviewSession session = new ReviewSession();
-        session.deck        = deck;
-        session.user        = user;
-        session.currentIndex = 0;
-        session.startedAt   = LocalDateTime.now();
+        ReviewSession session        = new ReviewSession();
+        session.deck                 = deck;
+        session.user                 = user;
+        session.currentIndex         = 0;
+        session.finished             = false;
+        session.totalCardCount       = totalCardCount;
+        session.availableCardCount   = availableCards.size();
+        session.startedAt            = LocalDateTime.now();
 
-        // 카드 목록을 등록 순으로 CardReview로 변환
-        for (int i = 0; i < cards.size(); i++) {
-            CardReview cardReview = CardReview.of(cards.get(i), session, i);
-            session.cardReviews.add(cardReview);
+        for (int i = 0; i < availableCards.size(); i++) {
+            session.cardReviews.add(CardReview.of(availableCards.get(i), session, i));
         }
 
         return session;
@@ -88,12 +82,20 @@ public class ReviewSession {
     // -------------------------------------------------------
 
     public CardReview currentCardReview() {
+        validateNotFinished();
         return cardReviews.get(currentIndex);
     }
 
     public void startComparingCurrentCard() {
         validateNotFinished();
         currentCardReview().startComparing();
+    }
+
+    public boolean recordCurrentCardView(OnFieldBudget budget) {
+        validateNotFinished();
+        CardReview current = currentCardReview();
+        current.recordView();
+        return current.isCardLastView(budget.getMaxView());
     }
 
     public void moveToNext() {
@@ -104,10 +106,14 @@ public class ReviewSession {
                     "currentIndex=" + currentIndex);
         }
         this.currentIndex++;
+        if (this.currentIndex >= cardReviews.size()) {
+            this.finished = true;
+        }
     }
 
+    /** is_finished 컬럼을 직접 읽는다. cardReviews 컬렉션을 로딩하지 않는다. */
     public boolean isFinished() {
-        return currentIndex >= cardReviews.size();
+        return finished;
     }
 
     public boolean isOwner(Long userId) {
@@ -125,15 +131,11 @@ public class ReviewSession {
     }
 
     private static void validateDeck(Deck deck) {
-        if (deck == null) {
-            throw new IllegalArgumentException("ReviewSession 생성 실패: deck은 null일 수 없습니다.");
-        }
+        if (deck == null) throw new IllegalArgumentException("ReviewSession 생성 실패: deck은 null일 수 없습니다.");
     }
 
     private static void validateUser(UserEntity user) {
-        if (user == null) {
-            throw new IllegalArgumentException("ReviewSession 생성 실패: user는 null일 수 없습니다.");
-        }
+        if (user == null) throw new IllegalArgumentException("ReviewSession 생성 실패: user는 null일 수 없습니다.");
     }
 
     private static void validateCards(List<Card> cards) {

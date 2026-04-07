@@ -8,10 +8,11 @@ import java.time.LocalDateTime;
 @Getter
 public class ReviewSessionSummaryRow {
 
-    private final Long sessionId;
-    private final Long deckId;
-    private final String deckName;
-    private final int totalCardCount;
+    private final Long          sessionId;
+    private final Long          deckId;
+    private final String        deckName;
+    private final int           totalCardCount;
+    private final int           availableCardCount;
     private final LocalDateTime startedAt;
 
     @QueryProjection
@@ -20,12 +21,14 @@ public class ReviewSessionSummaryRow {
             Long deckId,
             String deckName,
             int totalCardCount,
+            int availableCardCount,
             LocalDateTime startedAt
                                   ) {
-        this.sessionId = sessionId;
-        this.deckId = deckId;
-        this.deckName = deckName;
-        this.totalCardCount = totalCardCount;
-        this.startedAt = startedAt;
+        this.sessionId          = sessionId;
+        this.deckId             = deckId;
+        this.deckName           = deckName;
+        this.totalCardCount     = totalCardCount;
+        this.availableCardCount = availableCardCount;
+        this.startedAt          = startedAt;
     }
 }

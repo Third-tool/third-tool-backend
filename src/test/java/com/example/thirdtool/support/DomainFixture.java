@@ -1,138 +1,100 @@
 package com.example.thirdtool.support;
 
-import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.model.MainNote;
-import com.example.thirdtool.Card.domain.model.Summary;
+import com.example.thirdtool.Card.domain.model.*;
 import com.example.thirdtool.Deck.domain.model.Deck;
-import com.example.thirdtool.User.domain.model.SocialProviderType;
-import com.example.thirdtool.User.domain.model.UserEntity;
+import org.mockito.Mockito;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
-
 
 public class DomainFixture {
 
-    // ─── UserEntity ───────────────────────────────────────
+    // ─── Deck ─────────────────────────────────────────────────────────────────
 
-    /**
-     * 기본 로컬 유저 (자체 로그인)
-     * username / encodedPassword / nickname / email 기본값 사용
-     */
-    public static UserEntity sampleLocalUser() {
-        return UserEntity.ofLocal(
-                "testuser",
-                "encoded_password",
-                "테스트유저",
-                "testuser@example.com"
-                                 );
-    }
-
-    /**
-     * 로컬 유저 — username / nickname 지정
-     */
-    public static UserEntity sampleLocalUser(String username, String nickname) {
-        return UserEntity.ofLocal(
-                username,
-                "encoded_password",
-                nickname,
-                username + "@example.com"
-                                 );
-    }
-
-    /**
-     * 카카오 소셜 유저
-     */
-    public static UserEntity sampleKakaoUser() {
-        return UserEntity.ofSocial(
-                "kakao_testuser",
-                SocialProviderType.KAKAO,
-                "카카오유저",
-                "kakao@example.com"
-                                  );
-    }
-
-    /**
-     * 네이버 소셜 유저
-     */
-    public static UserEntity sampleNaverUser() {
-        return UserEntity.ofSocial(
-                "naver_testuser",
-                SocialProviderType.NAVER,
-                "네이버유저",
-                "naver@example.com"
-                                  );
-    }
-
-    // ─── Deck ─────────────────────────────────────────────
-
-    /**
-     * 기본 루트 덱 (parentDeck = null, depth = 0)
-     * 내부적으로 sampleLocalUser() 사용
-     */
     public static Deck sampleDeck() {
-        return Deck.of("테스트덱", null, sampleLocalUser());
+        Deck deck = Mockito.mock(Deck.class);
+        Mockito.when(deck.getId()).thenReturn(1L);
+        Mockito.when(deck.getName()).thenReturn("테스트 덱");
+        return deck;
     }
 
-    /**
-     * 덱 이름 지정 루트 덱
-     */
-    public static Deck sampleDeck(String name) {
-        return Deck.of(name, null, sampleLocalUser());
-    }
+    // ─── Card ─────────────────────────────────────────────────────────────────
 
-    /**
-     * 유저 지정 루트 덱
-     */
-    public static Deck sampleDeck(String name, UserEntity user) {
-        return Deck.of(name, null, user);
-    }
-
-    /**
-     * 하위 덱 — 부모 덱 지정 (depth 자동 계산)
-     * 유저는 부모 덱의 유저를 그대로 사용
-     */
-    public static Deck sampleSubDeck(String name, Deck parentDeck) {
-        return Deck.of(name, parentDeck, parentDeck.getUser());
-    }
-
-    // ─── Card ─────────────────────────────────────────────
-
-    /**
-     * 기본 카드 (텍스트 MainNote + Summary + 키워드 3개)
-     */
+    /** 기본 카드 (keyword: LIFO, push, pop / 태그 없음) */
     public static Card sampleCard() {
         return Card.create(
                 sampleDeck(),
-                MainNote.of("스택은 LIFO 자료구조다.", null),
-                Summary.of("스택은 마지막에 넣은 것이 먼저 나온다."),
-                List.of("LIFO란?", "push란?", "pop이란?")
+                MainNote.of("스택은 LIFO 구조다.", null),
+                Summary.of("스택은 LIFO 구조다."),
+                List.of("LIFO", "push", "pop")
                           );
     }
 
-    /**
-     * 덱 지정 카드
-     */
-    public static Card sampleCard(Deck deck) {
-        return Card.create(
-                deck,
-                MainNote.of("스택은 LIFO 자료구조다.", null),
-                Summary.of("스택은 마지막에 넣은 것이 먼저 나온다."),
-                List.of("LIFO란?", "push란?", "pop이란?")
-                          );
+    /** ID가 있는 카드 (CardRelationFinder 테스트용) */
+    public static Card sampleCardWithId(Long id) {
+        Card card = sampleCard();
+        ReflectionTestUtils.setField(card, "id", id);
+        return card;
     }
 
-    /**
-     * 내용 전체 지정 카드
-     */
-    public static Card sampleCard(Deck deck,
-                                  String mainText,
-                                  String summaryText,
-                                  List<String> keywords) {
-        return Card.create(
-                deck,
-                MainNote.of(mainText, null),
-                Summary.of(summaryText),
-                keywords
-                          );
+    /** lastViewedAt이 설정된 카드 (SoftScheduleTemplate 테스트용) */
+    public static Card sampleCardWithLastViewedAt(LocalDateTime lastViewedAt) {
+        Card card = sampleCard();
+        ReflectionTestUtils.setField(card, "lastViewedAt", lastViewedAt);
+        return card;
+    }
+
+    /** enteredFieldAt이 설정된 카드 (OnFieldBudget 기간 초과 테스트용) */
+    public static Card sampleCardWithEnteredFieldAt(LocalDateTime enteredFieldAt) {
+        Card card = sampleCard();
+        ReflectionTestUtils.setField(card, "enteredFieldAt", enteredFieldAt);
+        return card;
+    }
+
+    /** ARCHIVE 상태 카드 */
+    public static Card archivedCard() {
+        Card card = sampleCard();
+        card.archive();
+        return card;
+    }
+
+    // ─── Tag ──────────────────────────────────────────────────────────────────
+
+    public static Tag sampleTag(String value) {
+        return Tag.of(value);
+    }
+
+    /** ID가 있는 태그 (CardRelationFinder - Set<Long> tagId 비교용) */
+    public static Tag sampleTagWithId(Long id, String value) {
+        Tag tag = Tag.of(value);
+        ReflectionTestUtils.setField(tag, "id", id);
+        return tag;
+    }
+
+    // ─── OnFieldBudget ────────────────────────────────────────────────────────
+
+    public static OnFieldBudget sampleBudget() {
+        return OnFieldBudget.of(3, Duration.ofDays(10));
+    }
+
+    public static OnFieldBudget budgetWithMaxView(int maxView) {
+        return OnFieldBudget.of(maxView, Duration.ofDays(30));
+    }
+
+    public static OnFieldBudget budgetWithMaxDuration(Duration maxDuration) {
+        return OnFieldBudget.of(10, maxDuration);
+    }
+
+    // ─── SoftScheduleTemplate ─────────────────────────────────────────────────
+
+    /** 기본 템플릿 [1일, 3일, 7일] */
+    public static SoftScheduleTemplate defaultTemplate() {
+        return SoftScheduleTemplate.of(List.of(
+                new SoftScheduleTemplate.IntervalStep(Duration.ofDays(1), SoftScheduleState.INTERVAL_1D),
+                new SoftScheduleTemplate.IntervalStep(Duration.ofDays(3), SoftScheduleState.INTERVAL_3D),
+                new SoftScheduleTemplate.IntervalStep(Duration.ofDays(7), SoftScheduleState.INTERVAL_7D)
+                                              ));
     }
 }

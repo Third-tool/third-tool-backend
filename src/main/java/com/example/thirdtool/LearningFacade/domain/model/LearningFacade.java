@@ -1,15 +1,19 @@
-
 package com.example.thirdtool.LearningFacade.domain.model;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "learning_facade")
 public class LearningFacade {
@@ -38,8 +42,6 @@ public class LearningFacade {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    protected LearningFacade() {}
-
     private LearningFacade(UserEntity user, String concept) {
         this.user    = user;
         this.concept = concept;
@@ -56,35 +58,23 @@ public class LearningFacade {
 
     // ─── 행위 ─────────────────────────────────────────────
 
-    public boolean updateConcept(String newConcept) {
+    public ConceptChangeRecord updateConcept(String newConcept) {
         validateConcept(newConcept);
-        if (isSameConcept(newConcept)) {
-            return false; // 동일 값 — 변경 없음
+
+        String trimmed = newConcept.trim();
+
+        if (this.concept.equals(trimmed)) {
+            return ConceptChangeRecord.unchanged(this.concept); // 동일 값 — 변경 없음
         }
-        this.concept = newConcept.trim();
-        return true;
-    }
 
-    public boolean isSameConcept(String concept) {
-        if (concept == null) return false;
-        return this.concept.equals(concept.trim());
-    }
-
-    public boolean isConceptDrifted(String newConcept) {
-        return !isSameConcept(newConcept);
+        String previous = this.concept;
+        this.concept    = trimmed;
+        return ConceptChangeRecord.changed(previous, this.concept);
     }
 
     public boolean isOwnedBy(Long userId) {
         return this.user.getId().equals(userId);
     }
-
-    // ─── 조회 ─────────────────────────────────────────────
-
-    public Long          getId()        { return id; }
-    public UserEntity    getUser()      { return user; }
-    public String        getConcept()   { return concept; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
 
     // ─── 내부 검증 ────────────────────────────────────────
 

@@ -53,7 +53,13 @@ public enum ErrorCode {
     LEARNING_FACADE_NOT_FOUND("LF001",       "LearningFacade를 찾을 수 없습니다.",              HttpStatus.NOT_FOUND),
     LEARNING_FACADE_ALREADY_EXISTS("LF002",  "이미 LearningFacade가 존재합니다.",               HttpStatus.CONFLICT),
     LEARNING_FACADE_CONCEPT_BLANK("LF003",   "직업적 컨셉은 비어 있을 수 없습니다.",            HttpStatus.BAD_REQUEST),
-    LEARNING_FACADE_FORBIDDEN("LF004",       "본인의 LearningFacade가 아닙니다.",            HttpStatus.FORBIDDEN),
+    LEARNING_FACADE_FORBIDDEN("LF004",       "본인의 LearningFacade가 아닙니다.",               HttpStatus.FORBIDDEN),
+
+    // ─── LearningAxis ─────────────────────────────────────
+    LEARNING_AXIS_NOT_FOUND("LA001",              "세부 축을 찾을 수 없습니다.",                          HttpStatus.NOT_FOUND),
+    LEARNING_AXIS_NAME_BLANK("LA002",             "축 이름은 비어 있을 수 없습니다.",                     HttpStatus.BAD_REQUEST),
+    LEARNING_AXIS_NAME_DUPLICATE("LA003",         "동일한 이름의 축이 이미 존재합니다.",                  HttpStatus.CONFLICT),
+    LEARNING_AXIS_REORDER_ID_MISMATCH("LA004",    "순서 변경 id 목록이 현재 축 id 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
 
             // ─── 파일 / 스토리지 ──────────────────────────────────
     FILE_EMPTY("FILE001",                   "파일이 비어있습니다.",               HttpStatus.BAD_REQUEST),

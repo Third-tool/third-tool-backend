@@ -49,7 +49,13 @@ public enum ErrorCode {
     REVIEW_COMPARING_REQUIRED("REVIEW004", "현재 카드를 먼저 비교(COMPARING) 단계로 전환해야 다음으로 이동할 수 있습니다.", HttpStatus.BAD_REQUEST),
     REVIEW_SESSION_FORBIDDEN("REVIEW005", "본인의 리뷰 세션이 아닙니다.", HttpStatus.FORBIDDEN),
 
-    // ─── 파일 / 스토리지 ──────────────────────────────────
+    // ─── LearningFacade ───────────────────────────────────
+    LEARNING_FACADE_NOT_FOUND("LF001",       "LearningFacade를 찾을 수 없습니다.",              HttpStatus.NOT_FOUND),
+    LEARNING_FACADE_ALREADY_EXISTS("LF002",  "이미 LearningFacade가 존재합니다.",               HttpStatus.CONFLICT),
+    LEARNING_FACADE_CONCEPT_BLANK("LF003",   "직업적 컨셉은 비어 있을 수 없습니다.",            HttpStatus.BAD_REQUEST),
+    LEARNING_FACADE_FORBIDDEN("LF004",       "본인의 LearningFacade가 아닙니다.",            HttpStatus.FORBIDDEN),
+
+            // ─── 파일 / 스토리지 ──────────────────────────────────
     FILE_EMPTY("FILE001",                   "파일이 비어있습니다.",               HttpStatus.BAD_REQUEST),
     FILE_UNSUPPORTED_EXTENSION("FILE002",   "지원하지 않는 확장자입니다.",        HttpStatus.BAD_REQUEST),
     FILE_UPLOAD_FAIL("FILE003",             "파일 업로드에 실패했습니다.",         HttpStatus.SERVICE_UNAVAILABLE),

@@ -9,9 +9,6 @@ import org.junit.jupiter.api.Test;
 import static com.example.thirdtool.support.DomainFixture.*;
 import static org.assertj.core.api.Assertions.*;
 
-/**
- * CardStatusHistory.of()는 package-private → 동일 패키지에 위치.
- */
 @DisplayName("CardStatusHistory")
 class CardStatusHistoryTest {
 

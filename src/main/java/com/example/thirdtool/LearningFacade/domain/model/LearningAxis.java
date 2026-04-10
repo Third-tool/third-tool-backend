@@ -68,10 +68,6 @@ public class LearningAxis {
 
     // ─── 생성 ─────────────────────────────────────────────
 
-    /**
-     * 축을 생성한다.
-     * {@link LearningFacade#addAxis(String)} 내부에서만 호출한다.
-     */
     static LearningAxis create(LearningFacade facade, String name, int displayOrder) {
         requireNonNull(facade, "facade");
         validateName(name);

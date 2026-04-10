@@ -64,6 +64,7 @@ public enum ErrorCode {
     // ─── AxisAction ───────────────────────────────────────
     LEARNING_AXIS_ACTION_NOT_FOUND("ACTION001",          "행동을 찾을 수 없습니다.",              HttpStatus.NOT_FOUND),
     LEARNING_AXIS_ACTION_DESCRIPTION_BLANK("ACTION002",  "행동 설명은 비어 있을 수 없습니다.",    HttpStatus.BAD_REQUEST),
+    LEARNING_AXIS_ACTION_DESCRIPTION_MULTI_VERB("ACTION003", "행동은 동사 하나로만 입력할 수 있습니다. 공백 없이 단일 동사로 입력해주세요.", HttpStatus.BAD_REQUEST),
 
     // ─── ActionRevision / RevisionReasonOption ────────────
     REVISION_REASON_NOT_FOUND("REVISION001", "수정 이유 선택지를 찾을 수 없거나 비활성화되어 있습니다.", HttpStatus.NOT_FOUND),

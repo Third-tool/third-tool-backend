@@ -50,16 +50,23 @@ public enum ErrorCode {
     REVIEW_SESSION_FORBIDDEN("REVIEW005", "본인의 리뷰 세션이 아닙니다.", HttpStatus.FORBIDDEN),
 
     // ─── LearningFacade ───────────────────────────────────
-    LEARNING_FACADE_NOT_FOUND("LF001",       "LearningFacade를 찾을 수 없습니다.",              HttpStatus.NOT_FOUND),
-    LEARNING_FACADE_ALREADY_EXISTS("LF002",  "이미 LearningFacade가 존재합니다.",               HttpStatus.CONFLICT),
-    LEARNING_FACADE_CONCEPT_BLANK("LF003",   "직업적 컨셉은 비어 있을 수 없습니다.",            HttpStatus.BAD_REQUEST),
-    LEARNING_FACADE_FORBIDDEN("LF004",       "본인의 LearningFacade가 아닙니다.",               HttpStatus.FORBIDDEN),
+    LEARNING_FACADE_NOT_FOUND("LF001",       "LearningFacade를 찾을 수 없습니다.",   HttpStatus.NOT_FOUND),
+    LEARNING_FACADE_ALREADY_EXISTS("LF002",  "이미 LearningFacade가 존재합니다.",    HttpStatus.CONFLICT),
+    LEARNING_FACADE_CONCEPT_BLANK("LF003",   "직업적 컨셉은 비어 있을 수 없습니다.", HttpStatus.BAD_REQUEST),
+    LEARNING_FACADE_FORBIDDEN("LF004",       "본인의 LearningFacade가 아닙니다.",    HttpStatus.FORBIDDEN),
 
     // ─── LearningAxis ─────────────────────────────────────
-    LEARNING_AXIS_NOT_FOUND("LA001",              "세부 축을 찾을 수 없습니다.",                          HttpStatus.NOT_FOUND),
-    LEARNING_AXIS_NAME_BLANK("LA002",             "축 이름은 비어 있을 수 없습니다.",                     HttpStatus.BAD_REQUEST),
-    LEARNING_AXIS_NAME_DUPLICATE("LA003",         "동일한 이름의 축이 이미 존재합니다.",                  HttpStatus.CONFLICT),
-    LEARNING_AXIS_REORDER_ID_MISMATCH("LA004",    "순서 변경 id 목록이 현재 축 id 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+    LEARNING_AXIS_NOT_FOUND("LA001",              "세부 축을 찾을 수 없습니다.",                             HttpStatus.NOT_FOUND),
+    LEARNING_AXIS_NAME_BLANK("LA002",             "축 이름은 비어 있을 수 없습니다.",                        HttpStatus.BAD_REQUEST),
+    LEARNING_AXIS_DUPLICATE_NAME("LA003",         "동일한 이름의 축이 이미 존재합니다.",                     HttpStatus.CONFLICT),
+    LEARNING_AXIS_REORDER_MISMATCH("LA004",       "순서 변경 id 목록이 현재 축 id 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+
+    // ─── AxisAction ───────────────────────────────────────
+    LEARNING_AXIS_ACTION_NOT_FOUND("ACTION001",          "행동을 찾을 수 없습니다.",              HttpStatus.NOT_FOUND),
+    LEARNING_AXIS_ACTION_DESCRIPTION_BLANK("ACTION002",  "행동 설명은 비어 있을 수 없습니다.",    HttpStatus.BAD_REQUEST),
+
+    // ─── ActionRevision / RevisionReasonOption ────────────
+    REVISION_REASON_NOT_FOUND("REVISION001", "수정 이유 선택지를 찾을 수 없거나 비활성화되어 있습니다.", HttpStatus.NOT_FOUND),
 
             // ─── 파일 / 스토리지 ──────────────────────────────────
     FILE_EMPTY("FILE001",                   "파일이 비어있습니다.",               HttpStatus.BAD_REQUEST),

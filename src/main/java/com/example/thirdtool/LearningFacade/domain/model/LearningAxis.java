@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -44,8 +43,7 @@ public class LearningAxis {
     private int displayOrder;
 
     // ─── 행동 목록 ────────────────────────────────────────
-    // 축 삭제 시 orphanRemoval로 함께 삭제된다.
-    // AxisAction은 Epic 2 Story 2-2에서 추가 예정
+
     @OneToMany(
             mappedBy      = "axis",
             cascade       = CascadeType.ALL,
@@ -59,7 +57,6 @@ public class LearningAxis {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    /** create() 내부 전용 생성자. */
     private LearningAxis(LearningFacade facade, String name, int displayOrder) {
         this.facade       = facade;
         this.name         = name;
@@ -97,10 +94,33 @@ public class LearningAxis {
         this.displayOrder = newOrder;
     }
 
+    public AxisAction addAction(String description) {
+        AxisAction action = AxisAction.create(this, description);
+        actions.add(action);
+        return action;
+    }
+
+    public void removeAction(Long actionId) {
+        AxisAction target = findAction(actionId);
+        actions.remove(target);
+    }
+
     // ─── 조회 ─────────────────────────────────────────────
 
     public List<AxisAction> getActions() {
         return Collections.unmodifiableList(actions);
+    }
+
+    // ─── 내부 유틸 ────────────────────────────────────────
+
+    AxisAction findAction(Long actionId) {
+        return actions.stream()
+                      .filter(a -> a.getId().equals(actionId))
+                      .findFirst()
+                      .orElseThrow(() -> LearningFacadeDomainException.of(
+                              ErrorCode.LEARNING_AXIS_ACTION_NOT_FOUND,
+                              "actionId=" + actionId
+                                                                         ));
     }
 
     // ─── 내부 검증 ────────────────────────────────────────

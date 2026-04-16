@@ -43,7 +43,6 @@ public class LearningAxis {
     private int displayOrder;
 
     // ─── 행동 목록 ────────────────────────────────────────
-
     @OneToMany(
             mappedBy      = "axis",
             cascade       = CascadeType.ALL,
@@ -68,10 +67,11 @@ public class LearningAxis {
     static LearningAxis create(LearningFacade facade, String name, int displayOrder) {
         requireNonNull(facade, "facade");
         validateName(name);
-        if (displayOrder < 0) {
+
+        if (displayOrder < 1) {
             throw LearningFacadeDomainException.of(
                     ErrorCode.INVALID_INPUT,
-                    "displayOrder는 0 이상이어야 합니다. displayOrder=" + displayOrder
+                    "displayOrder는 1 이상이어야 합니다. displayOrder=" + displayOrder
                                                   );
         }
         return new LearningAxis(facade, name.trim(), displayOrder);
@@ -85,10 +85,10 @@ public class LearningAxis {
     }
 
     void updateDisplayOrder(int newOrder) {
-        if (newOrder < 0) {
+        if (newOrder < 1) {
             throw LearningFacadeDomainException.of(
                     ErrorCode.INVALID_INPUT,
-                    "displayOrder는 0 이상이어야 합니다. newOrder=" + newOrder
+                    "displayOrder는 1 이상이어야 합니다. newOrder=" + newOrder
                                                   );
         }
         this.displayOrder = newOrder;

@@ -11,10 +11,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -90,7 +87,10 @@ public class LearningFacade {
     public LearningAxis addAxis(String name) {
         validateAxisNameDuplicate(name);
 
-        int nextOrder = axes.size(); // 0-based: 현재 크기가 곧 다음 인덱스
+        // [BUG FIX] displayOrder는 1-based다.
+        // 이전: axes.size() → 빈 목록이면 0이 되어 첫 번째 축의 displayOrder=0으로 저장됐다.
+        // 수정: axes.size() + 1 → 첫 번째 축은 1, 두 번째는 2 순서를 보장한다.
+        int nextOrder = axes.size() + 1;
         LearningAxis axis = LearningAxis.create(this, name, nextOrder);
         axes.add(axis);
         return axis;
@@ -104,9 +104,12 @@ public class LearningFacade {
     public void reorderAxes(List<Long> orderedAxisIds) {
         validateReorderIds(orderedAxisIds);
 
+        // [BUG FIX] displayOrder는 1-based다.
+        // 이전: updateDisplayOrder(i) → 첫 번째 축에 0이 할당됐다.
+        // 수정: updateDisplayOrder(i + 1) → 전달 순서대로 1, 2, 3... 을 할당한다.
         IntStream.range(0, orderedAxisIds.size()).forEach(i -> {
             LearningAxis axis = findAxis(orderedAxisIds.get(i));
-            axis.updateDisplayOrder(i);
+            axis.updateDisplayOrder(i + 1);
         });
     }
 
@@ -139,7 +142,7 @@ public class LearningFacade {
     // ─── 내부 검증 ────────────────────────────────────────
 
     private void validateAxisNameDuplicate(String name) {
-        if (name == null) return; // validateName이 이후에 처리
+        if (name == null) return; // null 방어는 LearningAxis.create() 내부 validateName()이 처리
 
         String trimmed = name.trim();
         boolean duplicated = axes.stream()
@@ -156,8 +159,15 @@ public class LearningFacade {
         Set<Long> currentIds = axes.stream()
                                    .map(LearningAxis::getId)
                                    .collect(Collectors.toSet());
-        Set<Long> incomingIds = Set.copyOf(orderedAxisIds);
 
+        if (orderedAxisIds.size() != currentIds.size()) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_AXIS_REORDER_MISMATCH,
+                    "전달된 축 id 수(" + orderedAxisIds.size() + ")가 현재 axes 수(" + currentIds.size() + ")와 다릅니다."
+                                                  );
+        }
+
+        Set<Long> incomingIds = new HashSet<>(orderedAxisIds);
         if (!currentIds.equals(incomingIds)) {
             throw LearningFacadeDomainException.of(
                     ErrorCode.LEARNING_AXIS_REORDER_MISMATCH,

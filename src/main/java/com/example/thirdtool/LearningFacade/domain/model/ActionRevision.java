@@ -1,6 +1,5 @@
 package com.example.thirdtool.LearningFacade.domain.model;
 
-
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import jakarta.persistence.*;
@@ -35,6 +34,7 @@ public class ActionRevision {
     private String newDescription;
 
     // ─── 수정 이유 스냅샷 ─────────────────────────────────
+
     @Column(name = "revision_reason_label", length = 100, updatable = false)
     private String revisionReasonLabel;
 
@@ -51,6 +51,7 @@ public class ActionRevision {
         this.previousDescription = previousDescription;
         this.newDescription      = newDescription;
         this.revisionReasonLabel = revisionReasonLabel;
+        this.revisedAt           = LocalDateTime.now(); // 단위 테스트 가용성 확보
     }
 
     // ─── 생성 ─────────────────────────────────────────────

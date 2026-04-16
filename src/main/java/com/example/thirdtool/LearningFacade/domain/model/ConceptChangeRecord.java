@@ -13,7 +13,6 @@ public class ConceptChangeRecord {
     private final String  previousConcept;
     private final String  newConcept;
 
-    // ─── 정적 팩토리 ──────────────────────────────────────
     static ConceptChangeRecord changed(String previousConcept, String newConcept) {
         return new ConceptChangeRecord(true, previousConcept, newConcept);
     }
@@ -26,5 +25,15 @@ public class ConceptChangeRecord {
 
     public boolean isDrifted() {
         return changed;
+    }
+
+    // ─── 조회 ─────────────────────────────────────────────
+
+    public String getPreviousConcept() {
+        return previousConcept;
+    }
+
+    public String getNewConcept() {
+        return newConcept;
     }
 }

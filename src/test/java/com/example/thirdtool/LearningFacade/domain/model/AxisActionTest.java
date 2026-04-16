@@ -1,8 +1,8 @@
-package com.example.thirdtool.learningfacade.domain.model;
+package com.example.thirdtool.LearningFacade.domain.model;
 
-import com.example.thirdtool.LearningFacade.domain.model.*;
-import com.example.thirdtool.learningfacade.domain.exception.LearningFacadeDomainException;
-import com.example.thirdtool.user.domain.model.UserEntity;
+
+import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
+import com.example.thirdtool.User.domain.model.UserEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,10 +29,6 @@ class AxisActionTest {
         return AxisAction.create(axis, "설계하다");
     }
 
-    /**
-     * revisionCount를 원하는 값으로 올리는 헬퍼.
-     * updateDescription()을 반복 호출해 revisionCount를 조작한다.
-     */
     private AxisAction createActionWithRevisionCount(int count) {
         AxisAction action = createAction();
         for (int i = 0; i < count; i++) {

@@ -1,7 +1,7 @@
 package com.example.thirdtool.LearningFacade.domain.model;
 
+import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.User.domain.model.UserEntity;
-import com.example.thirdtool.learningfacade.domain.exception.LearningFacadeDomainException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -152,7 +152,7 @@ class LearningMaterialTest {
 
         @Test
         @DisplayName("UNRATED → UNFAMILIAR 변경이 정상적으로 적용된다 — 슬라이더 첫 조작")
-        void updateProficiencyLevel_UNRATED→UNFAMILIAR() {
+        void updateProficiencyLevel_UNRATED_UNFAMILIAR() {
             //given
             LearningMaterial material = createMaterial();   // 초기: UNRATED
 
@@ -165,7 +165,7 @@ class LearningMaterialTest {
 
         @Test
         @DisplayName("UNFAMILIAR → GETTING_USED 변경이 정상적으로 적용된다")
-        void updateProficiencyLevel_UNFAMILIAR→GETTING_USED() {
+        void updateProficiencyLevel_UNFAMILIAR_GETTING_USED() {
             //given
             LearningMaterial material = createMaterial();
             material.updateProficiencyLevel(ProficiencyLevel.UNFAMILIAR);
@@ -179,7 +179,7 @@ class LearningMaterialTest {
 
         @Test
         @DisplayName("GETTING_USED → MASTERED 변경이 정상적으로 적용된다 — 커버리지 재계산 트리거 근거")
-        void updateProficiencyLevel_GETTING_USED→MASTERED() {
+        void updateProficiencyLevel_GETTING_USED_MASTERED() {
             //given
             LearningMaterial material = createMaterial();
             material.updateProficiencyLevel(ProficiencyLevel.GETTING_USED);

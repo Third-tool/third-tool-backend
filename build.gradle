@@ -66,8 +66,6 @@ dependencies {
     // Flyway
     implementation 'org.flywaydb:flyway-mysql'
 
-    //elasticsearch + uuid 툴
-    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
     implementation 'de.huxhorn.sulky:de.huxhorn.sulky.ulid:8.3.0'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'org.springframework:spring-web'   // MultipartFile 인터페이스

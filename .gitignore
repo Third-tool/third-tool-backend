@@ -40,3 +40,5 @@ application-dev.yml
 .env.dev
 .env.prod
 .env
+
+private-docs/

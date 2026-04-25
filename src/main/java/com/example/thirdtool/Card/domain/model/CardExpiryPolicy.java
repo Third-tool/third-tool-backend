@@ -10,7 +10,7 @@ public class CardExpiryPolicy {
 
     public Optional<ArchiveReason> expire(Card card, OnFieldBudget budget) {
         Optional<ArchiveReason> reason = budget.resolveReason(card);
-        reason.ifPresent(_ -> card.archive());
+        reason.ifPresent(r -> card.archive());
         return reason;
     }
 }

@@ -6,6 +6,7 @@ import com.example.thirdtool.Deck.domain.model.DeckMode;
 import com.example.thirdtool.Deck.domain.model.QDeck;
 import com.example.thirdtool.Deck.infrastructure.dto.DeckSearchCondition;
 import com.example.thirdtool.Deck.infrastructure.dto.DeckSummaryRow;
+import com.example.thirdtool.Deck.infrastructure.dto.QDeckSummaryRow;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -132,7 +133,7 @@ public class DeckQueryRepository {
                 .from(deck)
                 .where(
                         deck.user.id.eq(userId),
-                        deck.name.equalsIgnoreCaseBinding(name),
+                        deck.name.equalsIgnoreCase(name),
                         deck.deleted.isFalse()
                       )
                 .fetchFirst() != null;

@@ -8,6 +8,8 @@ import java.util.List;
 import static com.example.thirdtool.support.DomainFixture.*;
 import static org.assertj.core.api.Assertions.*;
 
+
+
 @DisplayName("CardRelationFinder")
 class CardRelationFinderTest {
 

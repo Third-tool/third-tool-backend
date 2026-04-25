@@ -87,9 +87,6 @@ public class LearningFacade {
     public LearningAxis addAxis(String name) {
         validateAxisNameDuplicate(name);
 
-        // [BUG FIX] displayOrder는 1-based다.
-        // 이전: axes.size() → 빈 목록이면 0이 되어 첫 번째 축의 displayOrder=0으로 저장됐다.
-        // 수정: axes.size() + 1 → 첫 번째 축은 1, 두 번째는 2 순서를 보장한다.
         int nextOrder = axes.size() + 1;
         LearningAxis axis = LearningAxis.create(this, name, nextOrder);
         axes.add(axis);

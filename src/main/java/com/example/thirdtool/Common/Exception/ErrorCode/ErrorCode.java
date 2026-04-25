@@ -69,6 +69,19 @@ public enum ErrorCode {
     // ─── ActionRevision / RevisionReasonOption ────────────
     REVISION_REASON_NOT_FOUND("REVISION001", "수정 이유 선택지를 찾을 수 없거나 비활성화되어 있습니다.", HttpStatus.NOT_FOUND),
 
+    // ─── LearningMaterial ─────────────────────────────────
+    LEARNING_MATERIAL_NOT_FOUND("LM001",                          "학습 자료를 찾을 수 없습니다.",                                  HttpStatus.NOT_FOUND),
+    LEARNING_MATERIAL_PROFICIENCY_UNRATED_NOT_ALLOWED("LM002",    "숙련도는 UNRATED로 되돌릴 수 없습니다.",                         HttpStatus.BAD_REQUEST),
+    LEARNING_ACTION_MATERIAL_ALREADY_LINKED("LM003",              "이미 연결된 행동-자료 매핑입니다.",                              HttpStatus.CONFLICT),
+    LEARNING_ACTION_MATERIAL_NOT_LINKED("LM004",                  "연결되지 않은 행동-자료 매핑입니다.",                            HttpStatus.NOT_FOUND),
+
+    // ─── Deck (확장) ──────────────────────────────────────
+    DECK_HIERARCHY_CYCLE("DECK006", "덱 계층 구조에 순환 참조가 발생했습니다.", HttpStatus.BAD_REQUEST),
+
+    // ─── UserSchedule ─────────────────────────────────────
+    SCHEDULE_NOT_FOUND("SCHEDULE001",            "스케줄을 찾을 수 없습니다.",                  HttpStatus.NOT_FOUND),
+    SCHEDULE_HISTORY_LIMIT_EXCEEDED("SCHEDULE002", "스케줄 이력 조회 한도를 초과했습니다.",     HttpStatus.BAD_REQUEST),
+
             // ─── 파일 / 스토리지 ──────────────────────────────────
     FILE_EMPTY("FILE001",                   "파일이 비어있습니다.",               HttpStatus.BAD_REQUEST),
     FILE_UNSUPPORTED_EXTENSION("FILE002",   "지원하지 않는 확장자입니다.",        HttpStatus.BAD_REQUEST),

@@ -141,7 +141,10 @@ public class LearningMaterial {
 
     private static void validateName(String name) {
         if (name == null || name.isBlank()) {
-            throw LearningFacadeDomainException.of(ErrorCode.LEARNING_MATERIAL_NAME_BLANK);
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "자료명은 비어 있을 수 없습니다."
+            );
         }
     }
 

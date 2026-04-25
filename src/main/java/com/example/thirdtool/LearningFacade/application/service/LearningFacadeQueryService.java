@@ -3,7 +3,7 @@ package com.example.thirdtool.LearningFacade.application.service;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.LearningFacade;
-import com.example.thirdtool.LearningFacade.domain.repository.*;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.ActionRevisionRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.RevisionReasonOptionRepository;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse;

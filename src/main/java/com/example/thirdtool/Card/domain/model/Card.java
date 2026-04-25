@@ -116,11 +116,6 @@ public class Card {
     // 생성
     // -------------------------------------------------------------------------
 
-    /**
-     * Card를 생성한다.
-     *
-     * <p>생성 시 운영 위치는 {@link CardStatus#ON_FIELD}로 초기화된다.
-     */
     public static Card create(
             Deck deck,
             MainNote mainNote,

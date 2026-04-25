@@ -11,7 +11,9 @@ import java.util.Optional;
 public interface LearningFacadeJpaRepository extends JpaRepository<LearningFacade, Long> {
 
 
-    @EntityGraph(attributePaths = {"axes", "axes.actions"})
+    // axes.actions까지 fetch하면 두 컬렉션 동시 fetch로 MultipleBagFetchException 발생.
+    // 하위 actions는 default_batch_fetch_size로 분리 로딩한다.
+    @EntityGraph(attributePaths = {"axes"})
     @Query("SELECT f FROM LearningFacade f WHERE f.user.id = :userId")
     Optional<LearningFacade> findByUserId(@Param("userId") Long userId);
 

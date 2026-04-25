@@ -22,15 +22,21 @@ public class QReviewSession extends EntityPathBase<ReviewSession> {
 
     public static final QReviewSession reviewSession = new QReviewSession("reviewSession");
 
+    public final NumberPath<Integer> availableCardCount = createNumber("availableCardCount", Integer.class);
+
     public final ListPath<CardReview, QCardReview> cardReviews = this.<CardReview, QCardReview>createList("cardReviews", CardReview.class, QCardReview.class, PathInits.DIRECT2);
 
     public final NumberPath<Integer> currentIndex = createNumber("currentIndex", Integer.class);
 
     public final com.example.thirdtool.Deck.domain.model.QDeck deck;
 
+    public final BooleanPath finished = createBoolean("finished");
+
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final DateTimePath<java.time.LocalDateTime> startedAt = createDateTime("startedAt", java.time.LocalDateTime.class);
+
+    public final NumberPath<Integer> totalCardCount = createNumber("totalCardCount", Integer.class);
 
     public final com.example.thirdtool.User.domain.model.QUserEntity user;
 

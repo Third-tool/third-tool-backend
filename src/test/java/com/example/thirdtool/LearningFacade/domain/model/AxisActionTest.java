@@ -1,40 +1,38 @@
 package com.example.thirdtool.LearningFacade.domain.model;
 
-
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DisplayName("AxisAction")
+/**
+ * AxisAction 단위 테스트 (운영 코드 v1).
+ *
+ * <p>sol §4의 AxisTopicTest는 Epic 2 v2(AxisTopic 모델) 가정. 현재 운영 코드는
+ * v1(AxisAction — 단일 동사 강제 + revisionCount + 동사 변경 시 커버리지 NO_MATERIAL
+ * 강제 초기화)이므로, 본 테스트는 v1의 의도된 동작을 검증한다.
+ *
+ * <p>v2 리팩토링이 머지되면 본 파일은 삭제되고 sol §4 시나리오가 AxisTopicTest로
+ * 신규 작성된다.
+ */
+@DisplayName("AxisAction (v1)")
 class AxisActionTest {
-
-    // ─── 테스트 픽스처 헬퍼 ───────────────────────────────────────────────
 
     private LearningAxis axis;
 
     @BeforeEach
     void setUp() {
-        UserEntity user = UserEntity.create(1L);
+        UserEntity user = UserEntity.ofLocal(
+                "tester-1", "encoded-pw", "닉네임-1", "tester1@example.com");
+        ReflectionTestUtils.setField(user, "id", 1L);
         LearningFacade facade = LearningFacade.create(user, "백엔드 개발자");
         axis = LearningAxis.create(facade, "API 설계", 1);
-    }
-
-    private AxisAction createAction() {
-        return AxisAction.create(axis, "설계하다");
-    }
-
-    private AxisAction createActionWithRevisionCount(int count) {
-        AxisAction action = createAction();
-        for (int i = 0; i < count; i++) {
-            action.updateDescription(i % 2 == 0 ? "검증하다" : "설계하다");
-        }
-        return action;
     }
 
     // ─── 1. 생성 ────────────────────────────────────────────────────────
@@ -44,20 +42,31 @@ class AxisActionTest {
     class Create {
 
         @Test
-        @DisplayName("유효한 파라미터로 생성하면 coverageStatus=NO_MATERIAL, revisionCount=0으로 초기화된다")
+        @DisplayName("유효한 단일 동사로 생성하면 coverageStatus=NO_MATERIAL, revisionCount=0이다")
         void create_valid_초기상태() {
-            //when
+            // when
             AxisAction action = AxisAction.create(axis, "설계하다");
 
-            //then
+            // then
+            assertThat(action.getDescription()).isEqualTo("설계하다");
             assertThat(action.getCoverageStatus()).isEqualTo(CoverageStatus.NO_MATERIAL);
-            assertThat(action.getRevisionCount()).isEqualTo(0);
+            assertThat(action.getRevisionCount()).isZero();
         }
 
         @Test
-        @DisplayName("axis가 null이면 예외가 발생한다")
+        @DisplayName("description의 앞뒤 공백은 trim된다")
+        void create_description_trim처리() {
+            // when
+            AxisAction action = AxisAction.create(axis, "  설계하다  ");
+
+            // then
+            assertThat(action.getDescription()).isEqualTo("설계하다");
+        }
+
+        @Test
+        @DisplayName("axis가 null이면 예외가 발생한다 — 소속 없는 행동 차단")
         void create_axis_null_예외() {
-            //when & then
+            // when & then
             assertThatThrownBy(() -> AxisAction.create(null, "설계하다"))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
@@ -65,7 +74,7 @@ class AxisActionTest {
         @Test
         @DisplayName("description이 null이면 예외가 발생한다")
         void create_description_null_예외() {
-            //when & then
+            // when & then
             assertThatThrownBy(() -> AxisAction.create(axis, null))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
@@ -73,16 +82,16 @@ class AxisActionTest {
         @Test
         @DisplayName("description이 공백 문자열이면 예외가 발생한다")
         void create_description_blank_예외() {
-            //when & then
+            // when & then
             assertThatThrownBy(() -> AxisAction.create(axis, "  "))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
 
         @Test
-        @DisplayName("description에 공백이 포함되면 단일 동사 원칙 위반으로 예외가 발생한다")
+        @DisplayName("description에 중간 공백이 있으면 예외가 발생한다 — v1 단일 동사 강제 규칙")
         void create_description_공백포함_예외() {
-            //when & then — "설계하다"는 허용, "설계하고 분석하다"는 불허
-            assertThatThrownBy(() -> AxisAction.create(axis, "설계하고 분석하다"))
+            // when & then
+            assertThatThrownBy(() -> AxisAction.create(axis, "설계 하다"))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
     }
@@ -94,94 +103,82 @@ class AxisActionTest {
     class UpdateDescription {
 
         @Test
-        @DisplayName("다른 값으로 수정하면 ActionChangeRecord.isChanged()가 true를 반환한다")
-        void updateDescription_변경_changed반환() {
-            //given
-            AxisAction action = createAction();
+        @DisplayName("다른 값으로 수정하면 ActionChangeRecord.isChanged()가 true이고 description이 갱신된다")
+        void updateDescription_변경값_changed반환() {
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
 
-            //when
+            // when
             ActionChangeRecord record = action.updateDescription("검증하다");
 
-            //then
+            // then
             assertThat(record.isChanged()).isTrue();
+            assertThat(action.getDescription()).isEqualTo("검증하다");
         }
 
         @Test
-        @DisplayName("동사를 변경하면 coverageStatus가 NO_MATERIAL로 초기화된다")
-        void updateDescription_변경_coverageStatus_초기화() {
-            //given
-            AxisAction action = createAction();
-            action.updateCoverageStatus(CoverageStatus.PARTIAL);   // PARTIAL 상태 설정
+        @DisplayName("동일한 값으로 수정하면 isChanged()가 false이고 description이 유지된다")
+        void updateDescription_동일값_unchanged반환() {
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
 
-            //when
+            // when
+            ActionChangeRecord record = action.updateDescription("설계하다");
+
+            // then
+            assertThat(record.isChanged()).isFalse();
+            assertThat(action.getDescription()).isEqualTo("설계하다");
+        }
+
+        @Test
+        @DisplayName("실제 변경 시 revisionCount가 1 증가한다 — v1 수정 횟수 추적 규칙")
+        void updateDescription_변경시_revisionCount_증가() {
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
+            int before = action.getRevisionCount();
+
+            // when
             action.updateDescription("검증하다");
 
-            //then
+            // then
+            assertThat(action.getRevisionCount()).isEqualTo(before + 1);
+        }
+
+        @Test
+        @DisplayName("실제 변경 시 coverageStatus는 NO_MATERIAL로 강제 초기화된다 — v1 동사 변경 규칙")
+        void updateDescription_변경시_coverageStatus_초기화() {
+            // given — 자료 연결을 가정해 PARTIAL 상태로 만든 후 동사 변경
+            AxisAction action = AxisAction.create(axis, "설계하다");
+            action.updateCoverageStatus(CoverageStatus.PARTIAL);
+
+            // when
+            action.updateDescription("검증하다");
+
+            // then
             assertThat(action.getCoverageStatus()).isEqualTo(CoverageStatus.NO_MATERIAL);
         }
 
         @Test
-        @DisplayName("동사를 변경하면 revisionCount가 1 증가한다")
-        void updateDescription_변경_revisionCount_증가() {
-            //given
-            AxisAction action = createActionWithRevisionCount(1);  // revisionCount = 1
-            int beforeCount = action.getRevisionCount();
+        @DisplayName("동일 값 재입력 시 revisionCount는 증가하지 않는다 — 멱등성")
+        void updateDescription_동일값_revisionCount_불변() {
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
+            int before = action.getRevisionCount();
 
-            //when
-            action.updateDescription("문서화하다");
-
-            //then
-            assertThat(action.getRevisionCount()).isEqualTo(beforeCount + 1);
-        }
-
-        @Test
-        @DisplayName("동일한 값으로 수정하면 isChanged()가 false를 반환한다")
-        void updateDescription_동일값_unchanged반환() {
-            //given
-            AxisAction action = createAction();
-
-            //when
-            ActionChangeRecord record = action.updateDescription("설계하다");
-
-            //then
-            assertThat(record.isChanged()).isFalse();
-        }
-
-        @Test
-        @DisplayName("동일한 값으로 수정하면 PARTIAL 상태의 coverageStatus가 초기화되지 않는다")
-        void updateDescription_동일값_coverageStatus_불변() {
-            //given
-            AxisAction action = createAction();
-            action.updateCoverageStatus(CoverageStatus.PARTIAL);
-
-            //when
+            // when
             action.updateDescription("설계하다");
 
-            //then
-            assertThat(action.getCoverageStatus()).isEqualTo(CoverageStatus.PARTIAL);
+            // then
+            assertThat(action.getRevisionCount()).isEqualTo(before);
         }
 
         @Test
-        @DisplayName("동일한 값으로 수정하면 revisionCount가 증가하지 않는다")
-        void updateDescription_동일값_revisionCount_불변() {
-            //given
-            AxisAction action = createActionWithRevisionCount(2);  // revisionCount = 2
-            int countBefore = action.getRevisionCount();
-
-            //when
-            action.updateDescription(action.getDescription());  // 현재 description 그대로 재입력
-
-            //then
-            assertThat(action.getRevisionCount()).isEqualTo(countBefore);
-        }
-
-        @Test
-        @DisplayName("공백 문자열로 수정하면 예외가 발생한다")
+        @DisplayName("blank로 수정하면 예외가 발생한다")
         void updateDescription_blank_예외() {
-            //given
-            AxisAction action = createAction();
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
 
-            //when & then
+            // when & then
             assertThatThrownBy(() -> action.updateDescription("  "))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
@@ -189,107 +186,95 @@ class AxisActionTest {
         @Test
         @DisplayName("null로 수정하면 예외가 발생한다")
         void updateDescription_null_예외() {
-            //given
-            AxisAction action = createAction();
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
 
-            //when & then
+            // when & then
             assertThatThrownBy(() -> action.updateDescription(null))
-                    .isInstanceOf(LearningFacadeDomainException.class);
-        }
-
-        @Test
-        @DisplayName("공백 포함 동사로 수정하면 단일 동사 원칙 위반으로 예외가 발생한다")
-        void updateDescription_공백포함_예외() {
-            //given
-            AxisAction action = createAction();
-
-            //when & then
-            assertThatThrownBy(() -> action.updateDescription("검증하고 기록하다"))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
     }
 
-    // ─── 3. 커버리지 상태 변경 ───────────────────────────────────────────
+    // ─── 3. 커버리지 상태 변경 ────────────────────────────────────────────
 
     @Nested
     @DisplayName("커버리지 상태 변경")
     class UpdateCoverageStatus {
 
         @Test
-        @DisplayName("NO_MATERIAL → PARTIAL 전이가 정상적으로 적용된다")
-        void updateCoverageStatus_NO_MATERIAL→PARTIAL() {
-            //given
-            AxisAction action = createAction();   // 초기: NO_MATERIAL
+        @DisplayName("NO_MATERIAL → PARTIAL 전이가 적용된다")
+        void updateCoverageStatus_NO_MATERIAL_PARTIAL() {
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
 
-            //when
+            // when
             action.updateCoverageStatus(CoverageStatus.PARTIAL);
 
-            //then
+            // then
             assertThat(action.getCoverageStatus()).isEqualTo(CoverageStatus.PARTIAL);
         }
 
         @Test
-        @DisplayName("PARTIAL → COVERED 전이가 정상적으로 적용된다")
-        void updateCoverageStatus_PARTIAL→COVERED() {
-            //given
-            AxisAction action = createAction();
+        @DisplayName("PARTIAL → COVERED 전이가 적용된다 — MASTERED 자료 연결 시 최종 상태")
+        void updateCoverageStatus_PARTIAL_COVERED() {
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
             action.updateCoverageStatus(CoverageStatus.PARTIAL);
 
-            //when
+            // when
             action.updateCoverageStatus(CoverageStatus.COVERED);
 
-            //then
+            // then
             assertThat(action.getCoverageStatus()).isEqualTo(CoverageStatus.COVERED);
         }
 
         @Test
-        @DisplayName("COVERED → NO_MATERIAL 전이가 정상적으로 적용된다 — 자료 전체 해제 시 복귀")
-        void updateCoverageStatus_COVERED→NO_MATERIAL() {
-            //given
-            AxisAction action = createAction();
-            action.updateCoverageStatus(CoverageStatus.COVERED);
+        @DisplayName("null로 변경하면 예외가 발생한다 — 외부 호출 방어")
+        void updateCoverageStatus_null_예외() {
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
 
-            //when
-            action.updateCoverageStatus(CoverageStatus.NO_MATERIAL);
-
-            //then
-            assertThat(action.getCoverageStatus()).isEqualTo(CoverageStatus.NO_MATERIAL);
+            // when & then
+            assertThatThrownBy(() -> action.updateCoverageStatus(null))
+                    .isInstanceOf(LearningFacadeDomainException.class);
         }
     }
 
-    // ─── 4. 단련 안내 ────────────────────────────────────────────────────
+    // ─── 4. 보조 조회 ────────────────────────────────────────────────────
 
     @Nested
-    @DisplayName("단련 안내")
-    class RefinementSuggested {
+    @DisplayName("isRefinementSuggested — v1 수정 횟수 임계값")
+    class IsRefinementSuggested {
 
         @Test
-        @DisplayName("revisionCount가 임계값(3) 미만이면 isRefinementSuggested가 false를 반환한다")
-        void isRefinementSuggested_임계값미만_false() {
-            //given — revisionCount = 2
-            AxisAction action = createActionWithRevisionCount(2);
+        @DisplayName("revisionCount=0이면 false (개선 권장 안 됨)")
+        void isRefinementSuggested_0회_false() {
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
 
-            //when & then
+            // when & then
             assertThat(action.isRefinementSuggested()).isFalse();
         }
 
         @Test
-        @DisplayName("revisionCount가 임계값(3)에 정확히 도달하면 isRefinementSuggested가 true를 반환한다")
-        void isRefinementSuggested_임계값정확히도달_true() {
-            //given — revisionCount = 3
-            AxisAction action = createActionWithRevisionCount(3);
+        @DisplayName("revisionCount=2이면 false — 임계값(3) 미만")
+        void isRefinementSuggested_2회_false() {
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
+            ReflectionTestUtils.setField(action, "revisionCount", 2);
 
-            //when & then
-            assertThat(action.isRefinementSuggested()).isTrue();
+            // when & then
+            assertThat(action.isRefinementSuggested()).isFalse();
         }
 
         @Test
-        @DisplayName("revisionCount가 임계값(3)을 초과해도 isRefinementSuggested가 true를 반환한다")
-        void isRefinementSuggested_임계값초과_true() {
-            //given — revisionCount = 5
-            AxisAction action = createActionWithRevisionCount(5);
+        @DisplayName("revisionCount=3이면 true — 경계값(임계값 도달)")
+        void isRefinementSuggested_3회_true() {
+            // given
+            AxisAction action = AxisAction.create(axis, "설계하다");
+            ReflectionTestUtils.setField(action, "revisionCount", 3);
 
-            //when & then
+            // when & then
             assertThat(action.isRefinementSuggested()).isTrue();
         }
     }

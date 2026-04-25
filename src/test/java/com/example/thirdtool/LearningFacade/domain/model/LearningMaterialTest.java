@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -19,7 +20,9 @@ class LearningMaterialTest {
 
     @BeforeEach
     void setUp() {
-        UserEntity user = UserEntity.create(1L);
+        UserEntity user = UserEntity.ofLocal(
+                "tester-1", "encoded-pw", "닉네임-1", "tester1@example.com");
+        ReflectionTestUtils.setField(user, "id", 1L);
         facade = LearningFacade.create(user, "백엔드 개발자");
     }
 

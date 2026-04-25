@@ -1,12 +1,12 @@
 package com.example.thirdtool.LearningFacade.domain.model;
 
+import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.User.domain.model.UserEntity;
-import com.example.thirdtool.learningfacade.domain.exception.LearningFacadeDomainException;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
@@ -22,7 +22,21 @@ class LearningFacadeTest {
 
     @BeforeEach
     void setUp() {
-        user = UserEntity.create(1L);   // 테스트용 사용자 생성 (실제 구현에 맞게 조정)
+        user = userWithId(1L);
+    }
+
+    private static UserEntity userWithId(Long id) {
+        UserEntity entity = UserEntity.ofLocal(
+                "tester-" + id, "encoded-pw", "닉네임-" + id, "tester" + id + "@example.com");
+        ReflectionTestUtils.setField(entity, "id", id);
+        return entity;
+    }
+
+    /** 도메인은 axis.id를 부여하지 않으므로 (DB IDENTITY) 단위 테스트용 ID를 주입한다. */
+    private static LearningAxis addAxisWithId(LearningFacade facade, String name, Long id) {
+        LearningAxis axis = facade.addAxis(name);
+        ReflectionTestUtils.setField(axis, "id", id);
+        return axis;
     }
 
     private LearningFacade createFacade() {
@@ -280,7 +294,7 @@ class LearningFacadeTest {
         void removeAxis_valid() {
             //given
             LearningFacade facade = createFacade();
-            LearningAxis axis = facade.addAxis("API 설계");
+            LearningAxis axis = addAxisWithId(facade, "API 설계", 10L);
             Long axisId = axis.getId();
 
             //when
@@ -313,9 +327,9 @@ class LearningFacadeTest {
         void reorderAxes_valid_순서재부여() {
             //given
             LearningFacade facade = createFacade();
-            LearningAxis axis1 = facade.addAxis("API 설계");       // order 1
-            LearningAxis axis2 = facade.addAxis("데이터 모델링");   // order 2
-            LearningAxis axis3 = facade.addAxis("성능 최적화");     // order 3
+            LearningAxis axis1 = addAxisWithId(facade, "API 설계", 10L);
+            LearningAxis axis2 = addAxisWithId(facade, "데이터 모델링", 11L);
+            LearningAxis axis3 = addAxisWithId(facade, "성능 최적화", 12L);
 
             //when
             facade.reorderAxes(List.of(axis3.getId(), axis1.getId(), axis2.getId()));
@@ -341,11 +355,11 @@ class LearningFacadeTest {
         void reorderAxes_id집합_불일치_예외() {
             //given
             LearningFacade facade = createFacade();
-            LearningAxis axis1 = facade.addAxis("API 설계");
-            LearningAxis axis2 = facade.addAxis("데이터 모델링");
-            LearningAxis axis3 = facade.addAxis("성능 최적화");
+            LearningAxis axis1 = addAxisWithId(facade, "API 설계", 10L);
+            LearningAxis axis2 = addAxisWithId(facade, "데이터 모델링", 11L);
+            addAxisWithId(facade, "성능 최적화", 12L);
 
-            //when & then — axis3 누락
+            //when & then — 3개 중 2개만 전달
             assertThatThrownBy(() -> facade.reorderAxes(List.of(axis1.getId(), axis2.getId())))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
@@ -355,8 +369,8 @@ class LearningFacadeTest {
         void reorderAxes_존재하지않는id포함_예외() {
             //given
             LearningFacade facade = createFacade();
-            LearningAxis axis1 = facade.addAxis("API 설계");
-            LearningAxis axis2 = facade.addAxis("데이터 모델링");
+            LearningAxis axis1 = addAxisWithId(facade, "API 설계", 10L);
+            LearningAxis axis2 = addAxisWithId(facade, "데이터 모델링", 11L);
 
             //when & then — 유령 id 999L 포함
             assertThatThrownBy(() -> facade.reorderAxes(List.of(axis1.getId(), axis2.getId(), 999L)))

@@ -54,7 +54,7 @@ public class ReviewCommandService {
         List<Card> cards = cardRepository.findAllByDeckIdAndDeletedFalse(deck.getId());
 
         // 카드 0개 검증은 ReviewSession.of() 도메인 내부에서 처리 (REVIEW002)
-        ReviewSession session = ReviewSession.of(deck, cards, user);
+        ReviewSession session = ReviewSession.of(deck, cards, user, cards.size());
         reviewSessionRepository.save(session);
 
         // 첫 번째 카드 진입 처리 (viewCount 증가 + maxView 도달 시 즉시 ARCHIVE)

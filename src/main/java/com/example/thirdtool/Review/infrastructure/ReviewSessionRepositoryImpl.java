@@ -28,7 +28,8 @@ public class ReviewSessionRepositoryImpl implements ReviewSessionRepositoryCusto
                         reviewSession.id,
                         deck.id,
                         deck.name,
-                        reviewSession.cardReviews.size(),
+                        reviewSession.totalCardCount,
+                        reviewSession.availableCardCount,
                         reviewSession.startedAt
                 ))
                 .from(reviewSession)

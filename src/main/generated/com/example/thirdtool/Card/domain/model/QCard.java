@@ -32,15 +32,23 @@ public class QCard extends EntityPathBase<Card> {
 
     public final DateTimePath<java.time.LocalDateTime> deletedAt = createDateTime("deletedAt", java.time.LocalDateTime.class);
 
+    public final DateTimePath<java.time.LocalDateTime> enteredFieldAt = createDateTime("enteredFieldAt", java.time.LocalDateTime.class);
+
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final ListPath<KeywordCue, QKeywordCue> keywordCues = this.<KeywordCue, QKeywordCue>createList("keywordCues", KeywordCue.class, QKeywordCue.class, PathInits.DIRECT2);
 
+    public final DateTimePath<java.time.LocalDateTime> lastViewedAt = createDateTime("lastViewedAt", java.time.LocalDateTime.class);
+
     public final QMainNote mainNote;
+
+    public final EnumPath<CardStatus> status = createEnum("status", CardStatus.class);
 
     public final QSummary summary;
 
     public final DateTimePath<java.time.LocalDateTime> updatedDate = createDateTime("updatedDate", java.time.LocalDateTime.class);
+
+    public final NumberPath<Integer> viewCount = createNumber("viewCount", Integer.class);
 
     public QCard(String variable) {
         this(Card.class, forVariable(variable), INITS);

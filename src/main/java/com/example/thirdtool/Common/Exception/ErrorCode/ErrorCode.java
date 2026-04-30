@@ -62,8 +62,9 @@ public enum ErrorCode {
     LEARNING_AXIS_REORDER_MISMATCH("LA004",       "순서 변경 id 목록이 현재 축 id 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
 
     // ─── AxisTopic (v2) ────────────────────────────────────
-    LEARNING_AXIS_TOPIC_NOT_FOUND("LT001",        "주제를 찾을 수 없습니다.",           HttpStatus.NOT_FOUND),
-    LEARNING_AXIS_TOPIC_NAME_BLANK("LT002",       "주제 이름은 비어 있을 수 없습니다.", HttpStatus.BAD_REQUEST),
+    LEARNING_AXIS_TOPIC_NOT_FOUND("LT001",        "주제를 찾을 수 없습니다.",                                HttpStatus.NOT_FOUND),
+    LEARNING_AXIS_TOPIC_NAME_BLANK("LT002",       "주제 이름은 비어 있을 수 없습니다.",                      HttpStatus.BAD_REQUEST),
+    LEARNING_AXIS_TOPIC_REORDER_MISMATCH("LT003", "전달된 주제 id 목록이 현재 주제 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
 
     // ─── LearningMaterial ─────────────────────────────────
     LEARNING_MATERIAL_NOT_FOUND("LM001",                          "학습 자료를 찾을 수 없습니다.",                                  HttpStatus.NOT_FOUND),

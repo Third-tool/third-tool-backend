@@ -127,6 +127,34 @@ class LearningAxisTest {
     }
 
     @Nested
+    @DisplayName("주제 다건 추가")
+    class AddTopics {
+
+        @Test
+        @DisplayName("commands 순서대로 displayOrder가 1, 2, 3으로 부여된다")
+        void addTopics_순차_displayOrder() {
+            LearningAxis axis = createAxis();
+            java.util.List<AxisTopic> added = axis.addTopics(java.util.List.of(
+                    LearningAxis.TopicCommand.of("A", null),
+                    LearningAxis.TopicCommand.of("B", "설명B"),
+                    LearningAxis.TopicCommand.of("C", null)
+            ));
+            assertThat(added).hasSize(3);
+            assertThat(added.get(0).getDisplayOrder()).isEqualTo(1);
+            assertThat(added.get(1).getDisplayOrder()).isEqualTo(2);
+            assertThat(added.get(2).getDisplayOrder()).isEqualTo(3);
+        }
+
+        @Test
+        @DisplayName("빈 리스트나 null이 들어와도 예외 없이 빈 리스트를 반환한다")
+        void addTopics_empty_빈리스트반환() {
+            LearningAxis axis = createAxis();
+            assertThat(axis.addTopics(null)).isEmpty();
+            assertThat(axis.addTopics(java.util.List.of())).isEmpty();
+        }
+    }
+
+    @Nested
     @DisplayName("주제 삭제")
     class RemoveTopic {
 
@@ -145,6 +173,77 @@ class LearningAxisTest {
             LearningAxis axis = createAxis();
             assertThatThrownBy(() -> axis.removeTopic(999L))
                     .isInstanceOf(LearningFacadeDomainException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("주제 순서 변경")
+    class ReorderTopics {
+
+        @Test
+        @DisplayName("전달된 id 순서대로 displayOrder가 1부터 재부여된다")
+        void reorderTopics_valid_순서재부여() {
+            LearningAxis axis = createAxis();
+            AxisTopic t1 = addTopicWithId(axis, "A", 100L);
+            AxisTopic t2 = addTopicWithId(axis, "B", 101L);
+            AxisTopic t3 = addTopicWithId(axis, "C", 102L);
+
+            axis.reorderTopics(java.util.List.of(t3.getId(), t1.getId(), t2.getId()));
+
+            assertThat(t3.getDisplayOrder()).isEqualTo(1);
+            assertThat(t1.getDisplayOrder()).isEqualTo(2);
+            assertThat(t2.getDisplayOrder()).isEqualTo(3);
+        }
+
+        @Test
+        @DisplayName("topics가 없을 때 빈 리스트를 전달하면 정상 처리된다")
+        void reorderTopics_빈목록_정상() {
+            LearningAxis axis = createAxis();
+            axis.reorderTopics(java.util.List.of());
+        }
+
+        @Test
+        @DisplayName("전달된 id 수가 현재 topics 수와 다르면 예외가 발생한다")
+        void reorderTopics_id수_불일치_예외() {
+            LearningAxis axis = createAxis();
+            AxisTopic t1 = addTopicWithId(axis, "A", 100L);
+            addTopicWithId(axis, "B", 101L);
+            addTopicWithId(axis, "C", 102L);
+
+            assertThatThrownBy(() -> axis.reorderTopics(java.util.List.of(t1.getId())))
+                    .isInstanceOf(LearningFacadeDomainException.class);
+        }
+
+        @Test
+        @DisplayName("현재 topics에 없는 id가 포함되면 예외가 발생한다")
+        void reorderTopics_존재하지않는id_예외() {
+            LearningAxis axis = createAxis();
+            AxisTopic t1 = addTopicWithId(axis, "A", 100L);
+            AxisTopic t2 = addTopicWithId(axis, "B", 101L);
+
+            assertThatThrownBy(() -> axis.reorderTopics(java.util.List.of(t1.getId(), t2.getId(), 999L)))
+                    .isInstanceOf(LearningFacadeDomainException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("권장 상한 안내")
+    class TopicCountRecommended {
+
+        @Test
+        @DisplayName("topics가 10개 이하이면 isTopicCountExceedsRecommended가 false")
+        void exceeds_10이하_false() {
+            LearningAxis axis = createAxis();
+            for (int i = 1; i <= 10; i++) axis.addTopic("주제 " + i, null);
+            assertThat(axis.isTopicCountExceedsRecommended()).isFalse();
+        }
+
+        @Test
+        @DisplayName("topics가 11개이면 isTopicCountExceedsRecommended가 true")
+        void exceeds_11_true() {
+            LearningAxis axis = createAxis();
+            for (int i = 1; i <= 11; i++) axis.addTopic("주제 " + i, null);
+            assertThat(axis.isTopicCountExceedsRecommended()).isTrue();
         }
     }
 }

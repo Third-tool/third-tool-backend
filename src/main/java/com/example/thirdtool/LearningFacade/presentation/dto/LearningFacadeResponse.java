@@ -239,4 +239,32 @@ public class LearningFacadeResponse {
             );
         }
     }
+
+    // ──────────────────────────────────────────────────────
+    // 11. ReorderTopics
+    // ──────────────────────────────────────────────────────
+
+    public record TopicOrderItem(
+            Long topicId,
+            String name,
+            int displayOrder
+    ) {
+        public static TopicOrderItem of(AxisTopic topic) {
+            return new TopicOrderItem(topic.getId(), topic.getName(), topic.getDisplayOrder());
+        }
+    }
+
+    public record ReorderTopics(
+            Long axisId,
+            List<TopicOrderItem> topics
+    ) {
+        public static ReorderTopics of(LearningAxis axis) {
+            return new ReorderTopics(
+                    axis.getId(),
+                    axis.getTopics().stream()
+                            .map(TopicOrderItem::of)
+                            .collect(Collectors.toList())
+            );
+        }
+    }
 }

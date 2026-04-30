@@ -11,7 +11,11 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -24,6 +28,8 @@ import java.util.List;
         )
 )
 public class LearningAxis {
+
+    private static final int RECOMMENDED_TOPIC_LIMIT = 10;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -94,9 +100,39 @@ public class LearningAxis {
         return topic;
     }
 
+    /**
+     * 다건 주제 추가 (AI 제안 체크박스 등). 입력 순서대로 displayOrder가 1-based로 부여된다.
+     */
+    public List<AxisTopic> addTopics(List<TopicCommand> commands) {
+        if (commands == null || commands.isEmpty()) {
+            return List.of();
+        }
+        List<AxisTopic> added = new ArrayList<>(commands.size());
+        for (TopicCommand cmd : commands) {
+            added.add(addTopic(cmd.name(), cmd.description()));
+        }
+        return added;
+    }
+
     public void removeTopic(Long topicId) {
         AxisTopic target = findTopic(topicId);
         topics.remove(target);
+    }
+
+    /**
+     * 주제 순서 변경. 전달된 id 순서대로 displayOrder를 1-based로 재부여한다.
+     * 전달된 id 집합이 현재 topics와 일치해야 한다.
+     */
+    public void reorderTopics(List<Long> orderedTopicIds) {
+        validateReorderTopicIds(orderedTopicIds);
+        IntStream.range(0, orderedTopicIds.size()).forEach(i -> {
+            AxisTopic topic = findTopic(orderedTopicIds.get(i));
+            topic.updateDisplayOrder(i + 1);
+        });
+    }
+
+    public boolean isTopicCountExceedsRecommended() {
+        return topics.size() > RECOMMENDED_TOPIC_LIMIT;
     }
 
     public List<AxisTopic> getTopics() {
@@ -113,6 +149,31 @@ public class LearningAxis {
                 ));
     }
 
+    private void validateReorderTopicIds(List<Long> orderedTopicIds) {
+        if (orderedTopicIds == null) {
+            throw LearningFacadeDomainException.of(ErrorCode.LEARNING_AXIS_TOPIC_REORDER_MISMATCH);
+        }
+        Set<Long> currentIds = topics.stream()
+                .map(AxisTopic::getId)
+                .collect(Collectors.toSet());
+
+        if (orderedTopicIds.size() != currentIds.size()) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_AXIS_TOPIC_REORDER_MISMATCH,
+                    "전달된 주제 id 수(" + orderedTopicIds.size()
+                            + ")가 현재 topics 수(" + currentIds.size() + ")와 다릅니다."
+            );
+        }
+
+        Set<Long> incomingIds = new HashSet<>(orderedTopicIds);
+        if (!currentIds.equals(incomingIds)) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_AXIS_TOPIC_REORDER_MISMATCH,
+                    "전달된 주제 id 목록이 현재 topics id 집합과 일치하지 않습니다."
+            );
+        }
+    }
+
     private static void validateName(String name) {
         if (name == null || name.isBlank()) {
             throw LearningFacadeDomainException.of(ErrorCode.LEARNING_AXIS_NAME_BLANK);
@@ -125,6 +186,12 @@ public class LearningAxis {
                     ErrorCode.INVALID_INPUT,
                     fieldName + "은(는) null일 수 없습니다."
             );
+        }
+    }
+
+    public record TopicCommand(String name, String description) {
+        public static TopicCommand of(String name, String description) {
+            return new TopicCommand(name, description);
         }
     }
 }

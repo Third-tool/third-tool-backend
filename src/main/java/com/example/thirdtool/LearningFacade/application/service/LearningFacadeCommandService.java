@@ -4,6 +4,7 @@ import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.*;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
+import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeRequest;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.*;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
@@ -110,18 +111,25 @@ public class LearningFacadeCommandService {
     }
 
     // ──────────────────────────────────────────────────────
-    // 9. 주제 수정 (이름 + 부연 설명)
+    // 9. 주제 부분 수정 (idempotent)
     // ──────────────────────────────────────────────────────
 
     public UpdateTopic updateTopic(UserEntity user, Long axisId, Long topicId,
-                                    String name, String description) {
+                                    LearningFacadeRequest.UpdateTopic command) {
         LearningFacade facade = loadFacade(user.getId());
         LearningAxis axis = findAxis(facade, axisId);
         AxisTopic topic = axis.findTopic(topicId);
 
-        topic.updateName(name);
-        topic.updateDescription(description);
-        facadeRepository.save(facade);
+        boolean changed = false;
+        if (command.isNamePresent()) {
+            changed = topic.updateName(command.getName()) || changed;
+        }
+        if (command.isDescriptionPresent()) {
+            changed = topic.updateDescription(command.getDescription()) || changed;
+        }
+        if (changed) {
+            facadeRepository.save(facade);
+        }
         return UpdateTopic.of(topic);
     }
 
@@ -134,6 +142,18 @@ public class LearningFacadeCommandService {
         LearningAxis axis = findAxis(facade, axisId);
         axis.removeTopic(topicId);
         facadeRepository.save(facade);
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 11. 주제 순서 변경
+    // ──────────────────────────────────────────────────────
+
+    public ReorderTopics reorderTopics(UserEntity user, Long axisId, List<Long> orderedTopicIds) {
+        LearningFacade facade = loadFacade(user.getId());
+        LearningAxis axis = findAxis(facade, axisId);
+        axis.reorderTopics(orderedTopicIds);
+        facadeRepository.save(facade);
+        return ReorderTopics.of(axis);
     }
 
     // ──────────────────────────────────────────────────────

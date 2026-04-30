@@ -85,19 +85,21 @@ class AxisTopicTest {
     class UpdateName {
 
         @Test
-        @DisplayName("새 이름으로 수정하면 name이 갱신된다")
-        void updateName_valid() {
+        @DisplayName("다른 값으로 수정하면 true 반환 + name 갱신")
+        void updateName_changed() {
             AxisTopic topic = createTopic();
-            topic.updateName("API 명세 작성");
+            boolean changed = topic.updateName("API 명세 작성");
+            assertThat(changed).isTrue();
             assertThat(topic.getName()).isEqualTo("API 명세 작성");
         }
 
         @Test
-        @DisplayName("앞뒤 공백은 trim된다")
-        void updateName_trim() {
+        @DisplayName("동일 값(trim 후)으로 수정하면 false 반환 + name 불변")
+        void updateName_unchanged() {
             AxisTopic topic = createTopic();
-            topic.updateName("  API 명세 작성  ");
-            assertThat(topic.getName()).isEqualTo("API 명세 작성");
+            boolean changed = topic.updateName("  REST API 설계 원칙  ");
+            assertThat(changed).isFalse();
+            assertThat(topic.getName()).isEqualTo("REST API 설계 원칙");
         }
 
         @Test
@@ -116,18 +118,28 @@ class AxisTopicTest {
     class UpdateDescription {
 
         @Test
-        @DisplayName("새 값으로 수정하면 description이 갱신된다")
-        void updateDescription_valid() {
+        @DisplayName("다른 값으로 수정하면 true 반환 + description 갱신")
+        void updateDescription_changed() {
             AxisTopic topic = createTopic();
-            topic.updateDescription("새 설명");
+            boolean changed = topic.updateDescription("새 설명");
+            assertThat(changed).isTrue();
             assertThat(topic.getDescription()).isEqualTo("새 설명");
+        }
+
+        @Test
+        @DisplayName("동일 값(trim 후)으로 수정하면 false 반환")
+        void updateDescription_unchanged() {
+            AxisTopic topic = createTopic();
+            boolean changed = topic.updateDescription("  자원 중심 URI  ");
+            assertThat(changed).isFalse();
         }
 
         @Test
         @DisplayName("null로 수정하면 description이 제거된다")
         void updateDescription_null_remove() {
             AxisTopic topic = createTopic();
-            topic.updateDescription(null);
+            boolean changed = topic.updateDescription(null);
+            assertThat(changed).isTrue();
             assertThat(topic.getDescription()).isNull();
         }
 
@@ -135,8 +147,17 @@ class AxisTopicTest {
         @DisplayName("빈 문자열은 null로 정규화되어 description이 제거된다")
         void updateDescription_empty_normalized_remove() {
             AxisTopic topic = createTopic();
-            topic.updateDescription("   ");
+            boolean changed = topic.updateDescription("   ");
+            assertThat(changed).isTrue();
             assertThat(topic.getDescription()).isNull();
+        }
+
+        @Test
+        @DisplayName("이미 null인 description에 null을 다시 입력하면 false")
+        void updateDescription_null_to_null_unchanged() {
+            AxisTopic topic = axis.addTopic("주제", null);
+            boolean changed = topic.updateDescription(null);
+            assertThat(changed).isFalse();
         }
     }
 
@@ -158,6 +179,30 @@ class AxisTopicTest {
             AxisTopic topic = createTopic();
             assertThatThrownBy(() -> topic.updateCoverageStatus(null))
                     .isInstanceOf(LearningFacadeDomainException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("isFocused")
+    class IsFocused {
+
+        @Test
+        @DisplayName("displayOrder가 threshold 이하이면 true")
+        void isFocused_within_threshold() {
+            AxisTopic t1 = axis.addTopic("A", null);
+            AxisTopic t2 = axis.addTopic("B", null);
+            AxisTopic t3 = axis.addTopic("C", null);
+            assertThat(t1.isFocused(3)).isTrue();
+            assertThat(t2.isFocused(3)).isTrue();
+            assertThat(t3.isFocused(3)).isTrue();
+        }
+
+        @Test
+        @DisplayName("displayOrder가 threshold를 초과하면 false")
+        void isFocused_above_threshold() {
+            for (int i = 1; i <= 4; i++) axis.addTopic("주제 " + i, null);
+            AxisTopic last = axis.getTopics().get(3);
+            assertThat(last.isFocused(3)).isFalse();
         }
     }
 }

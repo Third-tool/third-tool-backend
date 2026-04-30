@@ -21,19 +21,11 @@ public class ConceptChangeRecord {
         return new ConceptChangeRecord(false, concept, concept);
     }
 
-    // ─── 행위 ─────────────────────────────────────────────
-
-    public boolean isDrifted() {
+    public boolean isChanged() {
         return changed;
     }
 
-    // ─── 조회 ─────────────────────────────────────────────
-
-    public String getPreviousConcept() {
-        return previousConcept;
-    }
-
-    public String getNewConcept() {
-        return newConcept;
+    public boolean isDrifted() {
+        return changed;
     }
 }

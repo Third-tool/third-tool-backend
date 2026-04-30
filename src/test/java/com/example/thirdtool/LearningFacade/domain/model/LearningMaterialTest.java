@@ -59,13 +59,13 @@ class LearningMaterialTest {
         }
 
         @Test
-        @DisplayName("생성 직후 actionMappings가 비어있다")
-        void create_actionMappings_비어있음() {
+        @DisplayName("생성 직후 topicMappings가 비어있다")
+        void create_topicMappings_비어있음() {
             //when
             LearningMaterial material = createMaterial();
 
             //then
-            assertThat(material.getActionMappings()).isEmpty();
+            assertThat(material.getTopicMappings()).isEmpty();
         }
 
         @Test

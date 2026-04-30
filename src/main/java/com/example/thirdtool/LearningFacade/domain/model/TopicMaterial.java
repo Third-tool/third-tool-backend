@@ -14,55 +14,48 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(
-        name = "action_material",
+        name = "topic_material",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_action_material",
-                columnNames = {"axis_action_id", "learning_material_id"}
+                name = "uk_topic_material",
+                columnNames = {"axis_topic_id", "learning_material_id"}
         )
 )
-public class ActionMaterial {
+public class TopicMaterial {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "action_material_id")
+    @Column(name = "topic_material_id")
     private Long id;
 
-    // ─── 연결 대상 ────────────────────────────────────────
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "axis_action_id", nullable = false, updatable = false)
-    private AxisAction action;
+    @JoinColumn(name = "axis_topic_id", nullable = false, updatable = false)
+    private AxisTopic topic;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "learning_material_id", nullable = false, updatable = false)
     private LearningMaterial material;
 
-    // ─── 시각 ─────────────────────────────────────────────
     @CreationTimestamp
     @Column(name = "linked_at", nullable = false, updatable = false)
     private LocalDateTime linkedAt;
 
-    private ActionMaterial(AxisAction action, LearningMaterial material) {
-        this.action   = action;
+    private TopicMaterial(AxisTopic topic, LearningMaterial material) {
+        this.topic    = topic;
         this.material = material;
-        this.linkedAt = LocalDateTime.now();
     }
 
-    // ─── 생성 ─────────────────────────────────────────────
-
-    public static ActionMaterial create(AxisAction action, LearningMaterial material) {
-        requireNonNull(action, "action");
+    public static TopicMaterial create(AxisTopic topic, LearningMaterial material) {
+        requireNonNull(topic, "topic");
         requireNonNull(material, "material");
-        return new ActionMaterial(action, material);
+        return new TopicMaterial(topic, material);
     }
-
-    // ─── 내부 검증 ────────────────────────────────────────
 
     private static void requireNonNull(Object value, String fieldName) {
         if (value == null) {
             throw LearningFacadeDomainException.of(
                     ErrorCode.INVALID_INPUT,
                     fieldName + "은(는) null일 수 없습니다."
-                                                  );
+            );
         }
     }
 }

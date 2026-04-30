@@ -61,19 +61,19 @@ public enum ErrorCode {
     LEARNING_AXIS_DUPLICATE_NAME("LA003",         "동일한 이름의 축이 이미 존재합니다.",                     HttpStatus.CONFLICT),
     LEARNING_AXIS_REORDER_MISMATCH("LA004",       "순서 변경 id 목록이 현재 축 id 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
 
-    // ─── AxisAction ───────────────────────────────────────
-    LEARNING_AXIS_ACTION_NOT_FOUND("ACTION001",          "행동을 찾을 수 없습니다.",              HttpStatus.NOT_FOUND),
-    LEARNING_AXIS_ACTION_DESCRIPTION_BLANK("ACTION002",  "행동 설명은 비어 있을 수 없습니다.",    HttpStatus.BAD_REQUEST),
-    LEARNING_AXIS_ACTION_DESCRIPTION_MULTI_VERB("ACTION003", "행동은 동사 하나로만 입력할 수 있습니다. 공백 없이 단일 동사로 입력해주세요.", HttpStatus.BAD_REQUEST),
-
-    // ─── ActionRevision / RevisionReasonOption ────────────
-    REVISION_REASON_NOT_FOUND("REVISION001", "수정 이유 선택지를 찾을 수 없거나 비활성화되어 있습니다.", HttpStatus.NOT_FOUND),
+    // ─── AxisTopic (v2) ────────────────────────────────────
+    LEARNING_AXIS_TOPIC_NOT_FOUND("LT001",        "주제를 찾을 수 없습니다.",           HttpStatus.NOT_FOUND),
+    LEARNING_AXIS_TOPIC_NAME_BLANK("LT002",       "주제 이름은 비어 있을 수 없습니다.", HttpStatus.BAD_REQUEST),
 
     // ─── LearningMaterial ─────────────────────────────────
     LEARNING_MATERIAL_NOT_FOUND("LM001",                          "학습 자료를 찾을 수 없습니다.",                                  HttpStatus.NOT_FOUND),
     LEARNING_MATERIAL_PROFICIENCY_UNRATED_NOT_ALLOWED("LM002",    "숙련도는 UNRATED로 되돌릴 수 없습니다.",                         HttpStatus.BAD_REQUEST),
-    LEARNING_ACTION_MATERIAL_ALREADY_LINKED("LM003",              "이미 연결된 행동-자료 매핑입니다.",                              HttpStatus.CONFLICT),
-    LEARNING_ACTION_MATERIAL_NOT_LINKED("LM004",                  "연결되지 않은 행동-자료 매핑입니다.",                            HttpStatus.NOT_FOUND),
+    LEARNING_MATERIAL_NAME_BLANK("LM005",                         "자료명은 비어 있을 수 없습니다.",                                HttpStatus.BAD_REQUEST),
+    LEARNING_MATERIAL_TYPE_REQUIRED("LM006",                      "자료 유형(Top-down / Bottom-up)을 선택해야 합니다.",              HttpStatus.BAD_REQUEST),
+
+    // ─── TopicMaterial (v2) ────────────────────────────────
+    LEARNING_TOPIC_MATERIAL_ALREADY_LINKED("TM001", "이미 연결된 주제입니다.",       HttpStatus.CONFLICT),
+    LEARNING_TOPIC_MATERIAL_NOT_LINKED("TM002",     "연결되지 않은 주제입니다.",     HttpStatus.NOT_FOUND),
 
     // ─── Deck (확장) ──────────────────────────────────────
     DECK_HIERARCHY_CYCLE("DECK006", "덱 계층 구조에 순환 참조가 발생했습니다.", HttpStatus.BAD_REQUEST),

@@ -11,14 +11,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * LearningAxis 단위 테스트.
- *
- * <p>본 테스트는 운영 코드 v1(AxisAction 모델) 기준으로 작성되었다.
- * sol §3의 #43~#57(addTopic/removeTopic/reorderTopics)은 Epic 2 v2 운영 코드를
- * 가정하므로 v2 리팩토링 PR에서 보강된다. 본 클래스는 v1의 create / updateName /
- * addAction / removeAction을 검증한다.
- */
 @DisplayName("LearningAxis")
 class LearningAxisTest {
 
@@ -32,58 +24,15 @@ class LearningAxisTest {
         facade = LearningFacade.create(user, "백엔드 개발자");
     }
 
-    // ─── 1. 생성 ────────────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("생성")
-    class Create {
-
-        @Test
-        @DisplayName("유효한 facade·name·displayOrder로 생성하면 actions가 비어있다")
-        void create_valid() {
-            // when
-            LearningAxis axis = LearningAxis.create(facade, "API 설계", 1);
-
-            // then
-            assertThat(axis.getName()).isEqualTo("API 설계");
-            assertThat(axis.getDisplayOrder()).isEqualTo(1);
-            assertThat(axis.getActions()).isEmpty();
-        }
-
-        @Test
-        @DisplayName("facade가 null이면 예외가 발생한다 — 소속 없는 축 차단")
-        void create_facade_null_예외() {
-            // when & then
-            assertThatThrownBy(() -> LearningAxis.create(null, "API 설계", 1))
-                    .isInstanceOf(LearningFacadeDomainException.class);
-        }
-
-        @Test
-        @DisplayName("name이 null이면 예외가 발생한다")
-        void create_name_null_예외() {
-            // when & then
-            assertThatThrownBy(() -> LearningAxis.create(facade, null, 1))
-                    .isInstanceOf(LearningFacadeDomainException.class);
-        }
-
-        @Test
-        @DisplayName("name이 공백 문자열이면 예외가 발생한다")
-        void create_name_blank_예외() {
-            // when & then
-            assertThatThrownBy(() -> LearningAxis.create(facade, "  ", 1))
-                    .isInstanceOf(LearningFacadeDomainException.class);
-        }
-
-        @Test
-        @DisplayName("displayOrder가 1 미만이면 예외가 발생한다 — 1-based 정렬 기준 오염 방어")
-        void create_displayOrder_0이하_예외() {
-            // when & then
-            assertThatThrownBy(() -> LearningAxis.create(facade, "API 설계", 0))
-                    .isInstanceOf(LearningFacadeDomainException.class);
-        }
+    private LearningAxis createAxis() {
+        return facade.addAxis("API 설계");
     }
 
-    // ─── 2. 이름 수정 ────────────────────────────────────────────────────
+    private static AxisTopic addTopicWithId(LearningAxis axis, String name, Long id) {
+        AxisTopic topic = axis.addTopic(name, null);
+        ReflectionTestUtils.setField(topic, "id", id);
+        return topic;
+    }
 
     @Nested
     @DisplayName("이름 수정")
@@ -92,23 +41,15 @@ class LearningAxisTest {
         @Test
         @DisplayName("유효한 새 이름으로 수정하면 name이 갱신된다")
         void updateName_valid() {
-            // given
-            LearningAxis axis = LearningAxis.create(facade, "API 설계", 1);
-
-            // when
+            LearningAxis axis = createAxis();
             axis.updateName("REST API 설계");
-
-            // then
             assertThat(axis.getName()).isEqualTo("REST API 설계");
         }
 
         @Test
         @DisplayName("공백 문자열로 수정하면 예외가 발생한다")
         void updateName_blank_예외() {
-            // given
-            LearningAxis axis = LearningAxis.create(facade, "API 설계", 1);
-
-            // when & then
+            LearningAxis axis = createAxis();
             assertThatThrownBy(() -> axis.updateName("  "))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
@@ -116,99 +57,93 @@ class LearningAxisTest {
         @Test
         @DisplayName("null로 수정하면 예외가 발생한다")
         void updateName_null_예외() {
-            // given
-            LearningAxis axis = LearningAxis.create(facade, "API 설계", 1);
-
-            // when & then
+            LearningAxis axis = createAxis();
             assertThatThrownBy(() -> axis.updateName(null))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
     }
 
-    // ─── 3. 행동 추가 (v1: addAction; v2에서 addTopic으로 재명명) ──────────
-
     @Nested
-    @DisplayName("행동 추가")
-    class AddAction {
+    @DisplayName("주제 추가")
+    class AddTopic {
 
         @Test
-        @DisplayName("정상 추가 시 반환된 action이 actions 컬렉션에 포함된다 — orphanRemoval 동작의 전제")
-        void addAction_actions컬렉션에포함() {
-            // given
-            LearningAxis axis = LearningAxis.create(facade, "API 설계", 1);
-
-            // when
-            AxisAction action = axis.addAction("설계하다");
-
-            // then
-            assertThat(axis.getActions()).contains(action);
+        @DisplayName("정상 추가 시 반환된 topic이 topics 컬렉션에 포함된다")
+        void addTopic_topics컬렉션에포함() {
+            LearningAxis axis = createAxis();
+            AxisTopic topic = axis.addTopic("REST API 설계 원칙", null);
+            assertThat(axis.getTopics()).contains(topic);
         }
 
         @Test
-        @DisplayName("정상 추가 시 커버리지 초기 상태는 NO_MATERIAL이다 — 통계 오염 방지")
-        void addAction_coverageStatus_NO_MATERIAL() {
-            // given
-            LearningAxis axis = LearningAxis.create(facade, "API 설계", 1);
-
-            // when
-            AxisAction action = axis.addAction("설계하다");
-
-            // then
-            assertThat(action.getCoverageStatus()).isEqualTo(CoverageStatus.NO_MATERIAL);
+        @DisplayName("정상 추가 시 커버리지 초기 상태는 NO_MATERIAL이다")
+        void addTopic_coverageStatus_NO_MATERIAL() {
+            LearningAxis axis = createAxis();
+            AxisTopic topic = axis.addTopic("REST API 설계 원칙", null);
+            assertThat(topic.getCoverageStatus()).isEqualTo(CoverageStatus.NO_MATERIAL);
         }
 
         @Test
-        @DisplayName("description이 null이면 예외가 발생한다")
-        void addAction_description_null_예외() {
-            // given
-            LearningAxis axis = LearningAxis.create(facade, "API 설계", 1);
+        @DisplayName("displayOrder는 현재 topics 수 + 1로 1-based로 자동 부여된다")
+        void addTopic_displayOrder_1based() {
+            LearningAxis axis = createAxis();
+            AxisTopic first = axis.addTopic("REST API 설계 원칙", null);
+            AxisTopic second = axis.addTopic("OpenAPI 문서화", "스펙 작성");
+            assertThat(first.getDisplayOrder()).isEqualTo(1);
+            assertThat(second.getDisplayOrder()).isEqualTo(2);
+        }
 
-            // when & then
-            assertThatThrownBy(() -> axis.addAction(null))
+        @Test
+        @DisplayName("description은 nullable이고 빈 문자열은 null로 정규화된다")
+        void addTopic_description_빈문자열_null로정규화() {
+            LearningAxis axis = createAxis();
+            AxisTopic topic = axis.addTopic("REST API 설계 원칙", "   ");
+            assertThat(topic.getDescription()).isNull();
+        }
+
+        @Test
+        @DisplayName("name이 null이면 예외가 발생한다")
+        void addTopic_name_null_예외() {
+            LearningAxis axis = createAxis();
+            assertThatThrownBy(() -> axis.addTopic(null, null))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
 
         @Test
-        @DisplayName("description이 공백 문자열이면 예외가 발생한다")
-        void addAction_description_blank_예외() {
-            // given
-            LearningAxis axis = LearningAxis.create(facade, "API 설계", 1);
-
-            // when & then
-            assertThatThrownBy(() -> axis.addAction("  "))
+        @DisplayName("name이 공백 문자열이면 예외가 발생한다")
+        void addTopic_name_blank_예외() {
+            LearningAxis axis = createAxis();
+            assertThatThrownBy(() -> axis.addTopic("  ", null))
                     .isInstanceOf(LearningFacadeDomainException.class);
+        }
+
+        @Test
+        @DisplayName("공백 포함 명사구 (예: 'REST API 설계 원칙')도 허용된다 — 단일 동사 강제 폐지")
+        void addTopic_공백포함_허용() {
+            LearningAxis axis = createAxis();
+            AxisTopic topic = axis.addTopic("REST API 설계 원칙", null);
+            assertThat(topic.getName()).isEqualTo("REST API 설계 원칙");
         }
     }
 
-    // ─── 4. 행동 삭제 (v1: removeAction; v2에서 removeTopic으로 재명명) ────
-
     @Nested
-    @DisplayName("행동 삭제")
-    class RemoveAction {
+    @DisplayName("주제 삭제")
+    class RemoveTopic {
 
         @Test
-        @DisplayName("존재하는 actionId로 삭제하면 actions에서 제거된다")
-        void removeAction_valid() {
-            // given
-            LearningAxis axis = LearningAxis.create(facade, "API 설계", 1);
-            AxisAction action = axis.addAction("설계하다");
-            ReflectionTestUtils.setField(action, "id", 100L);
-
-            // when
-            axis.removeAction(100L);
-
-            // then
-            assertThat(axis.getActions()).isEmpty();
+        @DisplayName("존재하는 topicId로 삭제하면 topics에서 제거된다")
+        void removeTopic_valid() {
+            LearningAxis axis = createAxis();
+            addTopicWithId(axis, "REST API 설계 원칙", 100L);
+            axis.removeTopic(100L);
+            assertThat(axis.getTopics()).isEmpty();
         }
 
         @Test
-        @DisplayName("존재하지 않는 actionId로 삭제하면 예외가 발생한다 — 잘못된 id 방어")
-        void removeAction_존재하지않는actionId_예외() {
-            // given
-            LearningAxis axis = LearningAxis.create(facade, "API 설계", 1);
-
-            // when & then
-            assertThatThrownBy(() -> axis.removeAction(999L))
+        @DisplayName("존재하지 않는 topicId로 삭제하면 예외가 발생한다")
+        void removeTopic_존재하지않는topicId_예외() {
+            LearningAxis axis = createAxis();
+            assertThatThrownBy(() -> axis.removeTopic(999L))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
     }

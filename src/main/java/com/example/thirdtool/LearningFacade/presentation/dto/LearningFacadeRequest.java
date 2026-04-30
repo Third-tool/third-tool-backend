@@ -36,16 +36,17 @@ public class LearningFacadeRequest {
             List<Long> orderedAxisIds
     ) {}
 
-    // ─── Action ───────────────────────────────────────────
+    // ─── Topic ────────────────────────────────────────────
 
-    public record AddAction(
+    public record AddTopic(
             @NotBlank
+            String name,
             String description
     ) {}
 
-    public record UpdateAction(
+    public record UpdateTopic(
             @NotBlank
-            String description,
-            String revisionReasonLabel  // nullable — 이유 선택은 선택 항목
+            String name,
+            String description
     ) {}
 }

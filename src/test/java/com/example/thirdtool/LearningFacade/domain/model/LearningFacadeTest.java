@@ -245,7 +245,7 @@ class LearningFacadeTest {
             LearningAxis axis = facade.addAxis("API 설계");
 
             //then
-            assertThat(axis.getActions()).isEmpty();
+            assertThat(axis.getTopics()).isEmpty();
         }
 
         @Test

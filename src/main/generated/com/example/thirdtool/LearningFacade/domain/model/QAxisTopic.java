@@ -11,16 +11,16 @@ import com.querydsl.core.types.dsl.PathInits;
 
 
 /**
- * QAxisAction is a Querydsl query type for AxisAction
+ * QAxisTopic is a Querydsl query type for AxisTopic
  */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
-public class QAxisAction extends EntityPathBase<AxisAction> {
+public class QAxisTopic extends EntityPathBase<AxisTopic> {
 
-    private static final long serialVersionUID = -2078276656L;
+    private static final long serialVersionUID = -49140651L;
 
     private static final PathInits INITS = PathInits.DIRECT2;
 
-    public static final QAxisAction axisAction = new QAxisAction("axisAction");
+    public static final QAxisTopic axisTopic = new QAxisTopic("axisTopic");
 
     public final QLearningAxis axis;
 
@@ -30,29 +30,31 @@ public class QAxisAction extends EntityPathBase<AxisAction> {
 
     public final StringPath description = createString("description");
 
+    public final NumberPath<Integer> displayOrder = createNumber("displayOrder", Integer.class);
+
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
-    public final NumberPath<Integer> revisionCount = createNumber("revisionCount", Integer.class);
+    public final StringPath name = createString("name");
 
-    public final ListPath<ActionRevision, QActionRevision> revisions = this.<ActionRevision, QActionRevision>createList("revisions", ActionRevision.class, QActionRevision.class, PathInits.DIRECT2);
+    public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt", java.time.LocalDateTime.class);
 
-    public QAxisAction(String variable) {
-        this(AxisAction.class, forVariable(variable), INITS);
+    public QAxisTopic(String variable) {
+        this(AxisTopic.class, forVariable(variable), INITS);
     }
 
-    public QAxisAction(Path<? extends AxisAction> path) {
+    public QAxisTopic(Path<? extends AxisTopic> path) {
         this(path.getType(), path.getMetadata(), PathInits.getFor(path.getMetadata(), INITS));
     }
 
-    public QAxisAction(PathMetadata metadata) {
+    public QAxisTopic(PathMetadata metadata) {
         this(metadata, PathInits.getFor(metadata, INITS));
     }
 
-    public QAxisAction(PathMetadata metadata, PathInits inits) {
-        this(AxisAction.class, metadata, inits);
+    public QAxisTopic(PathMetadata metadata, PathInits inits) {
+        this(AxisTopic.class, metadata, inits);
     }
 
-    public QAxisAction(Class<? extends AxisAction> type, PathMetadata metadata, PathInits inits) {
+    public QAxisTopic(Class<? extends AxisTopic> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
         this.axis = inits.isInitialized("axis") ? new QLearningAxis(forProperty("axis"), inits.get("axis")) : null;
     }

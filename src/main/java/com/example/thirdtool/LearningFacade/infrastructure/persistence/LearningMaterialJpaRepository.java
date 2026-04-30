@@ -12,18 +12,18 @@ public interface LearningMaterialJpaRepository extends JpaRepository<LearningMat
 
     @Query("""
             SELECT DISTINCT m FROM LearningMaterial m
-            LEFT JOIN FETCH m.actionMappings am
-            LEFT JOIN FETCH am.action a
-            LEFT JOIN FETCH a.axis
+            LEFT JOIN FETCH m.topicMappings tm
+            LEFT JOIN FETCH tm.topic t
+            LEFT JOIN FETCH t.axis
             WHERE m.id = :materialId
             """)
-    Optional<LearningMaterial> findById(@Param("materialId") Long materialId);
+    Optional<LearningMaterial> findByIdWithMappings(@Param("materialId") Long materialId);
 
     @Query("""
             SELECT DISTINCT m FROM LearningMaterial m
-            LEFT JOIN FETCH m.actionMappings am
-            LEFT JOIN FETCH am.action a
-            LEFT JOIN FETCH a.axis
+            LEFT JOIN FETCH m.topicMappings tm
+            LEFT JOIN FETCH tm.topic t
+            LEFT JOIN FETCH t.axis
             WHERE m.facade.id = :facadeId
             ORDER BY m.createdAt ASC
             """)

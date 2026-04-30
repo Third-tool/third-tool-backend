@@ -22,8 +22,6 @@ public class QLearningMaterial extends EntityPathBase<LearningMaterial> {
 
     public static final QLearningMaterial learningMaterial = new QLearningMaterial("learningMaterial");
 
-    public final ListPath<ActionMaterial, QActionMaterial> actionMappings = this.<ActionMaterial, QActionMaterial>createList("actionMappings", ActionMaterial.class, QActionMaterial.class, PathInits.DIRECT2);
-
     public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
 
     public final QLearningFacade facade;
@@ -35,6 +33,8 @@ public class QLearningMaterial extends EntityPathBase<LearningMaterial> {
     public final StringPath name = createString("name");
 
     public final EnumPath<ProficiencyLevel> proficiencyLevel = createEnum("proficiencyLevel", ProficiencyLevel.class);
+
+    public final ListPath<TopicMaterial, QTopicMaterial> topicMappings = this.<TopicMaterial, QTopicMaterial>createList("topicMappings", TopicMaterial.class, QTopicMaterial.class, PathInits.DIRECT2);
 
     public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt", java.time.LocalDateTime.class);
 

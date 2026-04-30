@@ -25,13 +25,11 @@ import java.util.List;
 )
 public class LearningAxis {
 
-    // ─── 식별자 ───────────────────────────────────────────
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "learning_axis_id")
     private Long id;
 
-    // ─── 소속 Facade ──────────────────────────────────────
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "learning_facade_id", nullable = false, updatable = false)
     private LearningFacade facade;
@@ -42,16 +40,15 @@ public class LearningAxis {
     @Column(name = "display_order", nullable = false)
     private int displayOrder;
 
-    // ─── 행동 목록 ────────────────────────────────────────
     @OneToMany(
             mappedBy      = "axis",
             cascade       = CascadeType.ALL,
             orphanRemoval = true,
             fetch         = FetchType.LAZY
     )
-    private final List<AxisAction> actions = new ArrayList<>();
+    @OrderBy("displayOrder ASC")
+    private final List<AxisTopic> topics = new ArrayList<>();
 
-    // ─── 시각 ─────────────────────────────────────────────
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -62,8 +59,6 @@ public class LearningAxis {
         this.displayOrder = displayOrder;
     }
 
-    // ─── 생성 ─────────────────────────────────────────────
-
     static LearningAxis create(LearningFacade facade, String name, int displayOrder) {
         requireNonNull(facade, "facade");
         validateName(name);
@@ -72,12 +67,10 @@ public class LearningAxis {
             throw LearningFacadeDomainException.of(
                     ErrorCode.INVALID_INPUT,
                     "displayOrder는 1 이상이어야 합니다. displayOrder=" + displayOrder
-                                                  );
+            );
         }
         return new LearningAxis(facade, name.trim(), displayOrder);
     }
-
-    // ─── 행위 ─────────────────────────────────────────────
 
     public void updateName(String newName) {
         validateName(newName);
@@ -89,41 +82,36 @@ public class LearningAxis {
             throw LearningFacadeDomainException.of(
                     ErrorCode.INVALID_INPUT,
                     "displayOrder는 1 이상이어야 합니다. newOrder=" + newOrder
-                                                  );
+            );
         }
         this.displayOrder = newOrder;
     }
 
-    public AxisAction addAction(String description) {
-        AxisAction action = AxisAction.create(this, description);
-        actions.add(action);
-        return action;
+    public AxisTopic addTopic(String name, String description) {
+        int nextOrder = topics.size() + 1;
+        AxisTopic topic = AxisTopic.create(this, name, description, nextOrder);
+        topics.add(topic);
+        return topic;
     }
 
-    public void removeAction(Long actionId) {
-        AxisAction target = findAction(actionId);
-        actions.remove(target);
+    public void removeTopic(Long topicId) {
+        AxisTopic target = findTopic(topicId);
+        topics.remove(target);
     }
 
-    // ─── 조회 ─────────────────────────────────────────────
-
-    public List<AxisAction> getActions() {
-        return Collections.unmodifiableList(actions);
+    public List<AxisTopic> getTopics() {
+        return Collections.unmodifiableList(topics);
     }
 
-    // ─── 내부 유틸 ────────────────────────────────────────
-
-    AxisAction findAction(Long actionId) {
-        return actions.stream()
-                      .filter(a -> a.getId().equals(actionId))
-                      .findFirst()
-                      .orElseThrow(() -> LearningFacadeDomainException.of(
-                              ErrorCode.LEARNING_AXIS_ACTION_NOT_FOUND,
-                              "actionId=" + actionId
-                                                                         ));
+    public AxisTopic findTopic(Long topicId) {
+        return topics.stream()
+                .filter(t -> t.getId() != null && t.getId().equals(topicId))
+                .findFirst()
+                .orElseThrow(() -> LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_AXIS_TOPIC_NOT_FOUND,
+                        "topicId=" + topicId
+                ));
     }
-
-    // ─── 내부 검증 ────────────────────────────────────────
 
     private static void validateName(String name) {
         if (name == null || name.isBlank()) {
@@ -136,7 +124,7 @@ public class LearningAxis {
             throw LearningFacadeDomainException.of(
                     ErrorCode.INVALID_INPUT,
                     fieldName + "은(는) null일 수 없습니다."
-                                                  );
+            );
         }
     }
 }

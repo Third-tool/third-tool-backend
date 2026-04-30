@@ -11,18 +11,16 @@ import com.querydsl.core.types.dsl.PathInits;
 
 
 /**
- * QActionMaterial is a Querydsl query type for ActionMaterial
+ * QTopicMaterial is a Querydsl query type for TopicMaterial
  */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
-public class QActionMaterial extends EntityPathBase<ActionMaterial> {
+public class QTopicMaterial extends EntityPathBase<TopicMaterial> {
 
-    private static final long serialVersionUID = 1856990102L;
+    private static final long serialVersionUID = 1750799933L;
 
     private static final PathInits INITS = PathInits.DIRECT2;
 
-    public static final QActionMaterial actionMaterial = new QActionMaterial("actionMaterial");
-
-    public final QAxisAction action;
+    public static final QTopicMaterial topicMaterial = new QTopicMaterial("topicMaterial");
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
@@ -30,26 +28,28 @@ public class QActionMaterial extends EntityPathBase<ActionMaterial> {
 
     public final QLearningMaterial material;
 
-    public QActionMaterial(String variable) {
-        this(ActionMaterial.class, forVariable(variable), INITS);
+    public final QAxisTopic topic;
+
+    public QTopicMaterial(String variable) {
+        this(TopicMaterial.class, forVariable(variable), INITS);
     }
 
-    public QActionMaterial(Path<? extends ActionMaterial> path) {
+    public QTopicMaterial(Path<? extends TopicMaterial> path) {
         this(path.getType(), path.getMetadata(), PathInits.getFor(path.getMetadata(), INITS));
     }
 
-    public QActionMaterial(PathMetadata metadata) {
+    public QTopicMaterial(PathMetadata metadata) {
         this(metadata, PathInits.getFor(metadata, INITS));
     }
 
-    public QActionMaterial(PathMetadata metadata, PathInits inits) {
-        this(ActionMaterial.class, metadata, inits);
+    public QTopicMaterial(PathMetadata metadata, PathInits inits) {
+        this(TopicMaterial.class, metadata, inits);
     }
 
-    public QActionMaterial(Class<? extends ActionMaterial> type, PathMetadata metadata, PathInits inits) {
+    public QTopicMaterial(Class<? extends TopicMaterial> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.action = inits.isInitialized("action") ? new QAxisAction(forProperty("action"), inits.get("action")) : null;
         this.material = inits.isInitialized("material") ? new QLearningMaterial(forProperty("material"), inits.get("material")) : null;
+        this.topic = inits.isInitialized("topic") ? new QAxisTopic(forProperty("topic"), inits.get("topic")) : null;
     }
 
 }

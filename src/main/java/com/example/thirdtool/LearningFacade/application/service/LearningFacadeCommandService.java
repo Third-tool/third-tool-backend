@@ -3,9 +3,7 @@ package com.example.thirdtool.LearningFacade.application.service;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.*;
-import com.example.thirdtool.LearningFacade.infrastructure.persistence.ActionRevisionRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
-import com.example.thirdtool.LearningFacade.infrastructure.persistence.RevisionReasonOptionRepository;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.*;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +18,6 @@ import java.util.List;
 public class LearningFacadeCommandService {
 
     private final LearningFacadeRepository facadeRepository;
-    private final ActionRevisionRepository revisionRepository;
-    private final RevisionReasonOptionRepository reasonOptionRepository;
-    private final VerbFormValidator verbFormValidator;
 
     // ──────────────────────────────────────────────────────
     // 1. LearningFacade 생성
@@ -70,8 +65,8 @@ public class LearningFacadeCommandService {
 
         String trimmed = newName == null ? null : newName.trim();
         boolean isDuplicate = facade.getAxes().stream()
-                                    .filter(a -> !a.getId().equals(axisId))
-                                    .anyMatch(a -> a.getName().equals(trimmed));
+                .filter(a -> !a.getId().equals(axisId))
+                .anyMatch(a -> a.getName().equals(trimmed));
         if (isDuplicate) {
             throw LearningFacadeDomainException.of(ErrorCode.LEARNING_AXIS_DUPLICATE_NAME);
         }
@@ -103,52 +98,41 @@ public class LearningFacadeCommandService {
     }
 
     // ──────────────────────────────────────────────────────
-    // 8. 행동 추가
+    // 8. 주제 추가
     // ──────────────────────────────────────────────────────
 
-    public AddAction addAction(UserEntity user, Long axisId, String description) {
+    public AddTopic addTopic(UserEntity user, Long axisId, String name, String description) {
         LearningFacade facade = loadFacade(user.getId());
         LearningAxis axis = findAxis(facade, axisId);
-        AxisAction action = axis.addAction(description);
+        AxisTopic topic = axis.addTopic(name, description);
         facadeRepository.save(facade);
-        return AddAction.of(action, verbFormValidator.isSuggested(description));
+        return AddTopic.of(topic);
     }
 
     // ──────────────────────────────────────────────────────
-    // 9. 행동 동사 수정
+    // 9. 주제 수정 (이름 + 부연 설명)
     // ──────────────────────────────────────────────────────
 
-    public UpdateAction updateAction(UserEntity user, Long axisId, Long actionId,
-                                     String description, String revisionReasonLabel) {
+    public UpdateTopic updateTopic(UserEntity user, Long axisId, Long topicId,
+                                    String name, String description) {
         LearningFacade facade = loadFacade(user.getId());
         LearningAxis axis = findAxis(facade, axisId);
-        AxisAction action = findAction(axis, actionId);
+        AxisTopic topic = axis.findTopic(topicId);
 
-        ActionChangeRecord record = action.updateDescription(description);
-
-        if (record.isChanged()) {
-            String reasonLabel = resolveReasonLabel(revisionReasonLabel);
-            ActionRevision revision = ActionRevision.create(
-                    action,
-                    record.getPreviousDescription(),
-                    record.getNewDescription(),
-                    reasonLabel
-                                                           );
-            revisionRepository.save(revision);
-            facadeRepository.save(facade);
-        }
-
-        return UpdateAction.of(action, record, verbFormValidator.isSuggested(description));
+        topic.updateName(name);
+        topic.updateDescription(description);
+        facadeRepository.save(facade);
+        return UpdateTopic.of(topic);
     }
 
     // ──────────────────────────────────────────────────────
-    // 10. 행동 삭제
+    // 10. 주제 삭제
     // ──────────────────────────────────────────────────────
 
-    public void removeAction(UserEntity user, Long axisId, Long actionId) {
+    public void removeTopic(UserEntity user, Long axisId, Long topicId) {
         LearningFacade facade = loadFacade(user.getId());
         LearningAxis axis = findAxis(facade, axisId);
-        axis.removeAction(actionId);
+        axis.removeTopic(topicId);
         facadeRepository.save(facade);
     }
 
@@ -158,35 +142,15 @@ public class LearningFacadeCommandService {
 
     private LearningFacade loadFacade(Long userId) {
         return facadeRepository.findByUserId(userId)
-                               .orElseThrow(() -> LearningFacadeDomainException.of(
-                                       ErrorCode.LEARNING_FACADE_NOT_FOUND));
+                .orElseThrow(() -> LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_FACADE_NOT_FOUND));
     }
 
     private LearningAxis findAxis(LearningFacade facade, Long axisId) {
         return facade.getAxes().stream()
-                     .filter(a -> a.getId().equals(axisId))
-                     .findFirst()
-                     .orElseThrow(() -> LearningFacadeDomainException.of(
-                             ErrorCode.LEARNING_AXIS_NOT_FOUND));
-    }
-
-    private AxisAction findAction(LearningAxis axis, Long actionId) {
-        return axis.getActions().stream()
-                   .filter(a -> a.getId().equals(actionId))
-                   .findFirst()
-                   .orElseThrow(() -> LearningFacadeDomainException.of(
-                           ErrorCode.LEARNING_AXIS_ACTION_NOT_FOUND));
-    }
-
-
-    private String resolveReasonLabel(String revisionReasonLabel) {
-        if (revisionReasonLabel == null || revisionReasonLabel.isBlank()) {
-            return null;
-        }
-        reasonOptionRepository.findByLabelAndActiveTrue(revisionReasonLabel)
-                              .orElseThrow(() -> LearningFacadeDomainException.of(
-                                      ErrorCode.INVALID_INPUT,
-                                      "유효하지 않은 수정 이유입니다: " + revisionReasonLabel));
-        return revisionReasonLabel;
+                .filter(a -> a.getId().equals(axisId))
+                .findFirst()
+                .orElseThrow(() -> LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_AXIS_NOT_FOUND));
     }
 }

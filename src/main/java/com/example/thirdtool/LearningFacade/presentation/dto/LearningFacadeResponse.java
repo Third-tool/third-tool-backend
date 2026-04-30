@@ -12,20 +12,20 @@ public class LearningFacadeResponse {
     // 공유 내부 레코드
     // ──────────────────────────────────────────────────────
 
-    public record ActionItem(
-            Long actionId,
+    public record TopicItem(
+            Long topicId,
+            String name,
             String description,
-            String coverageStatus,          // CoverageStatus.name()
-            int revisionCount,
-            boolean isRefinementSuggested
+            int displayOrder,
+            String coverageStatus
     ) {
-        public static ActionItem of(AxisAction action) {
-            return new ActionItem(
-                    action.getId(),
-                    action.getDescription(),
-                    action.getCoverageStatus().name(),
-                    action.getRevisionCount(),
-                    action.isRefinementSuggested()
+        public static TopicItem of(AxisTopic topic) {
+            return new TopicItem(
+                    topic.getId(),
+                    topic.getName(),
+                    topic.getDescription(),
+                    topic.getDisplayOrder(),
+                    topic.getCoverageStatus().name()
             );
         }
     }
@@ -34,27 +34,27 @@ public class LearningFacadeResponse {
             Long axisId,
             String name,
             int displayOrder,
-            List<ActionItem> actions
+            List<TopicItem> topics
     ) {
         public static AxisItem of(LearningAxis axis) {
             return new AxisItem(
                     axis.getId(),
                     axis.getName(),
                     axis.getDisplayOrder(),
-                    axis.getActions().stream()
-                        .map(ActionItem::of)
-                        .collect(Collectors.toList())
+                    axis.getTopics().stream()
+                            .map(TopicItem::of)
+                            .collect(Collectors.toList())
             );
         }
     }
 
     public record CoverageSummary(
-            int totalActions,
-            int uncoveredActions    // NO_MATERIAL 상태인 행동 수
+            int totalTopics,
+            int uncoveredTopics
     ) {}
 
     // ──────────────────────────────────────────────────────
-    // 1. LearningFacade 생성 — POST /learning-facade
+    // 1. CreateFacade
     // ──────────────────────────────────────────────────────
 
     public record CreateFacade(
@@ -67,14 +67,14 @@ public class LearningFacadeResponse {
             return new CreateFacade(
                     facade.getId(),
                     facade.getConcept(),
-                    List.of(),              // 신규 Facade는 axes 없음
+                    List.of(),
                     facade.getCreatedAt()
             );
         }
     }
 
     // ──────────────────────────────────────────────────────
-    // 2. LearningFacade 단건 조회 — GET /learning-facade
+    // 2. FacadeDetail
     // ──────────────────────────────────────────────────────
 
     public record FacadeDetail(
@@ -87,19 +87,19 @@ public class LearningFacadeResponse {
             LocalDateTime updatedAt
     ) {
         public static FacadeDetail of(LearningFacade facade) {
-            List<AxisAction> allActions = facade.getAxes().stream()
-                                                .flatMap(axis -> axis.getActions().stream())
-                                                .collect(Collectors.toList());
+            List<AxisTopic> allTopics = facade.getAxes().stream()
+                    .flatMap(axis -> axis.getTopics().stream())
+                    .collect(Collectors.toList());
 
-            int totalActions     = allActions.size();
-            int uncoveredActions = (int) allActions.stream()
-                                                   .filter(a -> a.getCoverageStatus() == CoverageStatus.NO_MATERIAL)
-                                                   .count();
+            int totalTopics = allTopics.size();
+            int uncoveredTopics = (int) allTopics.stream()
+                    .filter(t -> t.getCoverageStatus() == CoverageStatus.NO_MATERIAL)
+                    .count();
 
             return new FacadeDetail(
                     facade.getId(),
                     facade.getConcept(),
-                    new CoverageSummary(totalActions, uncoveredActions),
+                    new CoverageSummary(totalTopics, uncoveredTopics),
                     facade.isAxisCountExceedsRecommended(),
                     facade.getAxes().stream().map(AxisItem::of).collect(Collectors.toList()),
                     facade.getCreatedAt(),
@@ -109,7 +109,7 @@ public class LearningFacadeResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 3. 컨셉 수정 — PATCH /learning-facade/concept
+    // 3. UpdateConcept
     // ──────────────────────────────────────────────────────
 
     public record UpdateConcept(
@@ -131,14 +131,14 @@ public class LearningFacadeResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 4. 축 추가 — POST /learning-facade/axes
+    // 4. AddAxis
     // ──────────────────────────────────────────────────────
 
     public record AddAxis(
             Long axisId,
             String name,
             int displayOrder,
-            List<ActionItem> actions,
+            List<TopicItem> topics,
             boolean isAxisCountExceedsRecommended
     ) {
         public static AddAxis of(LearningAxis axis, boolean isAxisCountExceedsRecommended) {
@@ -146,14 +146,14 @@ public class LearningFacadeResponse {
                     axis.getId(),
                     axis.getName(),
                     axis.getDisplayOrder(),
-                    List.of(),             // 신규 축은 actions 없음
+                    List.of(),
                     isAxisCountExceedsRecommended
             );
         }
     }
 
     // ──────────────────────────────────────────────────────
-    // 5. 축 이름 수정 — PATCH /learning-facade/axes/{axisId}
+    // 5. UpdateAxisName
     // ──────────────────────────────────────────────────────
 
     public record UpdateAxisName(
@@ -167,7 +167,7 @@ public class LearningFacadeResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 7. 축 순서 변경 — PUT /learning-facade/axes/order
+    // 7. ReorderAxes
     // ──────────────────────────────────────────────────────
 
     public record AxisOrderItem(
@@ -191,91 +191,52 @@ public class LearningFacadeResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 8. 행동 추가 — POST /learning-facade/axes/{axisId}/actions
+    // 8. AddTopic
     // ──────────────────────────────────────────────────────
 
-    public record AddAction(
-            Long actionId,
+    public record AddTopic(
+            Long topicId,
             Long axisId,
+            String name,
             String description,
-            String coverageStatus,
-            int revisionCount,
-            boolean isRefinementSuggested,
-            boolean isVerbFormSuggested     // App Service 판단 플래그
+            int displayOrder,
+            String coverageStatus
     ) {
-        public static AddAction of(AxisAction action, boolean isVerbFormSuggested) {
-            return new AddAction(
-                    action.getId(),
-                    action.getAxis().getId(),
-                    action.getDescription(),
-                    action.getCoverageStatus().name(),
-                    action.getRevisionCount(),
-                    action.isRefinementSuggested(),
-                    isVerbFormSuggested
+        public static AddTopic of(AxisTopic topic) {
+            return new AddTopic(
+                    topic.getId(),
+                    topic.getAxis().getId(),
+                    topic.getName(),
+                    topic.getDescription(),
+                    topic.getDisplayOrder(),
+                    topic.getCoverageStatus().name()
             );
         }
     }
 
     // ──────────────────────────────────────────────────────
-    // 9. 행동 동사 수정 — PATCH /learning-facade/axes/{axisId}/actions/{actionId}
+    // 9. UpdateTopic
     // ──────────────────────────────────────────────────────
 
-    public record UpdateAction(
-            Long actionId,
+    public record UpdateTopic(
+            Long topicId,
             Long axisId,
+            String name,
             String description,
+            int displayOrder,
             String coverageStatus,
-            int revisionCount,
-            boolean isRefinementSuggested,
-            boolean isActionChanged,        // ActionChangeRecord 결과
-            boolean isVerbFormSuggested
+            LocalDateTime updatedAt
     ) {
-        public static UpdateAction of(AxisAction action, ActionChangeRecord record, boolean isVerbFormSuggested) {
-            return new UpdateAction(
-                    action.getId(),
-                    action.getAxis().getId(),
-                    action.getDescription(),
-                    action.getCoverageStatus().name(),
-                    action.getRevisionCount(),
-                    action.isRefinementSuggested(),
-                    record.isChanged(),
-                    isVerbFormSuggested
+        public static UpdateTopic of(AxisTopic topic) {
+            return new UpdateTopic(
+                    topic.getId(),
+                    topic.getAxis().getId(),
+                    topic.getName(),
+                    topic.getDescription(),
+                    topic.getDisplayOrder(),
+                    topic.getCoverageStatus().name(),
+                    topic.getUpdatedAt()
             );
-        }
-    }
-
-    // ──────────────────────────────────────────────────────
-    // 11. 행동 수정 이력 조회 — GET /learning-facade/actions/{actionId}/revisions
-    // ──────────────────────────────────────────────────────
-
-    public record RevisionItem(
-            Long revisionId,
-            String previousDescription,
-            String newDescription,
-            String revisionReasonLabel,     // nullable
-            LocalDateTime revisedAt
-    ) {
-        public static RevisionItem of(ActionRevision revision) {
-            return new RevisionItem(
-                    revision.getId(),
-                    revision.getPreviousDescription(),
-                    revision.getNewDescription(),
-                    revision.getRevisionReasonLabel(),
-                    revision.getRevisedAt()
-            );
-        }
-    }
-
-    // ──────────────────────────────────────────────────────
-    // 12. 수정 이유 선택지 목록 — GET /learning-facade/revision-reason-options
-    // ──────────────────────────────────────────────────────
-
-    public record RevisionReasonOptionItem(
-            Long id,
-            String label
-    ) {
-        public static RevisionReasonOptionItem of(RevisionReasonOption option) {
-            return new RevisionReasonOptionItem(option.getId(), option.getLabel());
         }
     }
 }

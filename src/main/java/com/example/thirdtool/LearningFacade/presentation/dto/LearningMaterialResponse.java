@@ -12,79 +12,69 @@ public class LearningMaterialResponse {
     // 공유 내부 레코드
     // ──────────────────────────────────────────────────────
 
-    /**
-     * 자료에 연결된 행동 아이템.
-     * 자료 등록·목록·연결 추가 응답에서 공통 사용한다.
-     */
-    public record LinkedActionItem(
-            Long actionId,
-            String description,
+    public record LinkedTopicItem(
+            Long topicId,
+            String name,
             Long axisId,
             String axisName,
-            String coverageStatus   // CoverageStatus.name()
+            String coverageStatus
     ) {
-        public static LinkedActionItem of(ActionMaterial mapping) {
-            AxisAction action = mapping.getAction();
-            LearningAxis axis = action.getAxis();
-            return new LinkedActionItem(
-                    action.getId(),
-                    action.getDescription(),
+        public static LinkedTopicItem of(TopicMaterial mapping) {
+            AxisTopic topic = mapping.getTopic();
+            LearningAxis axis = topic.getAxis();
+            return new LinkedTopicItem(
+                    topic.getId(),
+                    topic.getName(),
                     axis.getId(),
                     axis.getName(),
-                    action.getCoverageStatus().name()
+                    topic.getCoverageStatus().name()
             );
         }
     }
 
-    /**
-     * 목록 조회 응답의 행동 아이템 (axisName 포함, coverageStatus 미포함).
-     */
-    public record LinkedActionSummary(
-            Long actionId,
-            String description,
+    public record LinkedTopicSummary(
+            Long topicId,
+            String name,
             Long axisId,
             String axisName
     ) {
-        public static LinkedActionSummary of(ActionMaterial mapping) {
-            AxisAction action = mapping.getAction();
-            LearningAxis axis = action.getAxis();
-            return new LinkedActionSummary(
-                    action.getId(),
-                    action.getDescription(),
+        public static LinkedTopicSummary of(TopicMaterial mapping) {
+            AxisTopic topic = mapping.getTopic();
+            LearningAxis axis = topic.getAxis();
+            return new LinkedTopicSummary(
+                    topic.getId(),
+                    topic.getName(),
                     axis.getId(),
                     axis.getName()
             );
         }
     }
 
-    /**
-     * 커버리지 재계산 결과 아이템. 숙련도 변경 응답에서 사용한다.
-     */
-    public record ActionCoverageItem(
-            Long actionId,
-            String description,
+    public record TopicCoverageItem(
+            Long topicId,
+            String name,
             String coverageStatus
     ) {
-        public static ActionCoverageItem of(AxisAction action) {
-            return new ActionCoverageItem(
-                    action.getId(),
-                    action.getDescription(),
-                    action.getCoverageStatus().name()
+        public static TopicCoverageItem of(AxisTopic topic) {
+            return new TopicCoverageItem(
+                    topic.getId(),
+                    topic.getName(),
+                    topic.getCoverageStatus().name()
             );
         }
     }
 
     // ──────────────────────────────────────────────────────
-    // 13. 학습 자료 등록 — POST /learning-facade/materials
+    // 12. CreateMaterial
     // ──────────────────────────────────────────────────────
 
     public record CreateMaterial(
             Long materialId,
             String name,
-            String materialType,            // MaterialType.name()
+            String materialType,
             String url,
-            String proficiencyLevel,        // ProficiencyLevel.name()
-            List<LinkedActionItem> linkedActions,
+            String proficiencyLevel,
+            List<LinkedTopicItem> linkedTopics,
             LocalDateTime createdAt
     ) {
         public static CreateMaterial of(LearningMaterial material) {
@@ -94,8 +84,8 @@ public class LearningMaterialResponse {
                     material.getMaterialType().name(),
                     material.getUrl(),
                     material.getProficiencyLevel().name(),
-                    material.getActionMappings().stream()
-                            .map(LinkedActionItem::of)
+                    material.getTopicMappings().stream()
+                            .map(LinkedTopicItem::of)
                             .collect(Collectors.toList()),
                     material.getCreatedAt()
             );
@@ -103,7 +93,7 @@ public class LearningMaterialResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 14. 학습 자료 목록 조회 — GET /learning-facade/materials
+    // 13. MaterialSummary (목록)
     // ──────────────────────────────────────────────────────
 
     public record MaterialSummary(
@@ -112,7 +102,7 @@ public class LearningMaterialResponse {
             String materialType,
             String url,
             String proficiencyLevel,
-            List<LinkedActionSummary> linkedActions,
+            List<LinkedTopicSummary> linkedTopics,
             LocalDateTime createdAt
     ) {
         public static MaterialSummary of(LearningMaterial material) {
@@ -122,8 +112,8 @@ public class LearningMaterialResponse {
                     material.getMaterialType().name(),
                     material.getUrl(),
                     material.getProficiencyLevel().name(),
-                    material.getActionMappings().stream()
-                            .map(LinkedActionSummary::of)
+                    material.getTopicMappings().stream()
+                            .map(LinkedTopicSummary::of)
                             .collect(Collectors.toList()),
                     material.getCreatedAt()
             );
@@ -131,7 +121,7 @@ public class LearningMaterialResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 15. 자료 이름 수정 — PATCH /learning-facade/materials/{materialId}/name
+    // 14. UpdateMaterialName
     // ──────────────────────────────────────────────────────
 
     public record UpdateMaterialName(
@@ -144,17 +134,17 @@ public class LearningMaterialResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 16. 숙련도 수정 — PATCH /learning-facade/materials/{materialId}/proficiency
+    // 15. UpdateProficiency
     // ──────────────────────────────────────────────────────
 
     public record UpdateProficiency(
             Long materialId,
             String proficiencyLevel,
-            List<ActionCoverageItem> updatedCoverages,
-            boolean isCardCreationSuggested     // MASTERED 달성 시 Card 생성 안내
+            List<TopicCoverageItem> updatedCoverages,
+            boolean isCardCreationSuggested
     ) {
         public static UpdateProficiency of(LearningMaterial material,
-                                           List<ActionCoverageItem> updatedCoverages) {
+                                           List<TopicCoverageItem> updatedCoverages) {
             boolean isCardCreationSuggested =
                     material.getProficiencyLevel() == ProficiencyLevel.MASTERED;
             return new UpdateProficiency(
@@ -167,31 +157,31 @@ public class LearningMaterialResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 17. 행동-자료 연결 추가 — POST /learning-facade/materials/{materialId}/actions
+    // 16. LinkedTopics (연결 추가 응답)
     // ──────────────────────────────────────────────────────
 
-    public record LinkedActions(
+    public record LinkedTopics(
             Long materialId,
-            List<LinkedActionItem> linkedActions
+            List<LinkedTopicItem> linkedTopics
     ) {
-        public static LinkedActions of(LearningMaterial material) {
-            return new LinkedActions(
+        public static LinkedTopics of(LearningMaterial material) {
+            return new LinkedTopics(
                     material.getId(),
-                    material.getActionMappings().stream()
-                            .map(LinkedActionItem::of)
+                    material.getTopicMappings().stream()
+                            .map(LinkedTopicItem::of)
                             .collect(Collectors.toList())
             );
         }
     }
 
     // ──────────────────────────────────────────────────────
-    // 18. 행동-자료 연결 해제 — DELETE /learning-facade/materials/{materialId}/actions/{actionId}
+    // 17. UnlinkTopic (연결 해제 응답)
     // ──────────────────────────────────────────────────────
 
-    public record UnlinkAction(
+    public record UnlinkTopic(
             Long materialId,
-            Long unlinkedActionId,
-            ActionCoverageItem updatedCoverage,
-            List<LinkedActionSummary> remainingLinkedActions
+            Long unlinkedTopicId,
+            TopicCoverageItem updatedCoverage,
+            List<LinkedTopicSummary> remainingLinkedTopics
     ) {}
 }

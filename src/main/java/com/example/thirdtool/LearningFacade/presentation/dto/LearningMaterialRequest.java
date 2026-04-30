@@ -16,8 +16,8 @@ public class LearningMaterialRequest {
             @NotNull
             MaterialType materialType,
 
-            String url,                     // nullable — v1 선택 항목
-            List<Long> linkedActionIds      // nullable — 미입력 시 빈 목록
+            String url,
+            List<Long> linkedTopicIds
     ) {}
 
     public record UpdateMaterialName(
@@ -30,8 +30,8 @@ public class LearningMaterialRequest {
             ProficiencyLevel proficiencyLevel
     ) {}
 
-    public record LinkAction(
+    public record LinkTopic(
             @NotNull
-            Long actionId
+            Long topicId
     ) {}
 }

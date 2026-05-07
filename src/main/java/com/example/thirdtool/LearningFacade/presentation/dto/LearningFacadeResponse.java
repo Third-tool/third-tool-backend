@@ -267,6 +267,8 @@ public class LearningFacadeResponse {
             String description,
             int displayOrder,
             String coverageStatus,
+            int revisionCount,
+            boolean isRefinementSuggested,
             LocalDateTime updatedAt
     ) {
         public static UpdateTopic of(AxisTopic topic) {
@@ -277,6 +279,8 @@ public class LearningFacadeResponse {
                     topic.getDescription(),
                     topic.getDisplayOrder(),
                     topic.getCoverageStatus().name(),
+                    topic.getRevisionCount(),
+                    topic.isRefinementSuggested(),
                     topic.getUpdatedAt()
             );
         }

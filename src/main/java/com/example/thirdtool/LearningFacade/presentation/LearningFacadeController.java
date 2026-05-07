@@ -232,4 +232,13 @@ public class LearningFacadeController {
     ) {
         return topicRevisionQueryService.getActiveReasonOptions();
     }
+
+    // 21. GET /learning-facade/axes/{axisId}/topic-deletions  (Story-003-4)
+    @GetMapping("/axes/{axisId}/topic-deletions")
+    public LearningFacadeResponse.TopicDeletions getTopicDeletions(
+            @AuthenticationPrincipal UserEntity user,
+            @PathVariable Long axisId
+    ) {
+        return topicRevisionQueryService.getDeletions(axisId);
+    }
 }

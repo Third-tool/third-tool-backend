@@ -9,6 +9,48 @@ import java.util.stream.Collectors;
 public class LearningFacadeResponse {
 
     // ──────────────────────────────────────────────────────
+    // Topic 수정 이력 (Story-003-2)
+    // ──────────────────────────────────────────────────────
+
+    public record TopicRevisionItem(
+            Long revisionId,
+            String previousName,
+            String newName,
+            String revisionReasonLabel,
+            LocalDateTime revisedAt
+    ) {
+        public static TopicRevisionItem of(TopicRevision revision) {
+            return new TopicRevisionItem(
+                    revision.getId(),
+                    revision.getPreviousName(),
+                    revision.getNewName(),
+                    revision.getRevisionReasonLabel(),
+                    revision.getRevisedAt()
+            );
+        }
+    }
+
+    public record TopicRevisions(
+            Long topicId,
+            List<TopicRevisionItem> revisions
+    ) {}
+
+    public record RevisionReasonOptionItem(
+            Long optionId,
+            String label,
+            int displayOrder
+    ) {
+        public static RevisionReasonOptionItem of(RevisionReasonOption option) {
+            return new RevisionReasonOptionItem(
+                    option.getId(),
+                    option.getLabel(),
+                    option.getDisplayOrder()
+            );
+        }
+    }
+
+
+    // ──────────────────────────────────────────────────────
     // 공유 내부 레코드
     // ──────────────────────────────────────────────────────
 

@@ -58,6 +58,8 @@ public class LearningFacadeRequest {
      *   <li>{@code name} 필드 누락 → 기존 이름 유지</li>
      *   <li>{@code description} 필드 누락 → 기존 설명 유지</li>
      *   <li>{@code description: null} 명시 → 부연 설명 제거</li>
+     *   <li>{@code revisionReasonOptionId} — 이름 변경 시 선택. 미입력 또는 null이면
+     *       이유 없는 이력으로 저장 (이름 변경 자체는 허용)</li>
      * </ul>
      */
     @Getter
@@ -65,6 +67,7 @@ public class LearningFacadeRequest {
     public static class UpdateTopic {
         private String name;
         private String description;
+        private Long revisionReasonOptionId;
         private boolean namePresent;
         private boolean descriptionPresent;
 
@@ -76,6 +79,10 @@ public class LearningFacadeRequest {
         public void setDescription(String description) {
             this.description = description;
             this.descriptionPresent = true;
+        }
+
+        public void setRevisionReasonOptionId(Long revisionReasonOptionId) {
+            this.revisionReasonOptionId = revisionReasonOptionId;
         }
     }
 

@@ -62,13 +62,13 @@ src/main/java/com/example/thirdtool/
 - **domain** — 비즈니스 규칙의 본진. Aggregate/Entity/VO와 도메인 예외.
 - **infrastructure** — JPA·QueryDSL Repository 구현, 외부 시스템 어댑터.
 
-> 패키지 구조 규칙과 의존 방향은 [`docs/architecture/package-structure-guide.md`](docs/architecture/package-structure-guide.md)에 상세히 정의되어 있습니다. 아키텍처 의사결정은 [`docs/architecture/adr/ADR001.md`](docs/architecture/adr/ADR001.md)를 참고하세요.
+> 패키지 구조 규칙과 의존 방향은 [`docs/architecture/package-structure-guide.md`](docs/architecture/package-structure-guide.md)에 상세히 정의되어 있습니다. 아키텍처 의사결정은 [`docs/architecture/adr/ADR001.md`](private-docs/adr/ADR001.md)를 참고하세요.
 
 ---
 
 ## 4. 도메인 모델
 
-각 도메인의 Aggregate Root와 핵심 책임만 요약합니다. 용어 정의와 상세 모델은 [`docs/domain/용어사전.md`](docs/domain/용어사전.md)·[`docs/domain/도메인모델.md`](docs/domain/도메인모델.md)와 [`docs/database/테이블 정의서.md`](docs/database/테이블%20정의서.md)를 보세요.
+각 도메인의 Aggregate Root와 핵심 책임만 요약합니다. 용어 정의와 상세 모델은 [`docs/domain/용어사전.md`](private-docs/domain/용어사전.md)·[`docs/domain/도메인모델.md`](private-docs/domain/도메인모델.md)와 [`docs/database/테이블 정의서.md`](docs/database/테이블%20정의서.md)를 보세요.
 
 ### Card — 학습 카드 (`Card/domain/model/Card.java`)
 Aggregate Root. 학습 한 단위를 표현합니다.

@@ -2,7 +2,7 @@
 
 > Review BC가 다루는 리뷰 세션 + 카드별 공개 단계 데이터 영역.
 
-> 작성 규칙은 [`_rules.md`](_rules.md) 참조. 도메인 모델은 [`docs/domain/review.md`](../domain/review.md) 참조.
+> 작성 규칙은 [`_rules.md`](_rules.md) 참조. 도메인 모델은 [`docs/domain/review.md`](../../private-docs/domain/reviewsession.md) 참조.
 
 ---
 

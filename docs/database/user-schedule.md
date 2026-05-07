@@ -2,7 +2,7 @@
 
 > UserSchedule BC가 다루는 사용자별 학습 스케줄 설정 + 변경 이력 데이터 영역.
 
-> 작성 규칙은 [`_rules.md`](_rules.md) 참조. 도메인 모델은 [`docs/domain/user-schedule.md`](../domain/user-schedule.md) 참조.
+> 작성 규칙은 [`_rules.md`](_rules.md) 참조. 도메인 모델은 [`docs/domain/user-schedule.md`](../../private-docs/domain/user-schedule.md) 참조.
 
 ---
 

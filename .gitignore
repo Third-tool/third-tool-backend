@@ -42,3 +42,5 @@ application-dev.yml
 .env
 
 private-docs/
+workflow/
+workflow

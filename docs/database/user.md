@@ -2,7 +2,7 @@
 
 > User BC가 다루는 사용자 본체 + 소셜 프로바이더 연동 + JWT 리프레시 토큰 데이터 영역.
 
-> 작성 규칙은 [`_rules.md`](_rules.md) 참조. 도메인 모델은 [`docs/domain/user.md`](../domain/user.md) 참조.
+> 작성 규칙은 [`_rules.md`](_rules.md) 참조. 도메인 모델은 [`docs/domain/user.md`](../../private-docs/domain/user.md) 참조.
 
 ---
 

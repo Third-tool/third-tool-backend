@@ -2,7 +2,7 @@
 
 > LearningFacade BC가 다루는 학습 목표 프레임워크 데이터 영역. 컨셉 → 축 → 행동 → 자료의 4계층 + 매핑 + 변경 이력.
 
-> 작성 규칙은 [`_rules.md`](_rules.md) 참조. 도메인 모델은 [`docs/domain/learning-facade.md`](../domain/learning-facade.md) 참조.
+> 작성 규칙은 [`_rules.md`](_rules.md) 참조. 도메인 모델은 [`docs/domain/learning-facade.md`](../../private-docs/domain/learning-facade.md) 참조.
 
 ---
 

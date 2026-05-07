@@ -2,7 +2,7 @@
 
 > Card BC가 다루는 카드 본체 + 회상 단서 + 태그 + 상태 이력 데이터 영역.
 
-> 작성 규칙은 [`_rules.md`](_rules.md) 참조. 도메인 모델은 [`docs/domain/card.md`](../domain/card.md) 참조.
+> 작성 규칙은 [`_rules.md`](_rules.md) 참조. 도메인 모델은 [`docs/domain/card.md`](../../private-docs/domain/card.md) 참조.
 
 ---
 

@@ -205,4 +205,89 @@ class AxisTopicTest {
             assertThat(last.isFocused(3)).isFalse();
         }
     }
+
+    @Nested
+    @DisplayName("revisionCount (Story-003-3)")
+    class RevisionCount {
+
+        @Test
+        @DisplayName("생성 직후 revisionCount는 0")
+        void createInitialRevisionCount() {
+            AxisTopic topic = createTopic();
+            assertThat(topic.getRevisionCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("이름이 실제로 변경되면 revisionCount가 1 증가한다")
+        void updateName_changed_increments() {
+            AxisTopic topic = createTopic();
+            topic.updateName("API 명세 작성");
+            assertThat(topic.getRevisionCount()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("동일 값(trim 후) 입력 시 revisionCount는 증가하지 않는다 (멱등)")
+        void updateName_same_value_no_increment() {
+            AxisTopic topic = createTopic();
+            topic.updateName("  REST API 설계 원칙  ");
+            assertThat(topic.getRevisionCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("description 단독 수정 시 revisionCount는 증가하지 않는다 (이름 변경만 카운트)")
+        void updateDescription_only_no_increment() {
+            AxisTopic topic = createTopic();
+            topic.updateDescription("새 설명");
+            assertThat(topic.getRevisionCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("이름이 여러 번 변경되면 revisionCount가 누적된다")
+        void updateName_multiple_increments() {
+            AxisTopic topic = createTopic();
+            topic.updateName("API 명세 작성");
+            topic.updateName("OpenAPI 작성");
+            topic.updateName("REST 설계 가이드");
+            assertThat(topic.getRevisionCount()).isEqualTo(3);
+        }
+    }
+
+    @Nested
+    @DisplayName("isRefinementSuggested (Story-003-3)")
+    class IsRefinementSuggested {
+
+        @Test
+        @DisplayName("revisionCount = 0 (신규 주제)이면 false")
+        void newTopic_false() {
+            AxisTopic topic = createTopic();
+            assertThat(topic.isRefinementSuggested()).isFalse();
+        }
+
+        @Test
+        @DisplayName("경계값: revisionCount = 2 → false (임계값 직전)")
+        void boundary_2_false() {
+            AxisTopic topic = createTopic();
+            topic.updateName("v1");
+            topic.updateName("v2");
+            assertThat(topic.getRevisionCount()).isEqualTo(2);
+            assertThat(topic.isRefinementSuggested()).isFalse();
+        }
+
+        @Test
+        @DisplayName("경계값: revisionCount = 3 → true (임계값 도달)")
+        void boundary_3_true() {
+            AxisTopic topic = createTopic();
+            topic.updateName("v1");
+            topic.updateName("v2");
+            topic.updateName("v3");
+            assertThat(topic.getRevisionCount()).isEqualTo(3);
+            assertThat(topic.isRefinementSuggested()).isTrue();
+        }
+
+        @Test
+        @DisplayName("REFINEMENT_THRESHOLD 상수가 도메인에 노출된다 (외부 재정의 방지)")
+        void thresholdConstantExposed() {
+            assertThat(AxisTopic.REFINEMENT_THRESHOLD).isEqualTo(3);
+        }
+    }
 }

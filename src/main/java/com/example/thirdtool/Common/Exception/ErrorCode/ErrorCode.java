@@ -76,6 +76,9 @@ public enum ErrorCode {
     LEARNING_TOPIC_MATERIAL_ALREADY_LINKED("TM001", "이미 연결된 주제입니다.",       HttpStatus.CONFLICT),
     LEARNING_TOPIC_MATERIAL_NOT_LINKED("TM002",     "연결되지 않은 주제입니다.",     HttpStatus.NOT_FOUND),
 
+    // ─── TopicRevision (Epic-003) ─────────────────────────
+    REVISION_REASON_NOT_FOUND("TR001",              "선택한 수정 이유를 찾을 수 없거나 비활성 상태입니다.", HttpStatus.NOT_FOUND),
+
     // ─── Deck (확장) ──────────────────────────────────────
     DECK_HIERARCHY_CYCLE("DECK006", "덱 계층 구조에 순환 참조가 발생했습니다.", HttpStatus.BAD_REQUEST),
 

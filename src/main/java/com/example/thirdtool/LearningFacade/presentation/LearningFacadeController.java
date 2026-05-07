@@ -3,6 +3,7 @@ package com.example.thirdtool.LearningFacade.presentation;
 import com.example.thirdtool.LearningFacade.application.service.LearningFacadeCommandService;
 import com.example.thirdtool.LearningFacade.application.service.LearningFacadeQueryService;
 import com.example.thirdtool.LearningFacade.application.service.LearningMaterialCommandService;
+import com.example.thirdtool.LearningFacade.application.service.TopicRevisionQueryService;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeRequest;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningMaterialRequest;
@@ -24,6 +25,7 @@ public class LearningFacadeController {
     private final LearningFacadeCommandService facadeCommandService;
     private final LearningFacadeQueryService  facadeQueryService;
     private final LearningMaterialCommandService materialCommandService;
+    private final TopicRevisionQueryService topicRevisionQueryService;
 
     // 1. POST /learning-facade
     @PostMapping
@@ -208,5 +210,26 @@ public class LearningFacadeController {
             @PathVariable Long materialId
     ) {
         materialCommandService.deleteMaterial(user.getId(), materialId);
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Topic 수정 이력 (Story-003-2)
+    // ──────────────────────────────────────────────────────
+
+    // 19. GET /learning-facade/topics/{topicId}/revisions
+    @GetMapping("/topics/{topicId}/revisions")
+    public LearningFacadeResponse.TopicRevisions getTopicRevisions(
+            @AuthenticationPrincipal UserEntity user,
+            @PathVariable Long topicId
+    ) {
+        return topicRevisionQueryService.getRevisions(topicId);
+    }
+
+    // 20. GET /learning-facade/revision-reason-options
+    @GetMapping("/revision-reason-options")
+    public List<LearningFacadeResponse.RevisionReasonOptionItem> getActiveReasonOptions(
+            @AuthenticationPrincipal UserEntity user
+    ) {
+        return topicRevisionQueryService.getActiveReasonOptions();
     }
 }

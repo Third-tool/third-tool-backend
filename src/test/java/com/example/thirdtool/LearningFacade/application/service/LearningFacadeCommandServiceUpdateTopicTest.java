@@ -8,6 +8,7 @@ import com.example.thirdtool.LearningFacade.domain.model.RevisionReasonOption;
 import com.example.thirdtool.LearningFacade.domain.model.TopicRevision;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.RevisionReasonOptionRepository;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicDeletionRecordRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicRevisionRepository;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeRequest;
 import com.example.thirdtool.User.domain.model.UserEntity;
@@ -30,6 +31,7 @@ class LearningFacadeCommandServiceUpdateTopicTest {
     private LearningFacadeRepository facadeRepository;
     private TopicRevisionRepository topicRevisionRepository;
     private RevisionReasonOptionRepository revisionReasonOptionRepository;
+    private TopicDeletionRecordRepository topicDeletionRecordRepository;
     private LearningFacadeCommandService service;
 
     private UserEntity user;
@@ -42,9 +44,11 @@ class LearningFacadeCommandServiceUpdateTopicTest {
         facadeRepository = mock(LearningFacadeRepository.class);
         topicRevisionRepository = mock(TopicRevisionRepository.class);
         revisionReasonOptionRepository = mock(RevisionReasonOptionRepository.class);
+        topicDeletionRecordRepository = mock(TopicDeletionRecordRepository.class);
 
         service = new LearningFacadeCommandService(
-                facadeRepository, topicRevisionRepository, revisionReasonOptionRepository);
+                facadeRepository, topicRevisionRepository, revisionReasonOptionRepository,
+                topicDeletionRecordRepository);
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);

@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | [`.claude/rules/test-conventions.md`](.claude/rules/test-conventions.md) | 테스트 작성 시 |
 
 규칙 파일은 다시 다음 두 자료원으로 안내한다:
-- **`private-docs/workflows/`** — 현재 Epic / Story / Product 컨텍스트 (`workflow.md`가 정의)
+- **`workflow/`** (프로젝트 루트, gitignored) — 현재 Epic / Story / Product 컨텍스트 (`workflow.md`가 정의)
 - **`private-docs/{adr,api,domain,table,test}/`** — 운영 reference 패키지 (`private-docs.md`가 매칭 프로토콜 정의)
 
 CLAUDE.md의 다른 섹션(아키텍처 핵심, 명령어, 데이터베이스)은 규칙 파일과 모순될 경우 **규칙 파일이 우선**한다 — CLAUDE.md는 빠른 개요이지 단일 진실 소스가 아니다.

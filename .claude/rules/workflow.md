@@ -8,17 +8,18 @@
 ## 1. 디렉토리 구조 (단발 운영)
 
 ```
-private-docs/
-├── workflows/
-│   ├── product/      # 프로덕트 컨텍스트 (장기 보존)
-│   ├── Epic/         # 현재 진행 중인 Epic 1개. 파일명 예: Epic-002.md
-│   └── story/        # 현재 진행 중인 Story 1개. 파일명 예: Story-2-2.md
-└── (그 외 패키지)    # adr/, api/, domain/, table/, test/ — `private-docs.md` 규칙 참조
+workflow/                  ← 프로젝트 루트 (gitignored, 외부 관리)
+├── product/               # 프로덕트 컨텍스트 (장기 보존)
+├── epics/                 # 현재 진행 중인 Epic 1개. 파일명 예: Epic-003.md
+└── stories/               # 현재 진행 중인 Story 1개. 파일명 예: Story-003-2.md
+
+private-docs/              ← 운영 reference 패키지 (gitignored, 외부 관리)
+└── adr/, api/, domain/, table/, test/   # `private-docs.md` 규칙 참조
 ```
 
-**단발 운영 원칙**: `Epic/`과 `story/` 하위에는 **현재 진행 중인 파일만 1개씩** 둔다. Story가 끝나면 다음 Story 파일로 교체한다. 과거 이력은 외부(Claude Desktop)에서 관리되므로 이 레포 안에서 Living 문서를 갱신·보존하지 않는다.
+**단발 운영 원칙**: `epics/`와 `stories/` 하위에는 **현재 진행 중인 파일만 1개씩** 둔다. Story가 끝나면 다음 Story 파일로 교체한다. 과거 이력은 외부(Claude Desktop)에서 관리되므로 이 레포 안에서 Living 문서를 갱신·보존하지 않는다.
 
-**Claude Code 산출물은 코드와 PR 뿐이다.** workflow 폴더의 문서는 입력이지, Claude Code가 갱신하는 출력물이 아니다.
+**Claude Code 산출물은 코드와 로컬 커밋 뿐이다.** workflow 폴더의 문서는 입력이지, Claude Code가 갱신하는 출력물이 아니다.
 
 ---
 
@@ -26,9 +27,9 @@ private-docs/
 
 | 단위 | 위치 | 역할 |
 | --- | --- | --- |
-| Product | `private-docs/workflows/product/` | 비즈니스 컨텍스트, 장기 방향, 사용자가 풀려는 문제 |
-| Epic | `private-docs/workflows/Epic/Epic-NNN.md` | 여러 Story를 묶는 상위 목표 (예: "AxisAction → AxisTopic 도메인 전환") |
-| Story | `private-docs/workflows/story/Story-N-N.md` | Claude Code가 1회 분량으로 실행하는 작업 단위 |
+| Product | `workflow/product/` | 비즈니스 컨텍스트, 장기 방향, 사용자가 풀려는 문제 |
+| Epic | `workflow/epics/Epic-{NNN}.md` | 여러 Story를 묶는 상위 목표 (예: "AxisAction → AxisTopic 도메인 전환") |
+| Story | `workflow/stories/Story-{NNN}-{N}.md` | Claude Code가 1회 분량으로 실행하는 작업 단위 |
 
 ---
 
@@ -38,9 +39,9 @@ Story 명령("Story-X-X 진행해줘", "이 스토리 ㄱㄱ" 등)을 받으면 
 
 ### Step 1 — 읽기 (코드 작성 금지)
 
-1. `private-docs/workflows/story/` 내 Story 문서를 읽는다.
-2. `private-docs/workflows/Epic/` 내 Epic 문서를 상위 컨텍스트로 읽는다.
-3. `private-docs/workflows/product/` 의 프로덕트 컨텍스트를 필요한 만큼 참조한다.
+1. `workflow/stories/` 내 Story 문서를 읽는다.
+2. `workflow/epics/` 내 Epic 문서를 상위 컨텍스트로 읽는다.
+3. `workflow/product/` 의 프로덕트 컨텍스트를 필요한 만큼 참조한다.
 4. **Story 문서가 명시한 reference 문서**(`private-docs/{adr,api,domain,table,test}/...`)를 전부 읽는다 — `private-docs.md` 규칙의 매칭 프로토콜을 따른다.
 5. Story 본문 또는 reference 사이에 **모호함·충돌**이 있으면 **작업을 시작하지 않고 사용자에게 질문**한다.
 
@@ -81,7 +82,7 @@ Story 명령("Story-X-X 진행해줘", "이 스토리 ㄱㄱ" 등)을 받으면 
 
 ## 5. 금지 사항
 
-- workflow 문서(`workflows/Epic/`, `workflows/story/`, `workflows/product/`)를 Claude Code가 직접 생성·수정·삭제하지 않는다. 입력 문서이지 산출물이 아니다.
+- workflow 문서(`workflow/epics/`, `workflow/stories/`, `workflow/product/`)를 Claude Code가 직접 생성·수정·삭제하지 않는다. 입력 문서이지 산출물이 아니다. (Epic 번호 정정·Story 분리 등 사용자 명시 요청은 예외.)
 - Story 문서를 읽지 않고 코드를 쓰지 않는다.
 - Story가 명시하지 않은 reference 패키지를 임의로 참조하여 Story 범위를 확장하지 않는다 — 필요하면 사용자에게 추가 요청한다.
 - 한 Story 안에서 `main` / `develop` 직접 커밋·push, force push, 기존 Flyway V 파일 수정, PR 자동 생성은 금지 (상세는 [`pr-commit.md`](./pr-commit.md) §9).

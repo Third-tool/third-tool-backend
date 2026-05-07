@@ -4,6 +4,8 @@ import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.*;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.RevisionReasonOptionRepository;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicRevisionRepository;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeRequest;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.*;
 import com.example.thirdtool.User.domain.model.UserEntity;
@@ -19,6 +21,8 @@ import java.util.List;
 public class LearningFacadeCommandService {
 
     private final LearningFacadeRepository facadeRepository;
+    private final TopicRevisionRepository topicRevisionRepository;
+    private final RevisionReasonOptionRepository revisionReasonOptionRepository;
 
     // ──────────────────────────────────────────────────────
     // 1. LearningFacade 생성
@@ -120,17 +124,40 @@ public class LearningFacadeCommandService {
         LearningAxis axis = findAxis(facade, axisId);
         AxisTopic topic = axis.findTopic(topicId);
 
-        boolean changed = false;
+        // 이름 변경 발생 시 이력을 위해 이전 값 보존 (description 수정만 일어나면 이력 X)
+        String previousName = topic.getName();
+        boolean nameChanged = false;
+        boolean descriptionChanged = false;
+
         if (command.isNamePresent()) {
-            changed = topic.updateName(command.getName()) || changed;
+            nameChanged = topic.updateName(command.getName());
         }
         if (command.isDescriptionPresent()) {
-            changed = topic.updateDescription(command.getDescription()) || changed;
+            descriptionChanged = topic.updateDescription(command.getDescription());
         }
-        if (changed) {
+
+        if (nameChanged) {
+            String reasonLabel = resolveReasonLabel(command.getRevisionReasonOptionId());
+            TopicRevision revision = TopicRevision.of(topic, previousName, topic.getName(), reasonLabel);
+            topicRevisionRepository.save(revision);
+        }
+        if (nameChanged || descriptionChanged) {
             facadeRepository.save(facade);
         }
         return UpdateTopic.of(topic);
+    }
+
+    /**
+     * reasonOptionId가 null이면 라벨 없음(이유 미선택). 값이 있으면 active 선택지를 조회하여
+     * 라벨을 스냅샷한다. 비활성·미존재 선택지는 REVISION_REASON_NOT_FOUND로 거부.
+     */
+    private String resolveReasonLabel(Long reasonOptionId) {
+        if (reasonOptionId == null) {
+            return null;
+        }
+        return revisionReasonOptionRepository.findActiveById(reasonOptionId)
+                .orElseThrow(() -> LearningFacadeDomainException.of(ErrorCode.REVISION_REASON_NOT_FOUND))
+                .getLabel();
     }
 
     // ──────────────────────────────────────────────────────

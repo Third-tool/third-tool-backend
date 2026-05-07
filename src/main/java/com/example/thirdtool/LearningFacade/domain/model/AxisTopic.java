@@ -17,6 +17,13 @@ import java.time.LocalDateTime;
 @Table(name = "axis_topic")
 public class AxisTopic {
 
+    /**
+     * 주제가 "단련 중"으로 간주되는 이름 수정 횟수 임계값.
+     * 이 값 이상이면 {@link #isRefinementSuggested()}가 true를 반환한다.
+     * 운영 중 동적 조정이 필요해지면 Admin BC 시스템 설정으로 이관한다.
+     */
+    public static final int REFINEMENT_THRESHOLD = 3;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "axis_topic_id")
@@ -39,6 +46,13 @@ public class AxisTopic {
     @Column(name = "coverage_status", nullable = false, length = 20)
     private CoverageStatus coverageStatus;
 
+    /**
+     * 이름 수정 누적 횟수. 생성 시 0. {@link #updateName(String)}이 실제 변경을 일으킬 때마다 +1.
+     * 동일 값(trim 후 같은 값) 입력 또는 description 단독 수정 시 증가하지 않는다.
+     */
+    @Column(name = "revision_count", nullable = false)
+    private int revisionCount;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -53,6 +67,7 @@ public class AxisTopic {
         this.description    = description;
         this.displayOrder   = displayOrder;
         this.coverageStatus = CoverageStatus.NO_MATERIAL;
+        this.revisionCount  = 0;
     }
 
     static AxisTopic create(LearningAxis axis, String name, String description, int displayOrder) {
@@ -69,6 +84,7 @@ public class AxisTopic {
 
     /**
      * 이름을 갱신한다. 동일 값(trim 후)이 들어오면 상태를 바꾸지 않고 {@code false}를 반환한다.
+     * 실제 변경이 발생한 경우에만 {@code revisionCount}를 1 증가시킨다.
      */
     public boolean updateName(String newName) {
         validateName(newName);
@@ -77,7 +93,16 @@ public class AxisTopic {
             return false;
         }
         this.name = trimmed;
+        this.revisionCount++;
         return true;
+    }
+
+    /**
+     * 이름 수정 누적 횟수가 임계값(REFINEMENT_THRESHOLD) 이상인지 여부.
+     * Application Service가 응답에 안내 플래그로 포함한다 (UX는 강제가 아닌 안내).
+     */
+    public boolean isRefinementSuggested() {
+        return this.revisionCount >= REFINEMENT_THRESHOLD;
     }
 
     /**

@@ -148,4 +148,37 @@ class LearningFacadeCommandServiceUpdateTopicTest {
             verify(topicRevisionRepository, never()).save(any());
         }
     }
+
+    @Nested
+    @DisplayName("isRefinementSuggested 플래그 응답 (Story-003-3)")
+    class RefinementFlagInResponse {
+
+        @Test
+        @DisplayName("revisionCount=0 신규 주제는 응답에 isRefinementSuggested=false")
+        void noChange_flag_false() {
+            var response = service.updateTopic(user, 10L, 100L,
+                    command("REST API 설계 원칙", null));   // 동일 값 → 미증가
+            assertThat(response.revisionCount()).isZero();
+            assertThat(response.isRefinementSuggested()).isFalse();
+        }
+
+        @Test
+        @DisplayName("이름 1회 변경 후 응답 revisionCount=1, isRefinementSuggested=false")
+        void changed_once_flag_false() {
+            var response = service.updateTopic(user, 10L, 100L,
+                    command("API 명세 작성", null));
+            assertThat(response.revisionCount()).isEqualTo(1);
+            assertThat(response.isRefinementSuggested()).isFalse();
+        }
+
+        @Test
+        @DisplayName("이름 3회 누적 변경 후 응답 isRefinementSuggested=true (임계값 도달)")
+        void changed_three_times_flag_true() {
+            service.updateTopic(user, 10L, 100L, command("v1", null));
+            service.updateTopic(user, 10L, 100L, command("v2", null));
+            var response = service.updateTopic(user, 10L, 100L, command("v3", null));
+            assertThat(response.revisionCount()).isEqualTo(3);
+            assertThat(response.isRefinementSuggested()).isTrue();
+        }
+    }
 }

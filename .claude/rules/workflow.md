@@ -60,11 +60,23 @@ Story 명령("Story-X-X 진행해줘", "이 스토리 ㄱㄱ" 등)을 받으면 
 - 새 ErrorCode가 필요한지 확인 — 필요하면 `Common/Exception/ErrorCode/ErrorCode` enum 등록부터 한다.
 - Flyway 마이그레이션이 필요하면 새 `V*__*.sql` 파일을 추가한다 (기존 파일 수정 금지).
 
-### Step 4 — 실행
+### Step 4 — 실행 (코드 작업만)
 
 - 4-Layer + Repository Port/Adapter + Command/Query 분리 준수.
 - 테스트 작성: `private-docs/test/{bc}.md` 매트릭스를 그대로 따른다.
 - Story 본문의 Acceptance Criteria를 항목별로 자체 체크한다.
+- **작업 중에는 `update-docs/`를 건드리지 않는다** — 갱신 후보가 떠오르면 메모로만 둔다. update-docs는 Step 5에서 분리 진행.
+
+### Step 5 — Story 종료 후 update-docs 갱신 ceremony (분리)
+
+코드·테스트 작업이 끝나면 별도 단계로 update-docs 갱신을 진행한다. 절차는 [`update-docs.md`](./update-docs.md) §5가 정의한다 — 요약:
+
+1. **목차 제시**: Claude가 이번 Story/Epic/Product 단위로 갱신 가능한 update-docs 항목을 **번호 매긴 목록**으로 제시 (각 항목에 변경 요약 1줄 동반).
+2. **사용자 선택 대기**: 사용자가 항목 번호를 선택할 때까지 update-docs **작성하지 않는다** (예: "1, 3 ㄱㄱ", "전부").
+3. **선택 항목 디테일 작성**: 선택된 항목만 [`update-docs.md`](./update-docs.md) §4 미러링 원칙을 따라 디테일하게 작성.
+4. **종료 보고**: 갱신한 파일·커밋 hash 보고.
+
+ADR(즉시 트리거)은 작업 중 이미 반영되어 있으므로 본 ceremony 대상이 아니다. push 판단([`pr-commit.md`](./pr-commit.md) §6)은 본 ceremony와 독립적으로 진행한다.
 
 ---
 

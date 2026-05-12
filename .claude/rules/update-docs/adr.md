@@ -1,16 +1,16 @@
-# Rule: ADR 자동 업데이트 프로토콜
+# Rule: update-docs/adr 갱신 프로토콜
 
 > Architecture Decision Record(ADR)의 작성 권한·트리거·형식을 정의한다.
-> [`private-docs.md`](./private-docs.md) §3.2는 "private-docs는 외부 관리, Claude는 명시 요청 시만 수정"으로 정한다.
-> **ADR 디렉토리(`private-docs/adr/`)는 그 규칙의 명시적 예외다** — 본 문서가 정의한 트리거에 한해 Claude Code가 자동 작성 권한을 가진다. 다른 패키지(`domain/`, `api/`, `table/`, `test/`)는 여전히 외부 관리 영역이다.
+> ADR은 [`update-docs.md`](../update-docs.md)가 정의한 갱신 영역(`update-docs/`)의 패키지 중 하나이며, 본 문서는 그 중 ADR 패키지의 트리거·절차·템플릿을 구체화한다.
+> 갱신 시점은 **즉시 트리거** — Story/Epic 종료를 기다리지 않고 결정이 일어난 순간 작성한다 (`update-docs.md` §3 트리거 분류 참조).
 
 ---
 
 ## 1. 위치·명명·번호
 
-- **위치**: `private-docs/adr/`
+- **위치**: `update-docs/adr/`
 - **파일명**: `ADR{NNN}.md` (3자리 zero-padded, 1부터 순차)
-- **인덱스**: `private-docs/adr/index.md` — 새 ADR 추가 시 자동으로 한 줄 append
+- **인덱스**: `update-docs/adr/index.md` — 새 ADR 추가 시 자동으로 한 줄 append
 - **한 ADR = 한 결정**. 하나의 파일에 여러 결정 묶지 않는다.
 - **번호는 절대 재할당하지 않는다.** Superseded되어도 파일은 보존하고 상태만 변경한다.
 

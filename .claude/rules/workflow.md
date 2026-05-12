@@ -73,9 +73,9 @@ Story 명령("Story-X-X 진행해줘", "이 스토리 ㄱㄱ" 등)을 받으면 
 브랜치 전략(Epic 단일 브랜치), 커밋 단위·메시지, push 타이밍, PR 본문 자동 생성은 모두 [`pr-commit.md`](./pr-commit.md)가 정의한다.
 
 요약:
-- **Epic 1개 = 브랜치 1개**. 이름 형식 `{type}/{NNN}-{epic-slug}` (예: `feat/002-axis-topic-migration`). Epic의 첫 Story 명령 수신 시 develop에서 자동 분기 + 즉시 push 등록.
+- **Epic 1개 = 브랜치 1개**. 이름 형식 `{type}/{NNN}-{epic-slug}` (예: `feat/002-axis-topic-migration`). Epic의 첫 Story 명령 수신 시 develop에서 **로컬 분기만** 자동 생성. 원격 등록은 첫 push 시점에 함께 ([`pr-commit.md`](./pr-commit.md) §6 판단 기반).
 - Epic 안의 모든 Story 작업은 **같은 브랜치 위에 누적 커밋**한다 — Story별 sub-branch 만들지 않음.
-- 의미 단위마다 즉시 커밋. **각 Story 종료 시 같은 브랜치에 incremental push** + 누적 PR 본문 초안 출력.
+- 의미 단위마다 즉시 커밋. **Story 종료 시 push는 판단 기반** ([`pr-commit.md`](./pr-commit.md) §6.1 신호) — 권장 시 사용자에게 1줄 보고·확인 후 진행. 매 Story마다 자동 push 하지 않는다. push 실제 실행 시점에 한해 누적 PR 본문 초안 출력.
 - PR 생성·머지(`{type}/{NNN}-{slug} → develop`, `develop → main`)는 사용자가 GitHub UI에서 수행.
 
 ---

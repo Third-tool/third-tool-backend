@@ -29,10 +29,20 @@ public class LearningMaterialCommandService {
     // ──────────────────────────────────────────────────────
 
     @Transactional
-    public CreateMaterial createMaterial(Long userId, String name, MaterialType materialType,
-                                         String url, List<Long> linkedTopicIds) {
+    public CreateMaterial createMaterial(Long userId,
+                                         String name,
+                                         String materialTypeRaw,
+                                         String url,
+                                         String author,
+                                         String platform,
+                                         String aiProvider,
+                                         String webSource,
+                                         String memo,
+                                         List<Long> linkedTopicIds) {
+        MaterialType materialType = parseMaterialType(materialTypeRaw);
         LearningFacade facade = loadFacade(userId);
-        LearningMaterial material = LearningMaterial.create(facade, name, materialType, url);
+        LearningMaterial material = LearningMaterial.create(
+                facade, name, materialType, url, author, platform, aiProvider, webSource, memo);
         materialRepository.save(material);
 
         if (linkedTopicIds != null && !linkedTopicIds.isEmpty()) {
@@ -47,6 +57,17 @@ public class LearningMaterialCommandService {
         LearningMaterial saved = materialRepository.findById(material.getId())
                 .orElseThrow(() -> LearningFacadeDomainException.of(ErrorCode.LEARNING_MATERIAL_NOT_FOUND));
         return CreateMaterial.of(saved);
+    }
+
+    private MaterialType parseMaterialType(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw LearningFacadeDomainException.of(ErrorCode.LEARNING_MATERIAL_TYPE_REQUIRED);
+        }
+        try {
+            return MaterialType.valueOf(raw.trim());
+        } catch (IllegalArgumentException e) {
+            throw LearningFacadeDomainException.of(ErrorCode.LEARNING_MATERIAL_TYPE_INVALID);
+        }
     }
 
     // ──────────────────────────────────────────────────────

@@ -41,6 +41,7 @@ application-dev.yml
 .env.prod
 .env
 
-private-docs/
-workflow/
-workflow
+### ai workflow ###
+/private-docs/
+/workflow/
+/update-docs/

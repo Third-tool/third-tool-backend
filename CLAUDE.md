@@ -11,17 +11,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 규칙 파일 | 언제 참조하나 |
 | --- | --- |
 | [`.claude/rules/workflow.md`](.claude/rules/workflow.md) | Story 명령 수신 시 — 작업 단위·실행 순서·브랜치 |
-| [`.claude/rules/private-docs.md`](.claude/rules/private-docs.md) | Story가 어떤 reference docs를 읽어야 하는지 매칭 |
+| [`.claude/rules/private-docs.md`](.claude/rules/private-docs.md) | Story가 어떤 reference docs를 읽어야 하는지 매칭 (read-only 입력 영역) |
+| [`.claude/rules/update-docs.md`](.claude/rules/update-docs.md) | Story/Epic 진행·종료 시 Claude가 기록·갱신해야 하는 산출물 영역 (umbrella). 패키지별 상세는 `.claude/rules/update-docs/{package}.md` |
 | [`.claude/rules/pr-commit.md`](.claude/rules/pr-commit.md) | 브랜치 전략(Epic/Story), 커밋 단위·메시지, push 타이밍, PR 본문 생성 |
-| [`.claude/rules/adr.md`](.claude/rules/adr.md) | 작업 중 아키텍처 결정 감지 시 자동 작성 |
 | [`.claude/rules/domain-conventions.md`](.claude/rules/domain-conventions.md) | 도메인 객체 작성·수정 시 |
 | [`.claude/rules/api-conventions.md`](.claude/rules/api-conventions.md) | Controller/DTO 작성 시 |
 | [`.claude/rules/db-conventions.md`](.claude/rules/db-conventions.md) | JPA 매핑·Flyway 작성 시 |
 | [`.claude/rules/test-conventions.md`](.claude/rules/test-conventions.md) | 테스트 작성 시 |
 
-규칙 파일은 다시 다음 두 자료원으로 안내한다:
+규칙 파일은 다시 다음 세 자료원으로 안내한다:
 - **`workflow/`** (프로젝트 루트, gitignored) — 현재 Epic / Story / Product 컨텍스트 (`workflow.md`가 정의)
-- **`private-docs/{adr,api,domain,table,test}/`** — 운영 reference 패키지 (`private-docs.md`가 매칭 프로토콜 정의)
+- **`private-docs/{api,domain,table,test}/`** — 개발자가 확정해 올리는 **read-only reference 패키지** (`private-docs.md`가 매칭 프로토콜 정의)
+- **`update-docs/{adr,architecture,dictionary,...}/`** — Claude Code가 작업 결과를 **기록·갱신하는 영역** (`update-docs.md`가 트리거·절차 정의)
 
 CLAUDE.md의 다른 섹션(아키텍처 핵심, 명령어, 데이터베이스)은 규칙 파일과 모순될 경우 **규칙 파일이 우선**한다 — CLAUDE.md는 빠른 개요이지 단일 진실 소스가 아니다.
 
@@ -81,14 +82,15 @@ Swagger UI: 실행 후 `http://localhost:8080/swagger-ui.html`.
 
 ## 작업 흐름
 
-작업 단위(Epic / Story / Product)와 운영 reference 패키지(adr / api / domain / table / test)는 모두 `private-docs/` 하위에 있다. 절차는 다음 규칙 파일이 정의한다.
+작업 단위(Epic / Story / Product)는 `workflow/` 하위에 있다. 운영 reference 패키지는 두 영역으로 분리되어 있다 — read-only 입력(`private-docs/{api,domain,table,test}/`)과 Claude Code 갱신 영역(`update-docs/{adr,dictionary,...}/`). 절차는 다음 규칙 파일이 정의한다.
 
 - **Story 실행 순서**: [`.claude/rules/workflow.md`](.claude/rules/workflow.md)
-- **Story → reference 패키지 매칭**: [`.claude/rules/private-docs.md`](.claude/rules/private-docs.md)
+- **Story → reference 패키지 매칭 (read-only 입력)**: [`.claude/rules/private-docs.md`](.claude/rules/private-docs.md)
+- **Story/Epic 종료 시 기록·갱신 (Claude 산출물)**: [`.claude/rules/update-docs.md`](.claude/rules/update-docs.md)
 - **브랜치 / 커밋 / push / PR 본문 생성**: [`.claude/rules/pr-commit.md`](.claude/rules/pr-commit.md)
-- **ADR 자동 작성 트리거**: [`.claude/rules/adr.md`](.claude/rules/adr.md)
+- **ADR 즉시 자동 작성 트리거**: [`.claude/rules/update-docs/adr.md`](.claude/rules/update-docs/adr.md)
 
-**Epic 1개 = 브랜치 1개** (`{type}/{NNN}-{epic-slug}`). Epic 안의 모든 Story가 같은 브랜치에 누적 커밋되며, Claude Code는 각 Story 종료마다 push + 누적 PR 본문 초안을 출력한다. PR 생성·머지(`{type}/{NNN}-{slug} → develop`, `develop → main`)는 사용자가 GitHub UI에서 직접 수행한다 ([`pr-commit.md`](.claude/rules/pr-commit.md) §6-§8).
+**Epic 1개 = 브랜치 1개** (`{type}/{NNN}-{epic-slug}`). Epic 안의 모든 Story가 같은 브랜치에 누적 커밋된다. **Push는 판단 기반** — Story 종료마다 자동 push하지 않고, [`pr-commit.md`](.claude/rules/pr-commit.md) §6.1 신호가 충족되면 사용자에게 보고·확인 후 진행하며, push 시점에 한해 누적 PR 본문 초안을 출력한다. PR 생성·머지(`{type}/{NNN}-{slug} → develop`, `develop → main`)는 사용자가 GitHub UI에서 직접 수행한다 ([`pr-commit.md`](.claude/rules/pr-commit.md) §6-§8).
 
 ---
 

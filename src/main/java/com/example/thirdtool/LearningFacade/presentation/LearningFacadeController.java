@@ -148,6 +148,11 @@ public class LearningFacadeController {
                 request.name(),
                 request.materialType(),
                 request.url(),
+                request.author(),
+                request.platform(),
+                request.aiProvider(),
+                request.webSource(),
+                request.memo(),
                 request.linkedTopicIds()
         );
     }

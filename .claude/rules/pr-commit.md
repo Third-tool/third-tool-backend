@@ -64,15 +64,15 @@ main
    - 추정이 모호하면 사용자에게 한 번 확인. 기본값은 feat.
 3. {type}/{NNN}-{epic-slug} 브랜치가 로컬·원격에 존재하는지 확인.
    - 존재 (이미 진행 중인 Epic) → checkout만 한다.
-   - 미존재 → develop fetch 후 develop 최신 위에서 분기 + 즉시 push -u로 원격 등록.
+   - 미존재 → develop fetch 후 develop 최신 위에서 **로컬 분기만** 한다 (원격 등록 `git push -u origin`은 §6 판단 기반 첫 push 시점에 함께 실행).
 4. 그 브랜치에서 Story 작업을 시작한다 (Story별 분기 없이 동일 브랜치에 커밋 누적).
 ```
 
 ### 1.6 Epic 브랜치 생명주기
 
-- **시작**: Epic의 첫 Story 명령 수신 시 자동 생성 + `git push -u origin`으로 원격 등록.
+- **시작**: Epic의 첫 Story 명령 수신 시 **로컬 브랜치만** 자동 생성. 원격 등록(`git push -u origin`)은 §6 판단 기반 첫 push 시점에 함께.
 - **진행**: Epic의 Story 1, 2, 3, ... 모두 같은 브랜치에 의미 단위 커밋으로 누적.
-- **각 Story 종료**: 같은 브랜치에 push (incremental 업데이트). PR 본문 초안을 매번 갱신해 출력.
+- **각 Story 종료**: §6.1 신호로 push 판단. push 권장 시 사용자에게 1줄 보고·확인 후 진행하며, push 실제 실행 시점에 한해 PR 본문 초안을 누적 모드로 갱신해 출력. 신호 약하면 push 없이 다음 Story로 넘어간다.
 - **Epic 종료**: 사용자가 GitHub UI에서 PR 머지 (`{type}/{NNN}-{slug} → develop`).
 - 머지 후 브랜치는 사용자가 GitHub에서 정리 (Claude Code는 브랜치 삭제에 관여하지 않음).
 
@@ -95,7 +95,7 @@ main
 | Slice / 통합 테스트 | 1 |
 | Flyway 마이그레이션 1건 | 1 |
 | ErrorCode 신규 등록 | 도메인/서비스 변경에 합류 가능, 단독이면 분리 |
-| ADR 추가 | **반드시 별도 커밋**, scope = `adr` ([`adr.md`](./adr.md) §5 참조) |
+| ADR 추가 | **반드시 별도 커밋**, scope = `adr` ([`update-docs/adr.md`](./update-docs/adr.md) §5 참조) |
 
 **한 커밋에 묶지 않을 것**:
 - 서로 다른 BC의 변경.
@@ -189,24 +189,34 @@ description(선택) 구조로 재정의.
 
 ---
 
-## 6. Push 타이밍
+## 6. Push 타이밍 (판단 기반)
 
-### 6.1 Story 종료 시 push (자동)
+Push는 **자동·강제 행위가 아니다.** Story가 끝났다고 해서 무조건 push하지 않는다. 의미 있는 누적이 만들어졌거나 push가 필요해 보이는 순간에 **사용자에게 한 줄 보고하고 확인 후 진행**한다.
 
-각 Story 작업이 끝날 때마다 **현재 Epic 브랜치를 origin으로 push**한다 (Epic 브랜치가 누적된 채로 incremental 업데이트). 다음 조건이 모두 충족된 시점.
+### 6.1 Push 권장 판단 신호
 
-- 그 Story의 모든 의미 단위 커밋이 완료되었다.
-- Story 본문의 Acceptance Criteria가 모두 충족되었거나, 미충족 항목에 대해 사용자가 인지·동의했다.
-- `./gradlew compileJava`가 통과한다 (가능하면 `./gradlew test`도 통과).
+다음 중 하나 이상이 충족되면 **push 권장**으로 판단하고 사용자에게 1줄 보고 + 확인 요청.
 
-명령:
-- 첫 push (브랜치 생성 직후): `git push -u origin {epic-branch}` — `§1.5`에서 자동 등록.
-- Story 종료 시 추가 push: `git push`.
+- Story가 1개 이상 완료됐고 **여러 의미 단위 커밋이 누적**되었다 (통상 3개 이상).
+- 새 도메인·API·스키마 변경처럼 **외부 가시성이 큰 변경**이 포함됐다.
+- 마지막 push 이후 **상당한 분량**이 누적됐다 (여러 Story 분량 또는 큰 단일 Story).
+- Epic의 **마지막 Story가 끝났다** (Epic 종료 직전 — PR 머지 준비).
+- 사용자가 곧 **컨텍스트 전환·중단**을 알린다 (백업 목적).
+- 위험성·되돌리기 어려움이 있는 다음 작업 진입 직전 (안전 백업).
 
-### 6.2 Story 중간 push 금지
+신호가 명확하지 않으면 push를 **거론하지 않고** 다음 Story 작업으로 넘어간다. 매 Story마다 push 권유를 반복하지 않는다.
 
-- Story 안의 의미 단위 커밋 중간에는 push하지 않는다 (Story가 끝나야 push).
-- 예외: 사용자가 명시적으로 "지금 push해줘"라고 요청한 경우.
+### 6.2 Push 확인 절차
+
+1. 판단 후 사용자에게 한 줄 보고. 예:
+   - `Story-002-2 완료, 누적 4커밋. 지금 push할까요? (이유: 외부 가시성 큰 API 추가 포함)`
+   - `Epic-002 마지막 Story 완료. 머지 직전 push 권장합니다.`
+2. 사용자 승인 → push 실행.
+   - **원격 브랜치가 없으면 (첫 push)**: `git push -u origin {epic-branch}` (§1.5에서 미루어 둔 원격 등록을 이 시점에 함께 수행).
+   - **이후 push**: `git push`.
+3. 사용자가 "나중에"라고 하면 그대로 보류. **다음 push 후보 신호가 새로 충족되기 전까지 push를 다시 거론하지 않는다.** (반복 권유 금지)
+4. 사용자가 명시적으로 "지금 push해줘"라고 요청하면 신호 평가 없이 즉시 진행 (Story 중간이어도 가능).
+5. push 전 사전 점검: uncommitted 변경 없음 + `./gradlew compileJava` 통과 (가능하면 `./gradlew test`도 통과).
 
 ### 6.3 develop / main push 금지
 
@@ -215,11 +225,13 @@ description(선택) 구조로 재정의.
 
 ---
 
-## 7. PR 문서 자동 생성 (Story 종료 push 직후)
+## 7. PR 문서 자동 생성 (push 시점에만)
 
-Epic 1개에 PR은 1개(`{type}/{NNN}-{slug} → develop`). Story가 끝날 때마다 push와 함께 **PR 본문 초안을 통째로 갱신해 출력**한다 — 누적 모드: Epic 시작부터 지금까지의 모든 Story를 합쳐 작성.
+Epic 1개에 PR은 1개(`{type}/{NNN}-{slug} → develop`). **push가 실제로 일어나는 시점**에만 push와 함께 PR 본문 초안을 통째로 갱신해 출력한다 — 누적 모드: Epic 시작부터 지금까지의 완료 Story 전부를 합쳐 작성.
 
-사용자는 첫 Story push 시 GitHub UI에서 PR을 생성하고, 이후 Story push마다 출력된 새 본문으로 PR description을 덮어쓴다.
+push를 보류한 Story 종료에는 PR 본문 초안을 생성하지 않는다 — 다음 push 시점에 그 사이 누적된 Story들이 한 번에 반영된다.
+
+사용자는 **첫 push 시** GitHub UI에서 PR을 생성하고, 이후 push마다 출력된 새 본문으로 PR description을 덮어쓴다.
 
 ### 7.1 PR 제목
 
@@ -313,13 +325,15 @@ Epic 안의 각 Story Acceptance Criteria를 그룹핑해 체크 표시:
 - 파일로 저장하지 않는다 (private-docs 단발 운영 원칙과 충돌 방지).
 - 사용자가 명시적으로 "PR 초안 파일로 저장해줘"라고 요청하면 그때만 저장.
 
-### 7.5 첫 Story push vs 이후 Story push
+### 7.5 push 시점별 출력
 
 | 시점 | Claude 출력 | 사용자 액션 |
 | --- | --- | --- |
-| Epic의 첫 Story 종료 push | PR 본문 초안 (Story 1개 분량) + "GitHub에서 PR 생성: `{type}/{NNN}-{slug} → develop`" | GitHub에서 PR 생성, 본문 붙여넣기 |
-| Epic의 2번째 이후 Story 종료 push | 누적 PR 본문 초안 (지금까지 모든 Story 포함) + "기존 PR description을 이 본문으로 덮어쓰기" | 기존 PR description을 새 본문으로 갱신 |
-| Epic 마지막 Story 종료 push | 최종 PR 본문 초안 + "PR 머지 가능 상태" | 최종 본문으로 갱신 후 PR 머지 |
+| Epic의 **첫 push** (누적 Story 1개 이상) | PR 본문 초안 (누적 Story 분량) + "GitHub에서 PR 생성: `{type}/{NNN}-{slug} → develop`" | GitHub에서 PR 생성, 본문 붙여넣기 |
+| Epic의 **이후 push** | 누적 PR 본문 초안 (지금까지 모든 완료 Story 포함) + "기존 PR description을 이 본문으로 덮어쓰기" | 기존 PR description을 새 본문으로 갱신 |
+| Epic **마지막 push** (Epic 종료 직전) | 최종 PR 본문 초안 + "PR 머지 가능 상태" | 최종 본문으로 갱신 후 PR 머지 |
+
+한 번의 push가 여러 Story를 한꺼번에 반영할 수 있다 (§6 판단 기반으로 묶여 push되는 경우).
 
 ---
 
@@ -353,21 +367,26 @@ Story 작업 종료 시 다음 항목을 포함해 보고한다.
 
 1. 이번 Story에서 생성된 커밋 한 줄 요약 (`git log --oneline` 중 `[Story-{NNN}-{N}]` 필터).
 2. 이번 Story에서 추가된 ADR이 있으면 번호와 한 줄 요약.
-3. **push 결과**: Epic 브랜치명 + push 성공 여부.
-4. **PR 본문 초안**: §7.2 템플릿대로 markdown 코드 블록 출력 (누적 모드).
-5. 사용자 다음 단계:
-   - 첫 Story push: GitHub에서 PR 생성 + 본문 붙여넣기.
-   - 이후 Story push: 기존 PR description을 새 본문으로 갱신.
-   - Epic 마지막 Story push: 본문 갱신 후 PR 머지.
+3. update-docs 종료 트리거 패키지(architecture, dict, table-spec, test) 갱신 후보를 사용자에게 1줄씩 보고 ([`update-docs.md`](./update-docs.md) §5 체크리스트).
+4. **push 판단** (§6.1 신호 평가):
+   - **신호 충족** → push 권장 1줄 보고 + 사용자 확인 요청 (§6.2 절차).
+   - **신호 미충족** → push 거론 없이 누적 커밋 상태만 보고하고 다음 Story 대기.
+5. **PR 본문 초안**: push가 실제 실행된 경우에만 §7.2 템플릿대로 출력 (누적 모드). push 보류 시 미출력.
 
-### 보고 예시 (Epic 002의 2번째 Story 종료 시)
+### 보고 예시 — push 권장·실행 케이스 (Epic 002의 누적 push 시점)
 
 ```
-Story-002-2 완료. feat/002-axis-topic-migration에 3개 커밋이 추가되어 origin에 push되었습니다.
+Story-002-2 완료. 로컬에 3개 커밋이 추가되어 누적 6커밋 (Story-002-1+002-2).
 
 이번 Story 커밋:
   4d50f81 feat(learningfacade): 주제 부분 수정 + 다건 추가 + 순서 변경 [Story-002-2]
   ...
+
+push 권장합니다 — 누적 6커밋 + 새 API 추가 포함 (외부 가시성 큰 변경). 진행할까요?
+
+(승인 받은 뒤 push 실행)
+
+feat/002-axis-topic-migration에 push 완료.
 
 ---
 
@@ -385,8 +404,21 @@ Story-002-1, Story-002-2 완료. Story-002-3 미시작.
 ```
 
 다음 단계:
-- 기존 GitHub PR (feat/002-axis-topic-migration → develop) description을 위 본문으로 갱신.
+- (첫 push면) GitHub에서 PR 생성 + 본문 붙여넣기. / (이후 push면) 기존 PR description을 위 본문으로 갱신.
 - 다음 Story 명령을 받으면 같은 브랜치에서 Story-002-3 작업 시작.
+```
+
+### 보고 예시 — push 보류 케이스
+
+```
+Story-002-2 완료. feat/002-axis-topic-migration에 3개 커밋 추가 (로컬 누적 3커밋).
+
+이번 Story 커밋:
+  ...
+
+push는 보류합니다 (누적 3커밋, 외부 가시성 작은 변경 — 다음 Story와 묶어 §6.1 신호 강해지면 다시 보고). PR 본문 초안은 다음 push 시점에 누적 갱신.
+
+다음 Story 명령을 받으면 같은 브랜치에서 Story-002-3 작업 시작.
 ```
 
 ---

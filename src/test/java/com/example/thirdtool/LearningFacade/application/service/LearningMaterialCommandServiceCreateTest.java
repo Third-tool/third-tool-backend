@@ -1,6 +1,7 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialCommand;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.AxisTopic;
 import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
@@ -76,11 +77,17 @@ class LearningMaterialCommandServiceCreateTest {
         });
     }
 
+    private LearningMaterialCommand.CreateMaterial cmd(String name, String materialType, String url,
+                                                       String author, String platform, String aiProvider,
+                                                       String webSource, String memo, List<Long> linkedTopicIds) {
+        return new LearningMaterialCommand.CreateMaterial(
+                user.getId(), name, materialType, url, author, platform, aiProvider, webSource, memo, linkedTopicIds);
+    }
+
     @Test
     @DisplayName("createMaterial_BOOK_부가속성_5종_정상_등록")
     void createMaterial_BOOK_with_all_optional_attributes() {
-        CreateMaterial response = service.createMaterial(
-                user.getId(),
+        CreateMaterial response = service.createMaterial(cmd(
                 "Real MySQL 8.0",
                 "BOOK",
                 "https://example.com/real-mysql",
@@ -89,8 +96,7 @@ class LearningMaterialCommandServiceCreateTest {
                 "Claude",
                 "Notion",
                 "메모",
-                List.of()
-        );
+                List.of()));
 
         assertThat(response.materialType()).isEqualTo("BOOK");
         assertThat(response.author()).isEqualTo("백은빈, 이성욱");
@@ -104,15 +110,13 @@ class LearningMaterialCommandServiceCreateTest {
     @Test
     @DisplayName("createMaterial_AI_CONVERSATION_정상_등록")
     void createMaterial_AI_CONVERSATION_valid() {
-        CreateMaterial response = service.createMaterial(
-                user.getId(),
+        CreateMaterial response = service.createMaterial(cmd(
                 "JPA N+1 디버깅",
                 "AI_CONVERSATION",
                 "https://claude.ai/chat/...",
                 null, null, "Claude", null,
                 "N+1 발생 원인 정리",
-                null
-        );
+                null));
 
         assertThat(response.materialType()).isEqualTo("AI_CONVERSATION");
         assertThat(response.aiProvider()).isEqualTo("Claude");
@@ -122,9 +126,9 @@ class LearningMaterialCommandServiceCreateTest {
     @Test
     @DisplayName("createMaterial_알수없는_materialType_MATERIAL_TYPE_INVALID_예외")
     void createMaterial_unknown_materialType_invalid_exception() {
-        assertThatThrownBy(() -> service.createMaterial(
-                user.getId(), "이름", "UNKNOWN_TYPE", null,
-                null, null, null, null, null, null))
+        assertThatThrownBy(() -> service.createMaterial(cmd(
+                "이름", "UNKNOWN_TYPE", null,
+                null, null, null, null, null, null)))
                 .isInstanceOf(LearningFacadeDomainException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LEARNING_MATERIAL_TYPE_INVALID);
     }
@@ -133,9 +137,9 @@ class LearningMaterialCommandServiceCreateTest {
     @DisplayName("createMaterial_구_TOP_DOWN_값_MATERIAL_TYPE_INVALID_예외")
     void createMaterial_legacy_TOP_DOWN_invalid_exception() {
         // 구 enum 값(TOP_DOWN/BOTTOM_UP)도 더 이상 허용되지 않는다 (api §16 §22)
-        assertThatThrownBy(() -> service.createMaterial(
-                user.getId(), "이름", "TOP_DOWN", null,
-                null, null, null, null, null, null))
+        assertThatThrownBy(() -> service.createMaterial(cmd(
+                "이름", "TOP_DOWN", null,
+                null, null, null, null, null, null)))
                 .isInstanceOf(LearningFacadeDomainException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LEARNING_MATERIAL_TYPE_INVALID);
     }
@@ -143,9 +147,9 @@ class LearningMaterialCommandServiceCreateTest {
     @Test
     @DisplayName("createMaterial_materialType_blank_MATERIAL_TYPE_REQUIRED_예외")
     void createMaterial_blank_materialType_required_exception() {
-        assertThatThrownBy(() -> service.createMaterial(
-                user.getId(), "이름", "   ", null,
-                null, null, null, null, null, null))
+        assertThatThrownBy(() -> service.createMaterial(cmd(
+                "이름", "   ", null,
+                null, null, null, null, null, null)))
                 .isInstanceOf(LearningFacadeDomainException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LEARNING_MATERIAL_TYPE_REQUIRED);
     }
@@ -153,9 +157,9 @@ class LearningMaterialCommandServiceCreateTest {
     @Test
     @DisplayName("createMaterial_materialType_null_MATERIAL_TYPE_REQUIRED_예외")
     void createMaterial_null_materialType_required_exception() {
-        assertThatThrownBy(() -> service.createMaterial(
-                user.getId(), "이름", null, null,
-                null, null, null, null, null, null))
+        assertThatThrownBy(() -> service.createMaterial(cmd(
+                "이름", null, null,
+                null, null, null, null, null, null)))
                 .isInstanceOf(LearningFacadeDomainException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LEARNING_MATERIAL_TYPE_REQUIRED);
     }
@@ -163,10 +167,10 @@ class LearningMaterialCommandServiceCreateTest {
     @Test
     @DisplayName("createMaterial_linkedTopicIds_전달_시_TopicMaterial_저장과_커버리지_재계산_트리거")
     void createMaterial_with_linkedTopicIds_triggers_coverage_recalc() {
-        service.createMaterial(
-                user.getId(), "이름", "BOOK", null,
+        service.createMaterial(cmd(
+                "이름", "BOOK", null,
                 null, null, null, null, null,
-                List.of(100L));
+                List.of(100L)));
 
         verify(topicMaterialRepository, times(1)).save(any(TopicMaterial.class));
         verify(coverageRecalculator, times(1)).recalculate(topic);
@@ -175,10 +179,10 @@ class LearningMaterialCommandServiceCreateTest {
     @Test
     @DisplayName("createMaterial_linkedTopicIds_빈_리스트는_TopicMaterial_저장_안함")
     void createMaterial_empty_linkedTopicIds_no_link_no_recalc() {
-        service.createMaterial(
-                user.getId(), "이름", "WEB_RESOURCE", null,
+        service.createMaterial(cmd(
+                "이름", "WEB_RESOURCE", null,
                 null, null, null, null, null,
-                List.of());
+                List.of()));
 
         verify(topicMaterialRepository, never()).save(any(TopicMaterial.class));
         verify(coverageRecalculator, never()).recalculate(any(AxisTopic.class));

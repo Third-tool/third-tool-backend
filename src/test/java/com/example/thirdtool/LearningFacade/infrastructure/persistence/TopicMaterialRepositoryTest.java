@@ -52,7 +52,7 @@ class TopicMaterialRepositoryTest {
         topic = axis.addTopic("REST API 설계 원칙", null);
         em.flush();
 
-        material = LearningMaterial.create(facade, "DDD 책", MaterialType.TOP_DOWN, "https://e.com/ddd");
+        material = LearningMaterial.create(facade, "DDD 책", MaterialType.BOOK, "https://e.com/ddd");
         em.persist(material);
         em.flush();
     }

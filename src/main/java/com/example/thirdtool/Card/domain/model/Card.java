@@ -183,15 +183,17 @@ public class Card {
     }
 
     public void removeKeyword(Long keywordCueId) {
+        // size 우선 검증 — 마지막 keyword는 어떤 id를 받든 제거 불가 (도메인 규칙).
+        // 이 순서는 keywordCueId가 null이거나 미영속 엔티티 id(null)인 경우의 NPE도 방지.
+        if (keywordCues.size() <= 1) {
+            throw CardDomainException.of(ErrorCode.CARD_KEYWORD_LAST_CANNOT_REMOVE);
+        }
         KeywordCue target = keywordCues.stream()
-                                       .filter(c -> keywordCueId.equals(c.getId()))
+                                       .filter(c -> java.util.Objects.equals(keywordCueId, c.getId()))
                                        .findFirst()
                                        .orElseThrow(() -> CardDomainException.of(
                                                ErrorCode.CARD_KEYWORD_NOT_FOUND,
                                                "keywordCueId=" + keywordCueId));
-        if (keywordCues.size() <= 1) {
-            throw CardDomainException.of(ErrorCode.CARD_KEYWORD_LAST_CANNOT_REMOVE);
-        }
         keywordCues.remove(target);
     }
 

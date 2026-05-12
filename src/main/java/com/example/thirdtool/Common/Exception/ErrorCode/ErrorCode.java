@@ -70,7 +70,8 @@ public enum ErrorCode {
     LEARNING_MATERIAL_NOT_FOUND("LM001",                          "학습 자료를 찾을 수 없습니다.",                                  HttpStatus.NOT_FOUND),
     LEARNING_MATERIAL_PROFICIENCY_UNRATED_NOT_ALLOWED("LM002",    "숙련도는 UNRATED로 되돌릴 수 없습니다.",                         HttpStatus.BAD_REQUEST),
     LEARNING_MATERIAL_NAME_BLANK("LM005",                         "자료명은 비어 있을 수 없습니다.",                                HttpStatus.BAD_REQUEST),
-    LEARNING_MATERIAL_TYPE_REQUIRED("LM006",                      "자료 유형(Top-down / Bottom-up)을 선택해야 합니다.",              HttpStatus.BAD_REQUEST),
+    LEARNING_MATERIAL_TYPE_REQUIRED("LM006",                      "자료 유형을 선택해야 합니다.",                                   HttpStatus.BAD_REQUEST),
+    LEARNING_MATERIAL_TYPE_INVALID("LM007",                       "알 수 없는 자료 유형입니다.",                                    HttpStatus.BAD_REQUEST),
 
     // ─── TopicMaterial (v2) ────────────────────────────────
     LEARNING_TOPIC_MATERIAL_ALREADY_LINKED("TM001", "이미 연결된 주제입니다.",       HttpStatus.CONFLICT),

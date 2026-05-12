@@ -40,6 +40,21 @@ public class LearningMaterial {
     @Column(name = "url", length = 2048)
     private String url;
 
+    @Column(name = "author", length = 100)
+    private String author;
+
+    @Column(name = "platform", length = 100)
+    private String platform;
+
+    @Column(name = "ai_provider", length = 50)
+    private String aiProvider;
+
+    @Column(name = "web_source", length = 50)
+    private String webSource;
+
+    @Column(name = "memo", length = 1000)
+    private String memo;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "proficiency_level", nullable = false, length = 20)
     private ProficiencyLevel proficiencyLevel;
@@ -63,24 +78,57 @@ public class LearningMaterial {
     private LearningMaterial(LearningFacade facade,
                              String name,
                              MaterialType materialType,
-                             String url) {
+                             String url,
+                             String author,
+                             String platform,
+                             String aiProvider,
+                             String webSource,
+                             String memo) {
         this.facade           = facade;
         this.name             = name;
         this.materialType     = materialType;
         this.url              = url;
+        this.author           = author;
+        this.platform         = platform;
+        this.aiProvider       = aiProvider;
+        this.webSource        = webSource;
+        this.memo             = memo;
         this.proficiencyLevel = ProficiencyLevel.UNRATED;
     }
 
     public static LearningMaterial create(LearningFacade facade,
                                           String name,
                                           MaterialType materialType,
-                                          String url) {
+                                          String url,
+                                          String author,
+                                          String platform,
+                                          String aiProvider,
+                                          String webSource,
+                                          String memo) {
         requireNonNull(facade, "facade");
         validateName(name);
         if (materialType == null) {
             throw LearningFacadeDomainException.of(ErrorCode.LEARNING_MATERIAL_TYPE_REQUIRED);
         }
-        return new LearningMaterial(facade, name.trim(), materialType, url);
+        return new LearningMaterial(
+                facade,
+                name.trim(),
+                materialType,
+                normalizeOptional(url),
+                normalizeOptional(author),
+                normalizeOptional(platform),
+                normalizeOptional(aiProvider),
+                normalizeOptional(webSource),
+                normalizeOptional(memo)
+        );
+    }
+
+    // url·부가 속성 미입력 케이스의 등록 편의 팩토리 (기존 호출자 호환)
+    public static LearningMaterial create(LearningFacade facade,
+                                          String name,
+                                          MaterialType materialType,
+                                          String url) {
+        return create(facade, name, materialType, url, null, null, null, null, null);
     }
 
     public void updateName(String newName) {
@@ -110,5 +158,14 @@ public class LearningMaterial {
                     fieldName + "은(는) null일 수 없습니다."
             );
         }
+    }
+
+    // 선택적 String 필드: trim 후 빈 문자열이면 null로 정규화 (domain-conventions §1)
+    private static String normalizeOptional(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String trimmed = raw.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

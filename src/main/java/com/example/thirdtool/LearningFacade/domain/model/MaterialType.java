@@ -8,16 +8,34 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum MaterialType {
 
-    TOP_DOWN(
-            "🔽 Top-down",
-            "개념·원리 중심 자료. 예: 책, 강의, 아티클"
+    BOOK(
+            "📖 책",
+            "제목·저자 중심의 정적 자료"
     ),
 
-    BOTTOM_UP(
-            "🔼 Bottom-up",
-            "실습·경험 중심 자료. 예: 프로젝트, 과제, 실습 예제"
+    COURSE(
+            "🎓 강의",
+            "플랫폼·강의명 기반의 정적 자료"
+    ),
+
+    AI_CONVERSATION(
+            "💬 AI 대화",
+            "Claude / ChatGPT / Gemini 등 AI와의 동적 대화 자료"
+    ),
+
+    WEB_RESOURCE(
+            "🌐 웹 리소스",
+            "Notion / 블로그 / 공식 문서 등 살아 움직이는 동적 자료"
     );
 
     private final String displayName;
     private final String description;
+
+    public boolean isStatic() {
+        return this == BOOK || this == COURSE;
+    }
+
+    public boolean isDynamic() {
+        return !isStatic();
+    }
 }

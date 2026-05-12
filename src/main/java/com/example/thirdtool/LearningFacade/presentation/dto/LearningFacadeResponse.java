@@ -49,6 +49,36 @@ public class LearningFacadeResponse {
         }
     }
 
+    // ──────────────────────────────────────────────────────
+    // Topic 삭제 이력 (Story-003-4)
+    // ──────────────────────────────────────────────────────
+
+    public record TopicDeletionItem(
+            Long deletionId,
+            Long originalTopicId,
+            String name,
+            String description,
+            int revisionCount,
+            LocalDateTime deletedAt
+    ) {
+        public static TopicDeletionItem of(TopicDeletionRecord record) {
+            return new TopicDeletionItem(
+                    record.getId(),
+                    record.getOriginalTopicId(),
+                    record.getName(),
+                    record.getDescription(),
+                    record.getRevisionCount(),
+                    record.getDeletedAt()
+            );
+        }
+    }
+
+    public record TopicDeletions(
+            Long axisId,
+            List<TopicDeletionItem> deletions
+    ) {}
+
+
 
     // ──────────────────────────────────────────────────────
     // 공유 내부 레코드

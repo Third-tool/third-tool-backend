@@ -5,6 +5,7 @@ import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomai
 import com.example.thirdtool.LearningFacade.domain.model.*;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.RevisionReasonOptionRepository;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicDeletionRecordRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicRevisionRepository;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeRequest;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.*;
@@ -23,6 +24,7 @@ public class LearningFacadeCommandService {
     private final LearningFacadeRepository facadeRepository;
     private final TopicRevisionRepository topicRevisionRepository;
     private final RevisionReasonOptionRepository revisionReasonOptionRepository;
+    private final TopicDeletionRecordRepository topicDeletionRecordRepository;
 
     // ──────────────────────────────────────────────────────
     // 1. LearningFacade 생성
@@ -167,6 +169,11 @@ public class LearningFacadeCommandService {
     public void removeTopic(UserEntity user, Long axisId, Long topicId) {
         LearningFacade facade = loadFacade(user.getId());
         LearningAxis axis = findAxis(facade, axisId);
+
+        // 삭제 직전 스냅샷을 archive로 보존 (ADR003: AxisTopic은 soft delete 미적용 — archive 패턴)
+        AxisTopic topic = axis.findTopic(topicId);
+        topicDeletionRecordRepository.save(TopicDeletionRecord.of(topic));
+
         axis.removeTopic(topicId);
         facadeRepository.save(facade);
     }

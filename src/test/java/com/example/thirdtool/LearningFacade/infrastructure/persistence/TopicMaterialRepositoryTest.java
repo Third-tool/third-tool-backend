@@ -94,4 +94,47 @@ class TopicMaterialRepositoryTest {
                 topic.getId(), ProficiencyLevel.MASTERED);
         assertThat(hasMastered).isTrue();
     }
+
+    @Test
+    @DisplayName("findByTopicIdIn (Story 4-3) — 주제 id 리스트로 매핑을 한 번에 조회하고 material을 fetch한다")
+    void findByTopicIdIn_batch_fetch() {
+        // given — 같은 axis에 추가 주제 1개 + 자료 1개 추가
+        com.example.thirdtool.LearningFacade.domain.model.LearningAxis sameAxis =
+                topic.getAxis();
+        com.example.thirdtool.LearningFacade.domain.model.AxisTopic secondTopic =
+                sameAxis.addTopic("OpenAPI 명세", null);
+        em.flush();
+
+        com.example.thirdtool.LearningFacade.domain.model.LearningMaterial secondMaterial =
+                com.example.thirdtool.LearningFacade.domain.model.LearningMaterial.create(
+                        topic.getAxis().getFacade(),
+                        "Notion 메모",
+                        com.example.thirdtool.LearningFacade.domain.model.MaterialType.WEB_RESOURCE,
+                        null);
+        em.persist(secondMaterial);
+
+        repository.save(TopicMaterial.create(topic, material));
+        repository.save(TopicMaterial.create(secondTopic, secondMaterial));
+        em.flush();
+        em.clear();
+
+        // when
+        java.util.List<TopicMaterial> results =
+                repository.findByTopicIdIn(java.util.List.of(topic.getId(), secondTopic.getId()));
+
+        // then
+        assertThat(results).hasSize(2);
+        assertThat(results)
+                .extracting(tm -> tm.getMaterial().getMaterialType())
+                .containsExactlyInAnyOrder(
+                        com.example.thirdtool.LearningFacade.domain.model.MaterialType.BOOK,
+                        com.example.thirdtool.LearningFacade.domain.model.MaterialType.WEB_RESOURCE);
+    }
+
+    @Test
+    @DisplayName("findByTopicIdIn 빈 리스트 입력 시 DB 호출 없이 빈 결과 반환 (Adapter 가드)")
+    void findByTopicIdIn_empty_input_returns_empty() {
+        java.util.List<TopicMaterial> result = repository.findByTopicIdIn(java.util.List.of());
+        assertThat(result).isEmpty();
+    }
 }

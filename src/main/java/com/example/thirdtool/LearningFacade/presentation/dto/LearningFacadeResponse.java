@@ -89,15 +89,21 @@ public class LearningFacadeResponse {
             String name,
             String description,
             int displayOrder,
-            String coverageStatus
+            String coverageStatus,
+            MaterialBreakdown materialBreakdown
     ) {
         public static TopicItem of(AxisTopic topic) {
+            return of(topic, null);
+        }
+
+        public static TopicItem of(AxisTopic topic, MaterialBreakdown materialBreakdown) {
             return new TopicItem(
                     topic.getId(),
                     topic.getName(),
                     topic.getDescription(),
                     topic.getDisplayOrder(),
-                    topic.getCoverageStatus().name()
+                    topic.getCoverageStatus().name(),
+                    materialBreakdown
             );
         }
     }
@@ -109,12 +115,17 @@ public class LearningFacadeResponse {
             List<TopicItem> topics
     ) {
         public static AxisItem of(LearningAxis axis) {
+            return of(axis, java.util.Map.of());
+        }
+
+        public static AxisItem of(LearningAxis axis,
+                                  java.util.Map<Long, MaterialBreakdown> breakdownByTopic) {
             return new AxisItem(
                     axis.getId(),
                     axis.getName(),
                     axis.getDisplayOrder(),
                     axis.getTopics().stream()
-                            .map(TopicItem::of)
+                            .map(t -> TopicItem.of(t, breakdownByTopic.get(t.getId())))
                             .collect(Collectors.toList())
             );
         }
@@ -159,6 +170,11 @@ public class LearningFacadeResponse {
             LocalDateTime updatedAt
     ) {
         public static FacadeDetail of(LearningFacade facade) {
+            return of(facade, java.util.Map.of());
+        }
+
+        public static FacadeDetail of(LearningFacade facade,
+                                      java.util.Map<Long, MaterialBreakdown> breakdownByTopic) {
             List<AxisTopic> allTopics = facade.getAxes().stream()
                     .flatMap(axis -> axis.getTopics().stream())
                     .collect(Collectors.toList());
@@ -173,7 +189,9 @@ public class LearningFacadeResponse {
                     facade.getConcept(),
                     new CoverageSummary(totalTopics, uncoveredTopics),
                     facade.isAxisCountExceedsRecommended(),
-                    facade.getAxes().stream().map(AxisItem::of).collect(Collectors.toList()),
+                    facade.getAxes().stream()
+                            .map(axis -> AxisItem.of(axis, breakdownByTopic))
+                            .collect(Collectors.toList()),
                     facade.getCreatedAt(),
                     facade.getUpdatedAt()
             );

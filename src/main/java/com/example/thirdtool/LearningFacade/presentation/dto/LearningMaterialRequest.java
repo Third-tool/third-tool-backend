@@ -1,6 +1,5 @@
 package com.example.thirdtool.LearningFacade.presentation.dto;
 
-import com.example.thirdtool.LearningFacade.domain.model.MaterialType;
 import com.example.thirdtool.LearningFacade.domain.model.ProficiencyLevel;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,14 +8,25 @@ import java.util.List;
 
 public class LearningMaterialRequest {
 
+    /**
+     * 자료 등록 요청.
+     * materialType은 String으로 받아 Application Service에서 enum 변환 — 알 수 없는 값에 대해
+     * {@code LEARNING_MATERIAL_TYPE_INVALID} 도메인 예외로 응답한다 (api §16 / §22).
+     * 부가 속성 5종(author/platform/aiProvider/webSource/memo)은 모두 optional.
+     */
     public record CreateMaterial(
             @NotBlank
             String name,
 
-            @NotNull
-            MaterialType materialType,
+            @NotBlank
+            String materialType,
 
             String url,
+            String author,
+            String platform,
+            String aiProvider,
+            String webSource,
+            String memo,
             List<Long> linkedTopicIds
     ) {}
 

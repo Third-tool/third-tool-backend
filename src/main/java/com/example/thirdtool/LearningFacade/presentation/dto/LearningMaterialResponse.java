@@ -65,7 +65,7 @@ public class LearningMaterialResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 12. CreateMaterial
+    // 12. CreateMaterial — 부가 속성 5종 + linkedTopics + 커버리지 반영 결과
     // ──────────────────────────────────────────────────────
 
     public record CreateMaterial(
@@ -73,6 +73,11 @@ public class LearningMaterialResponse {
             String name,
             String materialType,
             String url,
+            String author,
+            String platform,
+            String aiProvider,
+            String webSource,
+            String memo,
             String proficiencyLevel,
             List<LinkedTopicItem> linkedTopics,
             LocalDateTime createdAt
@@ -83,6 +88,11 @@ public class LearningMaterialResponse {
                     material.getName(),
                     material.getMaterialType().name(),
                     material.getUrl(),
+                    material.getAuthor(),
+                    material.getPlatform(),
+                    material.getAiProvider(),
+                    material.getWebSource(),
+                    material.getMemo(),
                     material.getProficiencyLevel().name(),
                     material.getTopicMappings().stream()
                             .map(LinkedTopicItem::of)
@@ -93,7 +103,7 @@ public class LearningMaterialResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 13. MaterialSummary (목록)
+    // 13. MaterialSummary (목록) — 부가 속성 5종 동반
     // ──────────────────────────────────────────────────────
 
     public record MaterialSummary(
@@ -101,6 +111,11 @@ public class LearningMaterialResponse {
             String name,
             String materialType,
             String url,
+            String author,
+            String platform,
+            String aiProvider,
+            String webSource,
+            String memo,
             String proficiencyLevel,
             List<LinkedTopicSummary> linkedTopics,
             LocalDateTime createdAt
@@ -111,6 +126,11 @@ public class LearningMaterialResponse {
                     material.getName(),
                     material.getMaterialType().name(),
                     material.getUrl(),
+                    material.getAuthor(),
+                    material.getPlatform(),
+                    material.getAiProvider(),
+                    material.getWebSource(),
+                    material.getMemo(),
                     material.getProficiencyLevel().name(),
                     material.getTopicMappings().stream()
                             .map(LinkedTopicSummary::of)

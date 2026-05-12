@@ -1,6 +1,7 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.AxisTopic;
 import com.example.thirdtool.LearningFacade.domain.model.LearningFacade;
@@ -27,8 +28,8 @@ public class LearningFacadeQueryService {
     private final TopicMaterialRepository topicMaterialRepository;
 
     @Transactional(readOnly = true)
-    public FacadeDetail getFacade(Long userId) {
-        LearningFacade facade = facadeRepository.findByUserId(userId)
+    public FacadeDetail getFacade(LearningFacadeQuery.GetFacade query) {
+        LearningFacade facade = facadeRepository.findByUserId(query.userId())
                 .orElseThrow(() -> LearningFacadeDomainException.of(ErrorCode.LEARNING_FACADE_NOT_FOUND));
 
         List<Long> topicIds = facade.getAxes().stream()

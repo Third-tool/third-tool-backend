@@ -3,7 +3,7 @@ package com.example.thirdtool.LearningFacade.application.dto;
 /**
  * LearningFacade Query 입력 객체 묶음.
  *
- * <p>presentation.dto.Request 누수 방지 + Service 메서드 시그니처를 Query record 1개로 통일.
+ * <p>presentation 레이어 Request 누수 방지 + Service 메서드 시그니처를 Query record 1개로 통일.
  * 인자가 필요 없는 Query({@link GetActiveReasonOptions})도 명시적 marker record로 둔다.
  */
 public final class LearningFacadeQuery {

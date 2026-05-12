@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * LearningMaterial Command 입력 객체 묶음.
  *
- * <p>presentation.dto.Request 누수 방지 + Service 메서드 시그니처를 Command record 1개로 통일.
+ * <p>presentation 레이어 Request 누수 방지 + Service 메서드 시그니처를 Command record 1개로 통일.
  * {@code materialType}은 String으로 받아 Service에서 enum 변환 — 알 수 없는 값은
  * {@code MATERIAL_TYPE_INVALID} 도메인 예외로 응답 (api §16 / §22).
  */

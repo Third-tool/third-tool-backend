@@ -20,6 +20,14 @@ public class TopicMaterialRepositoryAdapter implements TopicMaterialRepository {
     }
 
     @Override
+    public List<TopicMaterial> findByTopicIdIn(List<Long> topicIds) {
+        if (topicIds == null || topicIds.isEmpty()) {
+            return List.of();
+        }
+        return jpa.findByTopicIdIn(topicIds);
+    }
+
+    @Override
     public List<TopicMaterial> findByMaterialId(Long materialId) {
         return jpa.findByMaterialId(materialId);
     }

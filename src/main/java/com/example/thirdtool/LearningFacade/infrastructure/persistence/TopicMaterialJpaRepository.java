@@ -22,6 +22,13 @@ public interface TopicMaterialJpaRepository extends JpaRepository<TopicMaterial,
 
     @Query("""
             SELECT tm FROM TopicMaterial tm
+            JOIN FETCH tm.material
+            WHERE tm.topic.id IN :topicIds
+            """)
+    List<TopicMaterial> findByTopicIdIn(@Param("topicIds") List<Long> topicIds);
+
+    @Query("""
+            SELECT tm FROM TopicMaterial tm
             JOIN FETCH tm.topic t
             JOIN FETCH t.axis
             WHERE tm.material.id = :materialId

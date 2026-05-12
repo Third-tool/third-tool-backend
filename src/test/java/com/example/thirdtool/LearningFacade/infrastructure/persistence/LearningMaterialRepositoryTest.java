@@ -162,4 +162,36 @@ class LearningMaterialRepositoryTest {
                         MaterialType.AI_CONVERSATION,
                         MaterialType.WEB_RESOURCE);
     }
+
+    @Test
+    @DisplayName("S21 (Story-003-4 / Story 4-2): 4종 ProficiencyLevel이 모두 영속화·재조회된다 (CHECK 제약 통과)")
+    void S21_persist_proficiency_level_4_values() {
+        // given — 4개 자료를 각각 다른 숙련도로 설정
+        LearningMaterial unrated = LearningMaterial.create(facade, "미평가", MaterialType.BOOK, null);
+        LearningMaterial unfamiliar = LearningMaterial.create(facade, "낯섦", MaterialType.BOOK, null);
+        unfamiliar.updateProficiencyLevel(ProficiencyLevel.UNFAMILIAR);
+        LearningMaterial gettingUsed = LearningMaterial.create(facade, "익숙해지는중", MaterialType.BOOK, null);
+        gettingUsed.updateProficiencyLevel(ProficiencyLevel.GETTING_USED);
+        LearningMaterial mastered = LearningMaterial.create(facade, "마스터", MaterialType.BOOK, null);
+        mastered.updateProficiencyLevel(ProficiencyLevel.MASTERED);
+
+        em.persist(unrated);
+        em.persist(unfamiliar);
+        em.persist(gettingUsed);
+        em.persist(mastered);
+        em.flush();
+        em.clear();
+
+        // when
+        List<LearningMaterial> all = jpa.findByFacadeId(facade.getId());
+
+        // then
+        assertThat(all)
+                .extracting(LearningMaterial::getProficiencyLevel)
+                .containsExactlyInAnyOrder(
+                        ProficiencyLevel.UNRATED,
+                        ProficiencyLevel.UNFAMILIAR,
+                        ProficiencyLevel.GETTING_USED,
+                        ProficiencyLevel.MASTERED);
+    }
 }

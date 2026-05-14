@@ -27,7 +27,13 @@ public class LearningMaterialRequest {
             String aiProvider,
             String webSource,
             String memo,
-            List<Long> linkedTopicIds
+            List<Long> linkedTopicIds,
+
+            // Story-005-1: Deck 자동 생성용. null/공백이면 자료명을 Deck 이름으로 사용.
+            String deckName,
+            // Story-005-1: 동명 Deck 존재 시 자동 suffix `(2)` 부여로 진행할지 여부.
+            // null·미입력이면 false로 처리 (기본값) — 동명 발견 시 409.
+            Boolean forceCreateDeck
     ) {}
 
     public record UpdateMaterialName(

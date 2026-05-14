@@ -189,6 +189,7 @@ public LearningFacadeResponse.UpdateAxisName updateAxisName(
 | `Card → Deck` (`Deck` 참조) | ✅ | Card는 Deck 소속 |
 | `Deck → User` (`UserEntity` 참조) | ✅ | Deck이 소유 유저 보유 |
 | `Review → Card, Deck` | ✅ | ReviewSession이 카드를 순회 (ID 참조 권장, Aggregate 직접 포함 지양) |
+| `Deck → LearningFacade` (이벤트 import) | ✅ | `LearningMaterialCreatedEvent` 수신 — 동기 도메인 이벤트 단방향 협력 ([ADR007](adr/ADR007.md)) |
 | `BC ↔ BC` 양방향 의존 | ❌ | 사이클 → 양쪽 분리 또는 Domain Event 도입 검토 |
 | `Common → 특정 BC` | ❌ | Common은 BC 비의존 |
 | `infra → 특정 BC` | ❌ | infra는 어댑터, BC 비의존 |

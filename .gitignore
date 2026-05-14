@@ -45,3 +45,4 @@ application-dev.yml
 /private-docs/
 /workflow/
 /update-docs/
+.claude

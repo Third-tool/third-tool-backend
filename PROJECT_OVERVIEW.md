@@ -62,7 +62,7 @@ src/main/java/com/example/thirdtool/
 - **domain** — 비즈니스 규칙의 본진. Aggregate/Entity/VO와 도메인 예외.
 - **infrastructure** — JPA·QueryDSL Repository 구현, 외부 시스템 어댑터.
 
-> 패키지 구조 규칙과 의존 방향은 [`docs/architecture/package-structure-guide.md`](docs/architecture/package-structure-guide.md)에 상세히 정의되어 있습니다. 아키텍처 의사결정은 [`docs/architecture/adr/ADR001.md`](private-docs/adr/ADR001.md)를 참고하세요.
+> 패키지 구조 규칙과 의존 방향은 [`docs/architecture/package-structure-guide.md`](docs/architecture/package-structure-guide.md)에 상세히 정의되어 있습니다. 아키텍처 의사결정은 [`update-docs/adr/ADR001.md`](update-docs/adr/ADR001.md)를 참고하세요.
 
 ---
 

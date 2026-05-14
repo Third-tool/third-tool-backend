@@ -42,6 +42,9 @@ application-dev.yml
 .env
 
 ### ai workflow ###
+# 내부 문서 — GitHub 노출 차단 목적. Claude Code는 .gitignore 여부와 무관하게
+# working tree에 무조건 갱신한다 (개발자만 보는 자료).
 /private-docs/
 /workflow/
 /update-docs/
+.claude

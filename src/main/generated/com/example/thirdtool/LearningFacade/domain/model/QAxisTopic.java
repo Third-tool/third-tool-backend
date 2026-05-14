@@ -36,6 +36,8 @@ public class QAxisTopic extends EntityPathBase<AxisTopic> {
 
     public final StringPath name = createString("name");
 
+    public final NumberPath<Integer> revisionCount = createNumber("revisionCount", Integer.class);
+
     public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt", java.time.LocalDateTime.class);
 
     public QAxisTopic(String variable) {

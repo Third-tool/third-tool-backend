@@ -5,10 +5,14 @@ import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeComman
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.*;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningMaterialRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.RevisionReasonOptionRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicDeletionRecordRepository;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicMaterialRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicRevisionRepository;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.*;
+
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +26,8 @@ public class LearningFacadeCommandService {
     private final TopicRevisionRepository topicRevisionRepository;
     private final RevisionReasonOptionRepository revisionReasonOptionRepository;
     private final TopicDeletionRecordRepository topicDeletionRecordRepository;
+    private final LearningMaterialRepository learningMaterialRepository;
+    private final TopicMaterialRepository topicMaterialRepository;
 
     // ──────────────────────────────────────────────────────
     // 1. LearningFacade 생성
@@ -110,7 +116,14 @@ public class LearningFacadeCommandService {
         LearningAxis axis = findAxis(facade, command.axisId());
         AxisTopic topic = axis.addTopic(command.name(), command.description());
         facadeRepository.save(facade);
-        return AddTopic.of(topic);
+
+        // Story-004-2: 신규 주제는 항상 NO_MATERIAL이므로 "기존 자료에 연결하기" 후보를 함께 응답한다.
+        // 스펙: findByFacadeId + existsByTopicIdAndMaterialId 조합 (신규 Repository 메서드 도입 없음)
+        List<LinkableMaterialItem> linkable = learningMaterialRepository.findByFacadeId(facade.getId()).stream()
+                .filter(m -> !topicMaterialRepository.existsByTopicIdAndMaterialId(topic.getId(), m.getId()))
+                .map(LinkableMaterialItem::of)
+                .toList();
+        return AddTopic.of(topic, linkable);
     }
 
     // ──────────────────────────────────────────────────────

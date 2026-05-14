@@ -284,8 +284,22 @@ public class LearningFacadeResponse {
     }
 
     // ──────────────────────────────────────────────────────
-    // 8. AddTopic
+    // 8. AddTopic (Story-004-2: 자료 추가 유도 + 기존 자료 연결 후보)
     // ──────────────────────────────────────────────────────
+
+    public record LinkableMaterialItem(
+            Long materialId,
+            String name,
+            String materialType
+    ) {
+        public static LinkableMaterialItem of(LearningMaterial material) {
+            return new LinkableMaterialItem(
+                    material.getId(),
+                    material.getName(),
+                    material.getMaterialType().name()
+            );
+        }
+    }
 
     public record AddTopic(
             Long topicId,
@@ -293,16 +307,24 @@ public class LearningFacadeResponse {
             String name,
             String description,
             int displayOrder,
-            String coverageStatus
+            String coverageStatus,
+            boolean needsMaterialPrompt,
+            List<LinkableMaterialItem> linkableMaterials
     ) {
         public static AddTopic of(AxisTopic topic) {
+            return of(topic, List.of());
+        }
+
+        public static AddTopic of(AxisTopic topic, List<LinkableMaterialItem> linkableMaterials) {
             return new AddTopic(
                     topic.getId(),
                     topic.getAxis().getId(),
                     topic.getName(),
                     topic.getDescription(),
                     topic.getDisplayOrder(),
-                    topic.getCoverageStatus().name()
+                    topic.getCoverageStatus().name(),
+                    topic.isUncovered(),
+                    linkableMaterials == null ? List.of() : linkableMaterials
             );
         }
     }

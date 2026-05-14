@@ -49,7 +49,8 @@ class LearningMaterialCommandServiceCreateTest {
         coverageRecalculator = mock(CoverageRecalculator.class);
 
         service = new LearningMaterialCommandService(
-                facadeRepository, materialRepository, topicMaterialRepository, coverageRecalculator);
+                facadeRepository, materialRepository, topicMaterialRepository, coverageRecalculator,
+                mock(org.springframework.context.ApplicationEventPublisher.class));
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);
@@ -80,8 +81,11 @@ class LearningMaterialCommandServiceCreateTest {
     private LearningMaterialCommand.CreateMaterial cmd(String name, String materialType, String url,
                                                        String author, String platform, String aiProvider,
                                                        String webSource, String memo, List<Long> linkedTopicIds) {
+        // Story-005-1: deckName=null + forceCreateDeck=false (기본값) — 본 테스트는 Deck 자동 생성과 무관한
+        // 자료 등록 자체 검증에 집중하므로 이벤트 핸들러가 Mock된 publisher로 실행되지 않는다.
         return new LearningMaterialCommand.CreateMaterial(
-                user.getId(), name, materialType, url, author, platform, aiProvider, webSource, memo, linkedTopicIds);
+                user.getId(), name, materialType, url, author, platform, aiProvider, webSource, memo, linkedTopicIds,
+                null, false);
     }
 
     @Test

@@ -82,6 +82,14 @@ public class Deck {
     @Column(name = "learning_material_id", nullable = true)
     private Long learningMaterialId;
 
+    // ─── 진행 상태 (Story-005-2) ─────────────────────────────
+    // Card 추가/archive/returnToField 시점에 CardCommandService가 자동 갱신한다.
+    // Card 도메인 자체가 다른 Aggregate(Deck) 상태를 변경하지 않음 — Service 조율.
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "progress_status", nullable = false, length = 20)
+    private DeckProgressStatus progressStatus = DeckProgressStatus.NOT_STARTED;
+
     // ─── Soft Delete ──────────────────────────────────────
     @Column(nullable = false)
     private boolean deleted = false;
@@ -160,6 +168,43 @@ public class Deck {
      */
     public void markMaterialDeleted() {
         this.learningMaterialId = null;
+    }
+
+    // ─── 진행 상태 갱신 (Story-005-2) ─────────────────────────
+
+    /**
+     * NOT_STARTED → IN_PROGRESS 전용 마커. Deck에 첫 Card가 추가될 때 CardCommandService가 호출한다.
+     *
+     * <p><strong>멱등</strong>: 이미 IN_PROGRESS / COMPLETED이면 무시 — NOT_STARTED → IN_PROGRESS 전이만 수행.
+     * COMPLETED → IN_PROGRESS 회귀는 본 메서드 책임 아님. {@link #recalculateProgressStatus()}가 담당.
+     */
+    public void markInProgress() {
+        if (this.progressStatus == DeckProgressStatus.NOT_STARTED) {
+            this.progressStatus = DeckProgressStatus.IN_PROGRESS;
+        }
+    }
+
+    /**
+     * Card archive / returnToField 등 cards 상태가 바뀐 후 호출 (Story-005-2).
+     * soft delete된 Card는 제외하고 활성 Card만 기준:
+     * <ul>
+     *   <li>활성 Card 0개 → NOT_STARTED</li>
+     *   <li>모든 활성 Card가 ARCHIVE → COMPLETED</li>
+     *   <li>그 외 → IN_PROGRESS</li>
+     * </ul>
+     */
+    public void recalculateProgressStatus() {
+        List<Card> activeCards = this.cards.stream()
+                .filter(card -> !card.isDeleted())
+                .toList();
+
+        if (activeCards.isEmpty()) {
+            this.progressStatus = DeckProgressStatus.NOT_STARTED;
+            return;
+        }
+
+        boolean allArchived = activeCards.stream().allMatch(Card::isArchived);
+        this.progressStatus = allArchived ? DeckProgressStatus.COMPLETED : DeckProgressStatus.IN_PROGRESS;
     }
 
     public void updateName(String name) {

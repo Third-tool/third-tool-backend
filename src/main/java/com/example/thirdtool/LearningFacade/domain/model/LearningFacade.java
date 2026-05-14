@@ -120,6 +120,35 @@ public class LearningFacade {
         return axes.size() > RECOMMENDED_AXIS_LIMIT;
     }
 
+    /**
+     * 소속 모든 주제의 커버리지 분포를 인메모리로 집계한다.
+     * Aggregate Root가 단일 진입점으로 제공한다 — 외부에서 axes→topics를 직접 순회해 합산하지 않는다.
+     * 빈 Facade(축 0개 또는 모든 축의 주제 0개)는 모든 카운트가 0인 CoverageSummary를 반환한다.
+     */
+    public CoverageSummary getCoverageSummary() {
+        int uncovered = 0;
+        int partial   = 0;
+        int covered   = 0;
+        for (LearningAxis axis : axes) {
+            for (AxisTopic topic : axis.getTopics()) {
+                switch (topic.getCoverageStatus()) {
+                    case NO_MATERIAL -> uncovered++;
+                    case PARTIAL     -> partial++;
+                    case COVERED     -> covered++;
+                }
+            }
+        }
+        return CoverageSummary.of(uncovered, partial, covered);
+    }
+
+    /**
+     * 소속 주제 중 coverageStatus == NO_MATERIAL 인 것이 하나라도 있으면 true.
+     * getCoverageSummary().hasGap()과 동치지만 존재 여부 판단용 단축 경로.
+     */
+    public boolean hasUncoveredTopics() {
+        return axes.stream().anyMatch(LearningAxis::hasUncoveredTopics);
+    }
+
     public List<LearningAxis> getAxes() {
         return Collections.unmodifiableList(axes);
     }

@@ -134,6 +134,14 @@ public class AxisTopic {
     }
 
     /**
+     * 학습 자료가 하나도 연결되지 않은 상태(⚠️ 표시 대상)인지 여부.
+     * coverageStatus 분기를 호출 측이 반복하지 않도록 캡슐화한다.
+     */
+    public boolean isUncovered() {
+        return this.coverageStatus == CoverageStatus.NO_MATERIAL;
+    }
+
+    /**
      * displayOrder가 {@code focusThreshold} 이하면 "지금 집중 중"으로 본다.
      * Application Service가 상위 N개 주제에 isFocused 플래그를 표시할 때 사용한다.
      */

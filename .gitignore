@@ -44,5 +44,9 @@ application-dev.yml
 ### ai workflow ###
 /private-docs/
 /workflow/
-/update-docs/
+# update-docs는 ADR만 tracked (PR에 포함). 나머지 패키지는 외부 관리.
+/update-docs/architecture/
+/update-docs/dict/
+/update-docs/table-spec/
+/update-docs/test/
 .claude

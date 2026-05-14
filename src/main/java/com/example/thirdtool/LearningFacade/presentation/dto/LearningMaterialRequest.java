@@ -3,6 +3,7 @@ package com.example.thirdtool.LearningFacade.presentation.dto;
 import com.example.thirdtool.LearningFacade.domain.model.ProficiencyLevel;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
@@ -30,6 +31,8 @@ public class LearningMaterialRequest {
             List<Long> linkedTopicIds,
 
             // Story-005-1: Deck 자동 생성용. null/공백이면 자료명을 Deck 이름으로 사용.
+            // 길이 제한 100자 — deck.name VARCHAR(100) 컬럼 정합 (Reviewer C1).
+            @Size(max = 100)
             String deckName,
             // Story-005-1: 동명 Deck 존재 시 자동 suffix `(2)` 부여로 진행할지 여부.
             // null·미입력이면 false로 처리 (기본값) — 동명 발견 시 409.

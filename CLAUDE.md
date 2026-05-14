@@ -80,6 +80,85 @@ Swagger UI: 실행 후 `http://localhost:8080/swagger-ui.html`.
 
 ---
 
+
+## Issue 작성 규칙
+
+### 제목 형식
+[<domain>] <action>: <one-line summary>
+
+예시:
+- [Card] feat: 카드 일괄 비활성화 API 추가
+- [LearningFacade] refactor: AxisAction → AxisTopic 마이그레이션
+- [Infra] chore: Redisson 분산 락 설정 외부화
+
+### 본문 템플릿
+## 배경
+<왜 이 작업이 필요한가>
+
+## 목표
+<무엇을 달성하나>
+
+## 완료 기준 (DoD)
+- [ ] 구현
+- [ ] 단위 테스트
+- [ ] 슬라이스 테스트 (필요 시)
+- [ ] 문서 업데이트 (ADR/README)
+
+## 관련 ADR/문서
+- docs/adr/NNNN-...
+
+## 영향받는 컴포넌트
+- <bounded context / 파일>
+
+### 라벨 규칙
+- type: feat / fix / refactor / chore / docs / test
+- domain: card / deck / learning / axis / infra / payments
+- priority: P0 / P1 / P2
+
+## PR 작성 규칙
+
+### 제목 형식
+이슈 제목과 동일 형식 사용. 끝에 (#<이슈번호>) 추가.
+
+### 본문 템플릿
+## What
+<무엇을 했는가>
+
+## Why
+<왜 했는가 - 이슈/ADR 링크>
+
+## How
+<주요 설계 결정 요약>
+
+## tradeoff
+<작업 중 있었던 트레이드오프>
+
+## Test
+- [ ] 단위 테스트 추가/통과
+- [ ] 통합 테스트 결과
+- [ ] 성능 영향 (해당 시)
+
+## Checklist
+- [ ] CLAUDE.md / ADR 업데이트 반영
+- [ ] OSIV=false, READ_COMMITTED 등 프로젝트 원칙 준수
+- [ ] 변경사항이 hexagonal 경계 위반하지 않음
+
+Closes #<이슈번호>
+
+### 브랜치 명명
+<type>/<domain>/<short-kebab-case>
+
+예시:
+- feat/card/bulk-deactivation
+- refactor/learning/axis-topic-migration
+
+## Commit 규칙
+- Conventional Commits 형식: <type>(<scope>): <subject>
+- 예: feat(card): 카드 일괄 비활성화 도메인 로직 추가
+
+## 머지 정책
+- 머지는 사람이 직접. Claude는 PR 생성까지만.
+
 ## 작업 흐름
 
 작업 단위(Epic / Story / Product)는 `workflow/` 하위에 있다. 운영 reference 패키지는 두 영역으로 분리되어 있다 — read-only 입력(`private-docs/{api,domain,table,test}/`)과 Claude Code 갱신 영역(`update-docs/{adr,dictionary,...}/`). 절차는 다음 규칙 파일이 정의한다.

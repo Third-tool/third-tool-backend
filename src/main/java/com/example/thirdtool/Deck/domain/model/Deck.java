@@ -155,6 +155,8 @@ public class Deck {
      * 원천 학습 자료가 삭제되었을 때 호출 (Story-005-1).
      * Deck 자체는 유지하고 {@code learningMaterialId}만 null로 전환 — "자료 미연결 Deck".
      * {@code axisId}는 로드맵 추적성을 위해 보존한다.
+     *
+     * <p><strong>멱등성 보장</strong>: 이미 {@code learningMaterialId == null}이면 효과 없음 (예외 X).
      */
     public void markMaterialDeleted() {
         this.learningMaterialId = null;

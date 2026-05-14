@@ -22,6 +22,8 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public static final QDeck deck = new QDeck("deck");
 
+    public final NumberPath<Long> axisId = createNumber("axisId", Long.class);
+
     public final ListPath<com.example.thirdtool.Card.domain.model.Card, com.example.thirdtool.Card.domain.model.QCard> cards = this.<com.example.thirdtool.Card.domain.model.Card, com.example.thirdtool.Card.domain.model.QCard>createList("cards", com.example.thirdtool.Card.domain.model.Card.class, com.example.thirdtool.Card.domain.model.QCard.class, PathInits.DIRECT2);
 
     public final DateTimePath<java.time.LocalDateTime> createdDate = createDateTime("createdDate", java.time.LocalDateTime.class);
@@ -35,6 +37,8 @@ public class QDeck extends EntityPathBase<Deck> {
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final DateTimePath<java.time.LocalDateTime> lastAccessed = createDateTime("lastAccessed", java.time.LocalDateTime.class);
+
+    public final NumberPath<Long> learningMaterialId = createNumber("learningMaterialId", Long.class);
 
     public final EnumPath<DeckMode> mode = createEnum("mode", DeckMode.class);
 

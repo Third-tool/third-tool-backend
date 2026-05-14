@@ -13,6 +13,10 @@ package com.example.thirdtool.LearningFacade.domain.event;
  * 호출자에게 필요하다(응답에 deckId 포함). record 대신 mutable class를 사용해 핸들러가 {@code setResult}로
  * Deck 정보를 설정하고, 호출자가 그 값을 응답 빌드에 사용한다. 일반적 도메인 이벤트는 immutable이지만
  * 본 동기 이벤트는 BC 간 결과 통신 채널 역할도 겸한다 (ADR007 §결정 참조).
+ *
+ * <p><strong>⚠️ 동기 전용. 비동기 처리({@code @TransactionalEventListener(AFTER_COMMIT)} 또는 {@code @Async})로
+ * 전환 금지</strong> — race condition으로 {@code setResult} 호출 전에 호출자가 결과를 읽을 수 있다.
+ * 비동기 처리가 필요해지면 별도 ADR로 결과 통신 메커니즘을 재설계한 후 본 클래스를 폐기·교체.
  */
 public class LearningMaterialCreatedEvent {
 

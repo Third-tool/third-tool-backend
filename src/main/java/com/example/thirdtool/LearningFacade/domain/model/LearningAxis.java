@@ -135,6 +135,30 @@ public class LearningAxis {
         return topics.size() > RECOMMENDED_TOPIC_LIMIT;
     }
 
+    /**
+     * 이 축에 속한 주제 중 자료 미연결 주제가 하나라도 있는지.
+     * 축 카드 ⚠️ 경고 뱃지 표시 판단에 사용한다.
+     */
+    public boolean hasUncoveredTopics() {
+        return topics.stream().anyMatch(AxisTopic::isUncovered);
+    }
+
+    /**
+     * 이 축에 속한 미커버 주제 개수.
+     */
+    public int countUncoveredTopics() {
+        return (int) topics.stream().filter(AxisTopic::isUncovered).count();
+    }
+
+    /**
+     * 주제가 1개 이상이고 모든 주제가 자료로 커버되어 있으면 true.
+     * 빈 축(주제 0개)은 false. PARTIAL 상태 주제만 있어도 미커버가 없으면 완전 커버로 간주한다
+     * (도메인 스펙 §13 디폴트 — coverage != NO_MATERIAL 기준).
+     */
+    public boolean isFullyCovered() {
+        return !topics.isEmpty() && topics.stream().noneMatch(AxisTopic::isUncovered);
+    }
+
     public List<AxisTopic> getTopics() {
         return Collections.unmodifiableList(topics);
     }

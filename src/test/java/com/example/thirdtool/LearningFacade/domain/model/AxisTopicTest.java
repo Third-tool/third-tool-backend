@@ -290,4 +290,32 @@ class AxisTopicTest {
             assertThat(AxisTopic.REFINEMENT_THRESHOLD).isEqualTo(3);
         }
     }
+
+    @Nested
+    @DisplayName("isUncovered (Story-004-1)")
+    class IsUncovered {
+
+        @Test
+        @DisplayName("생성 직후 NO_MATERIAL 상태이면 true")
+        void NO_MATERIAL_true() {
+            AxisTopic topic = createTopic();
+            assertThat(topic.isUncovered()).isTrue();
+        }
+
+        @Test
+        @DisplayName("PARTIAL로 갱신되면 false")
+        void PARTIAL_false() {
+            AxisTopic topic = createTopic();
+            topic.updateCoverageStatus(CoverageStatus.PARTIAL);
+            assertThat(topic.isUncovered()).isFalse();
+        }
+
+        @Test
+        @DisplayName("COVERED로 갱신되면 false")
+        void COVERED_false() {
+            AxisTopic topic = createTopic();
+            topic.updateCoverageStatus(CoverageStatus.COVERED);
+            assertThat(topic.isUncovered()).isFalse();
+        }
+    }
 }

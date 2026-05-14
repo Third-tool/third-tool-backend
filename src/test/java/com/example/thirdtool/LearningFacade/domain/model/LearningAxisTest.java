@@ -246,4 +246,81 @@ class LearningAxisTest {
             assertThat(axis.isTopicCountExceedsRecommended()).isTrue();
         }
     }
+
+    @Nested
+    @DisplayName("커버리지 보조 조회 (Story-004-1)")
+    class CoverageHelperQuery {
+
+        @Test
+        @DisplayName("빈 축은 hasUncoveredTopics가 false")
+        void hasUncoveredTopics_빈축_false() {
+            LearningAxis axis = createAxis();
+            assertThat(axis.hasUncoveredTopics()).isFalse();
+        }
+
+        @Test
+        @DisplayName("모든 주제가 커버되어 있으면 hasUncoveredTopics가 false")
+        void hasUncoveredTopics_모두커버_false() {
+            LearningAxis axis = createAxis();
+            AxisTopic t1 = axis.addTopic("t1", null);
+            AxisTopic t2 = axis.addTopic("t2", null);
+            t1.updateCoverageStatus(CoverageStatus.PARTIAL);
+            t2.updateCoverageStatus(CoverageStatus.COVERED);
+
+            assertThat(axis.hasUncoveredTopics()).isFalse();
+        }
+
+        @Test
+        @DisplayName("미커버 주제가 하나라도 있으면 hasUncoveredTopics가 true")
+        void hasUncoveredTopics_일부미커버_true() {
+            LearningAxis axis = createAxis();
+            AxisTopic t1 = axis.addTopic("t1", null);
+            axis.addTopic("t2", null); // NO_MATERIAL 유지
+            t1.updateCoverageStatus(CoverageStatus.COVERED);
+
+            assertThat(axis.hasUncoveredTopics()).isTrue();
+        }
+
+        @Test
+        @DisplayName("countUncoveredTopics는 NO_MATERIAL 주제 개수를 반환")
+        void countUncoveredTopics_정확히집계() {
+            LearningAxis axis = createAxis();
+            axis.addTopic("t1", null); // NO_MATERIAL
+            axis.addTopic("t2", null); // NO_MATERIAL
+            AxisTopic t3 = axis.addTopic("t3", null);
+            t3.updateCoverageStatus(CoverageStatus.PARTIAL);
+
+            assertThat(axis.countUncoveredTopics()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("빈 축은 isFullyCovered가 false (주제 0개는 완전 커버 아님)")
+        void isFullyCovered_빈축_false() {
+            LearningAxis axis = createAxis();
+            assertThat(axis.isFullyCovered()).isFalse();
+        }
+
+        @Test
+        @DisplayName("모든 주제가 NO_MATERIAL이 아니면 isFullyCovered가 true (PARTIAL만 있어도 true)")
+        void isFullyCovered_모두NO_MATERIAL아님_true() {
+            LearningAxis axis = createAxis();
+            AxisTopic t1 = axis.addTopic("t1", null);
+            AxisTopic t2 = axis.addTopic("t2", null);
+            t1.updateCoverageStatus(CoverageStatus.PARTIAL);
+            t2.updateCoverageStatus(CoverageStatus.COVERED);
+
+            assertThat(axis.isFullyCovered()).isTrue();
+        }
+
+        @Test
+        @DisplayName("한 주제라도 NO_MATERIAL이면 isFullyCovered가 false")
+        void isFullyCovered_일부NO_MATERIAL_false() {
+            LearningAxis axis = createAxis();
+            AxisTopic t1 = axis.addTopic("t1", null);
+            axis.addTopic("t2", null); // NO_MATERIAL 유지
+            t1.updateCoverageStatus(CoverageStatus.COVERED);
+
+            assertThat(axis.isFullyCovered()).isFalse();
+        }
+    }
 }

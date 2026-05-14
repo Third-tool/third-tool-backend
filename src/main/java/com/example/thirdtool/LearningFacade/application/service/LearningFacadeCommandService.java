@@ -1,20 +1,21 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.*;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningMaterialRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.RevisionReasonOptionRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicDeletionRecordRepository;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicMaterialRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicRevisionRepository;
-import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeRequest;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.*;
-import com.example.thirdtool.User.domain.model.UserEntity;
+
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @Transactional
@@ -25,16 +26,18 @@ public class LearningFacadeCommandService {
     private final TopicRevisionRepository topicRevisionRepository;
     private final RevisionReasonOptionRepository revisionReasonOptionRepository;
     private final TopicDeletionRecordRepository topicDeletionRecordRepository;
+    private final LearningMaterialRepository learningMaterialRepository;
+    private final TopicMaterialRepository topicMaterialRepository;
 
     // ──────────────────────────────────────────────────────
     // 1. LearningFacade 생성
     // ──────────────────────────────────────────────────────
 
-    public CreateFacade createFacade(UserEntity user, String concept) {
-        if (facadeRepository.existsByUserId(user.getId())) {
+    public CreateFacade createFacade(LearningFacadeCommand.CreateFacade command) {
+        if (facadeRepository.existsByUserId(command.user().getId())) {
             throw LearningFacadeDomainException.of(ErrorCode.LEARNING_FACADE_ALREADY_EXISTS);
         }
-        LearningFacade facade = LearningFacade.create(user, concept);
+        LearningFacade facade = LearningFacade.create(command.user(), command.concept());
         return CreateFacade.of(facadeRepository.save(facade));
     }
 
@@ -42,9 +45,9 @@ public class LearningFacadeCommandService {
     // 3. 컨셉 수정
     // ──────────────────────────────────────────────────────
 
-    public UpdateConcept updateConcept(UserEntity user, String newConcept) {
-        LearningFacade facade = loadFacade(user.getId());
-        ConceptChangeRecord record = facade.updateConcept(newConcept);
+    public UpdateConcept updateConcept(LearningFacadeCommand.UpdateConcept command) {
+        LearningFacade facade = loadFacade(command.userId());
+        ConceptChangeRecord record = facade.updateConcept(command.concept());
         if (record.isChanged()) {
             facadeRepository.save(facade);
         }
@@ -55,9 +58,9 @@ public class LearningFacadeCommandService {
     // 4. 축 추가
     // ──────────────────────────────────────────────────────
 
-    public AddAxis addAxis(UserEntity user, String name) {
-        LearningFacade facade = loadFacade(user.getId());
-        LearningAxis axis = facade.addAxis(name);
+    public AddAxis addAxis(LearningFacadeCommand.AddAxis command) {
+        LearningFacade facade = loadFacade(command.userId());
+        LearningAxis axis = facade.addAxis(command.name());
         facadeRepository.save(facade);
         return AddAxis.of(axis, facade.isAxisCountExceedsRecommended());
     }
@@ -66,19 +69,19 @@ public class LearningFacadeCommandService {
     // 5. 축 이름 수정
     // ──────────────────────────────────────────────────────
 
-    public UpdateAxisName updateAxisName(UserEntity user, Long axisId, String newName) {
-        LearningFacade facade = loadFacade(user.getId());
-        LearningAxis axis = findAxis(facade, axisId);
+    public UpdateAxisName updateAxisName(LearningFacadeCommand.UpdateAxisName command) {
+        LearningFacade facade = loadFacade(command.userId());
+        LearningAxis axis = findAxis(facade, command.axisId());
 
-        String trimmed = newName == null ? null : newName.trim();
+        String trimmed = command.name() == null ? null : command.name().trim();
         boolean isDuplicate = facade.getAxes().stream()
-                .filter(a -> !a.getId().equals(axisId))
+                .filter(a -> !a.getId().equals(command.axisId()))
                 .anyMatch(a -> a.getName().equals(trimmed));
         if (isDuplicate) {
             throw LearningFacadeDomainException.of(ErrorCode.LEARNING_AXIS_DUPLICATE_NAME);
         }
 
-        axis.updateName(newName);
+        axis.updateName(command.name());
         facadeRepository.save(facade);
         return UpdateAxisName.of(axis);
     }
@@ -87,9 +90,9 @@ public class LearningFacadeCommandService {
     // 6. 축 삭제
     // ──────────────────────────────────────────────────────
 
-    public void removeAxis(UserEntity user, Long axisId) {
-        LearningFacade facade = loadFacade(user.getId());
-        facade.removeAxis(axisId);
+    public void removeAxis(LearningFacadeCommand.RemoveAxis command) {
+        LearningFacade facade = loadFacade(command.userId());
+        facade.removeAxis(command.axisId());
         facadeRepository.save(facade);
     }
 
@@ -97,9 +100,9 @@ public class LearningFacadeCommandService {
     // 7. 축 순서 변경
     // ──────────────────────────────────────────────────────
 
-    public ReorderAxes reorderAxes(UserEntity user, List<Long> orderedAxisIds) {
-        LearningFacade facade = loadFacade(user.getId());
-        facade.reorderAxes(orderedAxisIds);
+    public ReorderAxes reorderAxes(LearningFacadeCommand.ReorderAxes command) {
+        LearningFacade facade = loadFacade(command.userId());
+        facade.reorderAxes(command.orderedAxisIds());
         facadeRepository.save(facade);
         return ReorderAxes.of(facade.getAxes());
     }
@@ -108,38 +111,44 @@ public class LearningFacadeCommandService {
     // 8. 주제 추가
     // ──────────────────────────────────────────────────────
 
-    public AddTopic addTopic(UserEntity user, Long axisId, String name, String description) {
-        LearningFacade facade = loadFacade(user.getId());
-        LearningAxis axis = findAxis(facade, axisId);
-        AxisTopic topic = axis.addTopic(name, description);
+    public AddTopic addTopic(LearningFacadeCommand.AddTopic command) {
+        LearningFacade facade = loadFacade(command.userId());
+        LearningAxis axis = findAxis(facade, command.axisId());
+        AxisTopic topic = axis.addTopic(command.name(), command.description());
         facadeRepository.save(facade);
-        return AddTopic.of(topic);
+
+        // Story-004-2: 신규 주제는 항상 NO_MATERIAL이므로 "기존 자료에 연결하기" 후보를 함께 응답한다.
+        // 스펙: findByFacadeId + existsByTopicIdAndMaterialId 조합 (신규 Repository 메서드 도입 없음)
+        List<LinkableMaterialItem> linkable = learningMaterialRepository.findByFacadeId(facade.getId()).stream()
+                .filter(m -> !topicMaterialRepository.existsByTopicIdAndMaterialId(topic.getId(), m.getId()))
+                .map(LinkableMaterialItem::of)
+                .toList();
+        return AddTopic.of(topic, linkable);
     }
 
     // ──────────────────────────────────────────────────────
     // 9. 주제 부분 수정 (idempotent)
     // ──────────────────────────────────────────────────────
 
-    public UpdateTopic updateTopic(UserEntity user, Long axisId, Long topicId,
-                                    LearningFacadeRequest.UpdateTopic command) {
-        LearningFacade facade = loadFacade(user.getId());
-        LearningAxis axis = findAxis(facade, axisId);
-        AxisTopic topic = axis.findTopic(topicId);
+    public UpdateTopic updateTopic(LearningFacadeCommand.UpdateTopic command) {
+        LearningFacade facade = loadFacade(command.userId());
+        LearningAxis axis = findAxis(facade, command.axisId());
+        AxisTopic topic = axis.findTopic(command.topicId());
 
         // 이름 변경 발생 시 이력을 위해 이전 값 보존 (description 수정만 일어나면 이력 X)
         String previousName = topic.getName();
         boolean nameChanged = false;
         boolean descriptionChanged = false;
 
-        if (command.isNamePresent()) {
-            nameChanged = topic.updateName(command.getName());
+        if (command.namePresent()) {
+            nameChanged = topic.updateName(command.name());
         }
-        if (command.isDescriptionPresent()) {
-            descriptionChanged = topic.updateDescription(command.getDescription());
+        if (command.descriptionPresent()) {
+            descriptionChanged = topic.updateDescription(command.description());
         }
 
         if (nameChanged) {
-            String reasonLabel = resolveReasonLabel(command.getRevisionReasonOptionId());
+            String reasonLabel = resolveReasonLabel(command.revisionReasonOptionId());
             TopicRevision revision = TopicRevision.of(topic, previousName, topic.getName(), reasonLabel);
             topicRevisionRepository.save(revision);
         }
@@ -166,15 +175,15 @@ public class LearningFacadeCommandService {
     // 10. 주제 삭제
     // ──────────────────────────────────────────────────────
 
-    public void removeTopic(UserEntity user, Long axisId, Long topicId) {
-        LearningFacade facade = loadFacade(user.getId());
-        LearningAxis axis = findAxis(facade, axisId);
+    public void removeTopic(LearningFacadeCommand.RemoveTopic command) {
+        LearningFacade facade = loadFacade(command.userId());
+        LearningAxis axis = findAxis(facade, command.axisId());
 
         // 삭제 직전 스냅샷을 archive로 보존 (ADR003: AxisTopic은 soft delete 미적용 — archive 패턴)
-        AxisTopic topic = axis.findTopic(topicId);
+        AxisTopic topic = axis.findTopic(command.topicId());
         topicDeletionRecordRepository.save(TopicDeletionRecord.of(topic));
 
-        axis.removeTopic(topicId);
+        axis.removeTopic(command.topicId());
         facadeRepository.save(facade);
     }
 
@@ -182,10 +191,10 @@ public class LearningFacadeCommandService {
     // 11. 주제 순서 변경
     // ──────────────────────────────────────────────────────
 
-    public ReorderTopics reorderTopics(UserEntity user, Long axisId, List<Long> orderedTopicIds) {
-        LearningFacade facade = loadFacade(user.getId());
-        LearningAxis axis = findAxis(facade, axisId);
-        axis.reorderTopics(orderedTopicIds);
+    public ReorderTopics reorderTopics(LearningFacadeCommand.ReorderTopics command) {
+        LearningFacade facade = loadFacade(command.userId());
+        LearningAxis axis = findAxis(facade, command.axisId());
+        axis.reorderTopics(command.orderedTopicIds());
         facadeRepository.save(facade);
         return ReorderTopics.of(axis);
     }

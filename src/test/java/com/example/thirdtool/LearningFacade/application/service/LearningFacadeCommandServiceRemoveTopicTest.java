@@ -29,6 +29,8 @@ class LearningFacadeCommandServiceRemoveTopicTest {
     private TopicRevisionRepository topicRevisionRepository;
     private RevisionReasonOptionRepository revisionReasonOptionRepository;
     private TopicDeletionRecordRepository topicDeletionRecordRepository;
+    private com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningMaterialRepository learningMaterialRepository;
+    private com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicMaterialRepository topicMaterialRepository;
     private LearningFacadeCommandService service;
 
     private UserEntity user;
@@ -42,10 +44,12 @@ class LearningFacadeCommandServiceRemoveTopicTest {
         topicRevisionRepository = mock(TopicRevisionRepository.class);
         revisionReasonOptionRepository = mock(RevisionReasonOptionRepository.class);
         topicDeletionRecordRepository = mock(TopicDeletionRecordRepository.class);
+        learningMaterialRepository = mock(com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningMaterialRepository.class);
+        topicMaterialRepository = mock(com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicMaterialRepository.class);
 
         service = new LearningFacadeCommandService(
                 facadeRepository, topicRevisionRepository, revisionReasonOptionRepository,
-                topicDeletionRecordRepository);
+                topicDeletionRecordRepository, learningMaterialRepository, topicMaterialRepository);
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);
@@ -64,7 +68,7 @@ class LearningFacadeCommandServiceRemoveTopicTest {
     void removeTopic_saves_archive_then_removes() {
         topic.updateName("REST 설계 가이드"); // revisionCount=1
 
-        service.removeTopic(user, 10L, 100L);
+        service.removeTopic(new com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand.RemoveTopic(user.getId(), 10L, 100L));
 
         ArgumentCaptor<TopicDeletionRecord> captor = ArgumentCaptor.forClass(TopicDeletionRecord.class);
         verify(topicDeletionRecordRepository).save(captor.capture());
@@ -83,7 +87,7 @@ class LearningFacadeCommandServiceRemoveTopicTest {
     @Test
     @DisplayName("미존재 topicId면 archive 미저장 + 도메인 예외 (LEARNING_AXIS_TOPIC_NOT_FOUND)")
     void removeTopic_unknown_id_no_archive() {
-        assertThatThrownBy(() -> service.removeTopic(user, 10L, 9999L))
+        assertThatThrownBy(() -> service.removeTopic(new com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand.RemoveTopic(user.getId(), 10L, 9999L)))
                 .isInstanceOf(LearningFacadeDomainException.class);
 
         verify(topicDeletionRecordRepository, never()).save(any());
@@ -94,7 +98,7 @@ class LearningFacadeCommandServiceRemoveTopicTest {
     @DisplayName("revisionCount가 0인 주제도 archive에 0 그대로 저장된다")
     void removeTopic_revisionCount_zero_preserved() {
         // setup의 topic은 변경 없는 상태(revisionCount=0)
-        service.removeTopic(user, 10L, 100L);
+        service.removeTopic(new com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand.RemoveTopic(user.getId(), 10L, 100L));
 
         ArgumentCaptor<TopicDeletionRecord> captor = ArgumentCaptor.forClass(TopicDeletionRecord.class);
         verify(topicDeletionRecordRepository).save(captor.capture());

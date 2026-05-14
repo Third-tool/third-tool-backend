@@ -440,4 +440,87 @@ class LearningFacadeTest {
             assertThat(facade.isAxisCountExceedsRecommended()).isFalse();
         }
     }
+
+    @Nested
+    @DisplayName("커버리지 집계 (Story-004-1)")
+    class CoverageSummaryAggregation {
+
+        @Test
+        @DisplayName("빈 Facade는 모든 카운트가 0인 CoverageSummary 반환")
+        void getCoverageSummary_빈Facade_0() {
+            LearningFacade facade = createFacade();
+
+            CoverageSummary summary = facade.getCoverageSummary();
+
+            assertThat(summary.totalTopics()).isZero();
+            assertThat(summary.uncoveredTopics()).isZero();
+            assertThat(summary.partialTopics()).isZero();
+            assertThat(summary.coveredTopics()).isZero();
+        }
+
+        @Test
+        @DisplayName("축은 있으나 주제가 0개여도 모든 카운트가 0")
+        void getCoverageSummary_축만있고주제0_0() {
+            LearningFacade facade = createFacadeWithAxes();
+
+            CoverageSummary summary = facade.getCoverageSummary();
+
+            assertThat(summary.totalTopics()).isZero();
+        }
+
+        @Test
+        @DisplayName("여러 축에 걸친 주제들의 분포를 정확히 집계")
+        void getCoverageSummary_분포_정확() {
+            LearningFacade facade = createFacade();
+            LearningAxis a1 = facade.addAxis("축1");
+            LearningAxis a2 = facade.addAxis("축2");
+
+            a1.addTopic("t1-1", null); // NO_MATERIAL
+            AxisTopic t12 = a1.addTopic("t1-2", null);
+            t12.updateCoverageStatus(CoverageStatus.PARTIAL);
+
+            AxisTopic t21 = a2.addTopic("t2-1", null);
+            AxisTopic t22 = a2.addTopic("t2-2", null);
+            a2.addTopic("t2-3", null); // NO_MATERIAL
+            t21.updateCoverageStatus(CoverageStatus.COVERED);
+            t22.updateCoverageStatus(CoverageStatus.COVERED);
+
+            CoverageSummary summary = facade.getCoverageSummary();
+
+            assertThat(summary.totalTopics()).isEqualTo(5);
+            assertThat(summary.uncoveredTopics()).isEqualTo(2);
+            assertThat(summary.partialTopics()).isEqualTo(1);
+            assertThat(summary.coveredTopics()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("hasUncoveredTopics는 빈 Facade에서 false")
+        void hasUncoveredTopics_빈Facade_false() {
+            assertThat(createFacade().hasUncoveredTopics()).isFalse();
+        }
+
+        @Test
+        @DisplayName("hasUncoveredTopics는 모든 주제가 커버되면 false")
+        void hasUncoveredTopics_모두커버_false() {
+            LearningFacade facade = createFacade();
+            LearningAxis a1 = facade.addAxis("축1");
+            AxisTopic t = a1.addTopic("t", null);
+            t.updateCoverageStatus(CoverageStatus.COVERED);
+
+            assertThat(facade.hasUncoveredTopics()).isFalse();
+        }
+
+        @Test
+        @DisplayName("hasUncoveredTopics는 어느 축이든 미커버 주제가 있으면 true")
+        void hasUncoveredTopics_일부미커버_true() {
+            LearningFacade facade = createFacade();
+            LearningAxis a1 = facade.addAxis("축1");
+            LearningAxis a2 = facade.addAxis("축2");
+            AxisTopic t1 = a1.addTopic("t1", null);
+            t1.updateCoverageStatus(CoverageStatus.COVERED);
+            a2.addTopic("t2", null); // NO_MATERIAL 유지
+
+            assertThat(facade.hasUncoveredTopics()).isTrue();
+        }
+    }
 }

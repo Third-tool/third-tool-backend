@@ -1,5 +1,6 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
+import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery;
 import com.example.thirdtool.LearningFacade.domain.model.TopicRevision;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.RevisionReasonOptionRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicDeletionRecordRepository;
@@ -27,7 +28,8 @@ public class TopicRevisionQueryService {
      * 주제별 이름 수정 이력을 revisedAt 오름차순으로 반환한다.
      * 이력이 없으면 빈 목록을 반환한다.
      */
-    public LearningFacadeResponse.TopicRevisions getRevisions(Long topicId) {
+    public LearningFacadeResponse.TopicRevisions getRevisions(LearningFacadeQuery.GetTopicRevisions query) {
+        Long topicId = query.topicId();
         List<TopicRevision> revisions = topicRevisionRepository.findByTopicIdOrderByRevisedAtAsc(topicId);
         return new LearningFacadeResponse.TopicRevisions(
                 topicId,
@@ -38,7 +40,7 @@ public class TopicRevisionQueryService {
     /**
      * 활성 수정 이유 선택지 목록 (FE 라디오 버튼 등 노출용).
      */
-    public List<RevisionReasonOptionItem> getActiveReasonOptions() {
+    public List<RevisionReasonOptionItem> getActiveReasonOptions(LearningFacadeQuery.GetActiveReasonOptions query) {
         return revisionReasonOptionRepository.findActiveOrderByDisplayOrderAsc().stream()
                 .map(RevisionReasonOptionItem::of)
                 .toList();
@@ -48,7 +50,8 @@ public class TopicRevisionQueryService {
      * 한 축의 주제 삭제 이력을 deletedAt 내림차순(최신순)으로 반환한다.
      * 삭제 이력이 없으면 빈 목록을 반환한다.
      */
-    public LearningFacadeResponse.TopicDeletions getDeletions(Long axisId) {
+    public LearningFacadeResponse.TopicDeletions getDeletions(LearningFacadeQuery.GetTopicDeletions query) {
+        Long axisId = query.axisId();
         List<TopicDeletionItem> items = topicDeletionRecordRepository
                 .findByLearningAxisIdOrderByDeletedAtDesc(axisId).stream()
                 .map(TopicDeletionItem::of)

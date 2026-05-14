@@ -92,6 +92,8 @@ Swagger UI: 실행 후 `http://localhost:8080/swagger-ui.html`.
 
 **Epic 1개 = 브랜치 1개** (`{type}/{NNN}-{epic-slug}`). Epic 안의 모든 Story가 같은 브랜치에 누적 커밋된다. **Push는 판단 기반** — Story 종료마다 자동 push하지 않고, [`pr-commit.md`](.claude/rules/pr-commit.md) §6.1 신호가 충족되면 사용자에게 보고·확인 후 진행하며, push 시점에 한해 누적 PR 본문 초안을 출력한다. PR 생성·머지(`{type}/{NNN}-{slug} → develop`, `develop → main`)는 사용자가 GitHub UI에서 직접 수행한다 ([`pr-commit.md`](.claude/rules/pr-commit.md) §6-§8).
 
+**Story 작업과 update-docs 갱신은 분리 단계**다. 코드·테스트 작업 중에는 `update-docs/`를 건드리지 않고, Story 종료 후 별도 ceremony로 진행한다 — Claude가 Story/Epic/Product 단위 갱신 후보 목차를 제시하고, 사용자가 선택한 항목만 디테일하게 작성한다 ([`workflow.md`](.claude/rules/workflow.md) Step 5, [`update-docs.md`](.claude/rules/update-docs.md) §5).
+
 ---
 
 ## 데이터베이스

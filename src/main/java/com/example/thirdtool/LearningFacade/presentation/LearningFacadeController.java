@@ -1,5 +1,9 @@
 package com.example.thirdtool.LearningFacade.presentation;
 
+import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand;
+import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery;
+import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialCommand;
+import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialQuery;
 import com.example.thirdtool.LearningFacade.application.service.LearningFacadeCommandService;
 import com.example.thirdtool.LearningFacade.application.service.LearningFacadeQueryService;
 import com.example.thirdtool.LearningFacade.application.service.LearningMaterialCommandService;
@@ -34,7 +38,8 @@ public class LearningFacadeController {
             @AuthenticationPrincipal UserEntity user,
             @Valid @RequestBody LearningFacadeRequest.CreateFacade request
     ) {
-        return facadeCommandService.createFacade(user, request.concept());
+        return facadeCommandService.createFacade(
+                new LearningFacadeCommand.CreateFacade(user, request.concept()));
     }
 
     // 2. GET /learning-facade
@@ -42,7 +47,8 @@ public class LearningFacadeController {
     public LearningFacadeResponse.FacadeDetail getFacade(
             @AuthenticationPrincipal UserEntity user
     ) {
-        return facadeQueryService.getFacade(user.getId());
+        return facadeQueryService.getFacade(
+                new LearningFacadeQuery.GetFacade(user.getId()));
     }
 
     // 3. PATCH /learning-facade/concept
@@ -51,7 +57,8 @@ public class LearningFacadeController {
             @AuthenticationPrincipal UserEntity user,
             @Valid @RequestBody LearningFacadeRequest.UpdateConcept request
     ) {
-        return facadeCommandService.updateConcept(user, request.concept());
+        return facadeCommandService.updateConcept(
+                new LearningFacadeCommand.UpdateConcept(user.getId(), request.concept()));
     }
 
     // 4. POST /learning-facade/axes
@@ -61,7 +68,8 @@ public class LearningFacadeController {
             @AuthenticationPrincipal UserEntity user,
             @Valid @RequestBody LearningFacadeRequest.AddAxis request
     ) {
-        return facadeCommandService.addAxis(user, request.name());
+        return facadeCommandService.addAxis(
+                new LearningFacadeCommand.AddAxis(user.getId(), request.name()));
     }
 
     // 5. PATCH /learning-facade/axes/{axisId}
@@ -71,7 +79,8 @@ public class LearningFacadeController {
             @PathVariable Long axisId,
             @Valid @RequestBody LearningFacadeRequest.UpdateAxisName request
     ) {
-        return facadeCommandService.updateAxisName(user, axisId, request.name());
+        return facadeCommandService.updateAxisName(
+                new LearningFacadeCommand.UpdateAxisName(user.getId(), axisId, request.name()));
     }
 
     // 6. DELETE /learning-facade/axes/{axisId}
@@ -81,7 +90,8 @@ public class LearningFacadeController {
             @AuthenticationPrincipal UserEntity user,
             @PathVariable Long axisId
     ) {
-        facadeCommandService.removeAxis(user, axisId);
+        facadeCommandService.removeAxis(
+                new LearningFacadeCommand.RemoveAxis(user.getId(), axisId));
     }
 
     // 7. PUT /learning-facade/axes/order
@@ -90,7 +100,8 @@ public class LearningFacadeController {
             @AuthenticationPrincipal UserEntity user,
             @Valid @RequestBody LearningFacadeRequest.ReorderAxes request
     ) {
-        return facadeCommandService.reorderAxes(user, request.orderedAxisIds());
+        return facadeCommandService.reorderAxes(
+                new LearningFacadeCommand.ReorderAxes(user.getId(), request.orderedAxisIds()));
     }
 
     // 8. POST /learning-facade/axes/{axisId}/topics
@@ -101,7 +112,9 @@ public class LearningFacadeController {
             @PathVariable Long axisId,
             @Valid @RequestBody LearningFacadeRequest.AddTopic request
     ) {
-        return facadeCommandService.addTopic(user, axisId, request.name(), request.description());
+        return facadeCommandService.addTopic(
+                new LearningFacadeCommand.AddTopic(
+                        user.getId(), axisId, request.name(), request.description()));
     }
 
     // 9. PATCH /learning-facade/axes/{axisId}/topics/{topicId}
@@ -112,7 +125,16 @@ public class LearningFacadeController {
             @PathVariable Long topicId,
             @RequestBody LearningFacadeRequest.UpdateTopic request
     ) {
-        return facadeCommandService.updateTopic(user, axisId, topicId, request);
+        return facadeCommandService.updateTopic(
+                new LearningFacadeCommand.UpdateTopic(
+                        user.getId(),
+                        axisId,
+                        topicId,
+                        request.getName(),
+                        request.getDescription(),
+                        request.getRevisionReasonOptionId(),
+                        request.isNamePresent(),
+                        request.isDescriptionPresent()));
     }
 
     // 10. DELETE /learning-facade/axes/{axisId}/topics/{topicId}
@@ -123,7 +145,8 @@ public class LearningFacadeController {
             @PathVariable Long axisId,
             @PathVariable Long topicId
     ) {
-        facadeCommandService.removeTopic(user, axisId, topicId);
+        facadeCommandService.removeTopic(
+                new LearningFacadeCommand.RemoveTopic(user.getId(), axisId, topicId));
     }
 
     // 11. PUT /learning-facade/axes/{axisId}/topics/order
@@ -133,7 +156,9 @@ public class LearningFacadeController {
             @PathVariable Long axisId,
             @Valid @RequestBody LearningFacadeRequest.ReorderTopics request
     ) {
-        return facadeCommandService.reorderTopics(user, axisId, request.orderedTopicIds());
+        return facadeCommandService.reorderTopics(
+                new LearningFacadeCommand.ReorderTopics(
+                        user.getId(), axisId, request.orderedTopicIds()));
     }
 
     // 12. POST /learning-facade/materials
@@ -144,17 +169,17 @@ public class LearningFacadeController {
             @Valid @RequestBody LearningMaterialRequest.CreateMaterial request
     ) {
         return materialCommandService.createMaterial(
-                user.getId(),
-                request.name(),
-                request.materialType(),
-                request.url(),
-                request.author(),
-                request.platform(),
-                request.aiProvider(),
-                request.webSource(),
-                request.memo(),
-                request.linkedTopicIds()
-        );
+                new LearningMaterialCommand.CreateMaterial(
+                        user.getId(),
+                        request.name(),
+                        request.materialType(),
+                        request.url(),
+                        request.author(),
+                        request.platform(),
+                        request.aiProvider(),
+                        request.webSource(),
+                        request.memo(),
+                        request.linkedTopicIds()));
     }
 
     // 13. GET /learning-facade/materials
@@ -162,7 +187,8 @@ public class LearningFacadeController {
     public List<LearningMaterialResponse.MaterialSummary> getMaterials(
             @AuthenticationPrincipal UserEntity user
     ) {
-        return materialCommandService.getMaterials(user.getId());
+        return materialCommandService.getMaterials(
+                new LearningMaterialQuery.GetMaterials(user.getId()));
     }
 
     // 14. PATCH /learning-facade/materials/{materialId}/name
@@ -172,7 +198,9 @@ public class LearningFacadeController {
             @PathVariable Long materialId,
             @Valid @RequestBody LearningMaterialRequest.UpdateMaterialName request
     ) {
-        return materialCommandService.updateMaterialName(user.getId(), materialId, request.name());
+        return materialCommandService.updateMaterialName(
+                new LearningMaterialCommand.UpdateMaterialName(
+                        user.getId(), materialId, request.name()));
     }
 
     // 15. PATCH /learning-facade/materials/{materialId}/proficiency
@@ -183,7 +211,8 @@ public class LearningFacadeController {
             @Valid @RequestBody LearningMaterialRequest.UpdateProficiency request
     ) {
         return materialCommandService.updateProficiency(
-                user.getId(), materialId, request.proficiencyLevel());
+                new LearningMaterialCommand.UpdateProficiency(
+                        user.getId(), materialId, request.proficiencyLevel()));
     }
 
     // 16. POST /learning-facade/materials/{materialId}/topics
@@ -194,7 +223,9 @@ public class LearningFacadeController {
             @PathVariable Long materialId,
             @Valid @RequestBody LearningMaterialRequest.LinkTopic request
     ) {
-        return materialCommandService.linkTopic(user.getId(), materialId, request.topicId());
+        return materialCommandService.linkTopic(
+                new LearningMaterialCommand.LinkTopic(
+                        user.getId(), materialId, request.topicId()));
     }
 
     // 17. DELETE /learning-facade/materials/{materialId}/topics/{topicId}
@@ -204,7 +235,9 @@ public class LearningFacadeController {
             @PathVariable Long materialId,
             @PathVariable Long topicId
     ) {
-        return materialCommandService.unlinkTopic(user.getId(), materialId, topicId);
+        return materialCommandService.unlinkTopic(
+                new LearningMaterialCommand.UnlinkTopic(
+                        user.getId(), materialId, topicId));
     }
 
     // 18. DELETE /learning-facade/materials/{materialId}
@@ -214,7 +247,8 @@ public class LearningFacadeController {
             @AuthenticationPrincipal UserEntity user,
             @PathVariable Long materialId
     ) {
-        materialCommandService.deleteMaterial(user.getId(), materialId);
+        materialCommandService.deleteMaterial(
+                new LearningMaterialCommand.DeleteMaterial(user.getId(), materialId));
     }
 
     // ──────────────────────────────────────────────────────
@@ -227,7 +261,8 @@ public class LearningFacadeController {
             @AuthenticationPrincipal UserEntity user,
             @PathVariable Long topicId
     ) {
-        return topicRevisionQueryService.getRevisions(topicId);
+        return topicRevisionQueryService.getRevisions(
+                new LearningFacadeQuery.GetTopicRevisions(topicId));
     }
 
     // 20. GET /learning-facade/revision-reason-options
@@ -235,7 +270,8 @@ public class LearningFacadeController {
     public List<LearningFacadeResponse.RevisionReasonOptionItem> getActiveReasonOptions(
             @AuthenticationPrincipal UserEntity user
     ) {
-        return topicRevisionQueryService.getActiveReasonOptions();
+        return topicRevisionQueryService.getActiveReasonOptions(
+                new LearningFacadeQuery.GetActiveReasonOptions());
     }
 
     // 21. GET /learning-facade/axes/{axisId}/topic-deletions  (Story-003-4)
@@ -244,6 +280,7 @@ public class LearningFacadeController {
             @AuthenticationPrincipal UserEntity user,
             @PathVariable Long axisId
     ) {
-        return topicRevisionQueryService.getDeletions(axisId);
+        return topicRevisionQueryService.getDeletions(
+                new LearningFacadeQuery.GetTopicDeletions(axisId));
     }
 }

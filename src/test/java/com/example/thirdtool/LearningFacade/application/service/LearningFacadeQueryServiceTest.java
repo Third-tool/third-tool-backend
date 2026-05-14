@@ -95,7 +95,7 @@ class LearningFacadeQueryServiceTest {
                         mapping(topicWithStaticOnly, book)
                 ));
 
-        FacadeDetail detail = service.getFacade(user.getId());
+        FacadeDetail detail = service.getFacade(new com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery.GetFacade(user.getId()));
 
         List<TopicItem> topics = detail.axes().get(0).topics();
         TopicItem mixItem = topics.stream().filter(t -> t.topicId() == 100L).findFirst().orElseThrow();
@@ -130,7 +130,7 @@ class LearningFacadeQueryServiceTest {
         when(topicMaterialRepository.findByTopicIdIn(List.of(100L, 101L, 102L)))
                 .thenReturn(List.of());
 
-        FacadeDetail detail = service.getFacade(user.getId());
+        FacadeDetail detail = service.getFacade(new com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery.GetFacade(user.getId()));
 
         for (TopicItem item : detail.axes().get(0).topics()) {
             assertThat(item.materialBreakdown()).isNotNull();
@@ -147,7 +147,7 @@ class LearningFacadeQueryServiceTest {
         ReflectionTestUtils.setField(emptyFacade, "id", 2L);
         when(facadeRepository.findByUserId(user.getId())).thenReturn(Optional.of(emptyFacade));
 
-        FacadeDetail detail = service.getFacade(user.getId());
+        FacadeDetail detail = service.getFacade(new com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery.GetFacade(user.getId()));
 
         assertThat(detail.axes()).isEmpty();
         verify(topicMaterialRepository, never()).findByTopicIdIn(anyList());
@@ -158,7 +158,7 @@ class LearningFacadeQueryServiceTest {
     void getFacade_no_facade_not_found_exception() {
         when(facadeRepository.findByUserId(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getFacade(999L))
+        assertThatThrownBy(() -> service.getFacade(new com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery.GetFacade(999L)))
                 .isInstanceOf(LearningFacadeDomainException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LEARNING_FACADE_NOT_FOUND);
         verify(topicMaterialRepository, never()).findByTopicIdIn(anyList());

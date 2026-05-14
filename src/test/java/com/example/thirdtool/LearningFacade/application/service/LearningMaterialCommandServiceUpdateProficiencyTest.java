@@ -1,6 +1,7 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialCommand;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.AxisTopic;
 import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
@@ -79,11 +80,14 @@ class LearningMaterialCommandServiceUpdateProficiencyTest {
         mappings.add(mapping);
     }
 
+    private LearningMaterialCommand.UpdateProficiency cmd(Long materialId, ProficiencyLevel level) {
+        return new LearningMaterialCommand.UpdateProficiency(user.getId(), materialId, level);
+    }
+
     @Test
     @DisplayName("updateProficiency_UNFAMILIAR_정상_숙련도_변경")
     void updateProficiency_UNRATED_to_UNFAMILIAR() {
-        UpdateProficiency response = service.updateProficiency(
-                user.getId(), 200L, ProficiencyLevel.UNFAMILIAR);
+        UpdateProficiency response = service.updateProficiency(cmd(200L, ProficiencyLevel.UNFAMILIAR));
 
         assertThat(material.getProficiencyLevel()).isEqualTo(ProficiencyLevel.UNFAMILIAR);
         assertThat(response.proficiencyLevel()).isEqualTo("UNFAMILIAR");
@@ -93,8 +97,7 @@ class LearningMaterialCommandServiceUpdateProficiencyTest {
     @Test
     @DisplayName("updateProficiency_MASTERED_isCardCreationSuggested_true_안내_트리거")
     void updateProficiency_MASTERED_card_suggestion_true() {
-        UpdateProficiency response = service.updateProficiency(
-                user.getId(), 200L, ProficiencyLevel.MASTERED);
+        UpdateProficiency response = service.updateProficiency(cmd(200L, ProficiencyLevel.MASTERED));
 
         assertThat(material.getProficiencyLevel()).isEqualTo(ProficiencyLevel.MASTERED);
         assertThat(response.isCardCreationSuggested()).isTrue();
@@ -103,8 +106,7 @@ class LearningMaterialCommandServiceUpdateProficiencyTest {
     @Test
     @DisplayName("updateProficiency_GETTING_USED_isCardCreationSuggested_false")
     void updateProficiency_GETTING_USED_card_suggestion_false() {
-        UpdateProficiency response = service.updateProficiency(
-                user.getId(), 200L, ProficiencyLevel.GETTING_USED);
+        UpdateProficiency response = service.updateProficiency(cmd(200L, ProficiencyLevel.GETTING_USED));
 
         assertThat(response.isCardCreationSuggested()).isFalse();
     }
@@ -112,8 +114,7 @@ class LearningMaterialCommandServiceUpdateProficiencyTest {
     @Test
     @DisplayName("updateProficiency_UNRATED_되돌림_시도_예외")
     void updateProficiency_UNRATED_rejected() {
-        assertThatThrownBy(() -> service.updateProficiency(
-                user.getId(), 200L, ProficiencyLevel.UNRATED))
+        assertThatThrownBy(() -> service.updateProficiency(cmd(200L, ProficiencyLevel.UNRATED)))
                 .isInstanceOf(LearningFacadeDomainException.class)
                 .hasFieldOrPropertyWithValue(
                         "errorCode",
@@ -126,7 +127,7 @@ class LearningMaterialCommandServiceUpdateProficiencyTest {
         linkMaterialTo(topic1);
         linkMaterialTo(topic2);
 
-        service.updateProficiency(user.getId(), 200L, ProficiencyLevel.MASTERED);
+        service.updateProficiency(cmd(200L, ProficiencyLevel.MASTERED));
 
         verify(coverageRecalculator, times(1)).recalculate(topic1);
         verify(coverageRecalculator, times(1)).recalculate(topic2);
@@ -135,8 +136,7 @@ class LearningMaterialCommandServiceUpdateProficiencyTest {
     @Test
     @DisplayName("updateProficiency_미연결_자료_updatedCoverages_빈리스트")
     void updateProficiency_no_linked_topics_empty_updatedCoverages() {
-        UpdateProficiency response = service.updateProficiency(
-                user.getId(), 200L, ProficiencyLevel.UNFAMILIAR);
+        UpdateProficiency response = service.updateProficiency(cmd(200L, ProficiencyLevel.UNFAMILIAR));
 
         assertThat(response.updatedCoverages()).isEmpty();
         verify(coverageRecalculator, never()).recalculate(any(AxisTopic.class));
@@ -147,8 +147,7 @@ class LearningMaterialCommandServiceUpdateProficiencyTest {
     void updateProficiency_unknown_materialId_not_found_exception() {
         when(materialRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.updateProficiency(
-                user.getId(), 999L, ProficiencyLevel.UNFAMILIAR))
+        assertThatThrownBy(() -> service.updateProficiency(cmd(999L, ProficiencyLevel.UNFAMILIAR)))
                 .isInstanceOf(LearningFacadeDomainException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LEARNING_MATERIAL_NOT_FOUND);
     }
@@ -165,8 +164,7 @@ class LearningMaterialCommandServiceUpdateProficiencyTest {
 
         when(materialRepository.findById(300L)).thenReturn(Optional.of(otherMaterial));
 
-        assertThatThrownBy(() -> service.updateProficiency(
-                user.getId(), 300L, ProficiencyLevel.UNFAMILIAR))
+        assertThatThrownBy(() -> service.updateProficiency(cmd(300L, ProficiencyLevel.UNFAMILIAR)))
                 .isInstanceOf(LearningFacadeDomainException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LEARNING_FACADE_NOT_FOUND);
     }

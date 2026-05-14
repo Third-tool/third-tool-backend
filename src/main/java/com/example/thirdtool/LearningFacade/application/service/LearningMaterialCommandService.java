@@ -74,6 +74,12 @@ public class LearningMaterialCommandService {
                 command.forceCreateDeck());
         eventPublisher.publishEvent(event);
 
+        // Reviewer C2: 핸들러가 0개 또는 setResult 누락 시 silent fail 방지. 동기 이벤트 가정상
+        // 정상 흐름에서는 항상 createdDeckId가 채워져 있어야 한다.
+        if (event.createdDeckId() == null) {
+            throw LearningFacadeDomainException.of(ErrorCode.DECK_AUTO_CREATE_FAILED);
+        }
+
         LearningMaterial saved = materialRepository.findById(material.getId())
                 .orElseThrow(() -> LearningFacadeDomainException.of(ErrorCode.LEARNING_MATERIAL_NOT_FOUND));
         return CreateMaterial.of(saved, event.createdDeckId(), event.createdDeckName());

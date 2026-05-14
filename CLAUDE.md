@@ -105,7 +105,7 @@ Swagger UI: 실행 후 `http://localhost:8080/swagger-ui.html`.
 - [ ] 문서 업데이트 (ADR/README)
 
 ## 관련 ADR/문서
-- docs/adr/NNNN-...
+- update-docs/adr/ADR{NNN}.md
 
 ## 영향받는 컴포넌트
 - <bounded context / 파일>

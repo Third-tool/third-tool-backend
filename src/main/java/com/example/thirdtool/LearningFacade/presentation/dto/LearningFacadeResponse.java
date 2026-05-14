@@ -90,6 +90,7 @@ public class LearningFacadeResponse {
             String description,
             int displayOrder,
             String coverageStatus,
+            boolean isUncovered,
             MaterialBreakdown materialBreakdown
     ) {
         public static TopicItem of(AxisTopic topic) {
@@ -103,6 +104,7 @@ public class LearningFacadeResponse {
                     topic.getDescription(),
                     topic.getDisplayOrder(),
                     topic.getCoverageStatus().name(),
+                    topic.isUncovered(),
                     materialBreakdown
             );
         }
@@ -112,6 +114,9 @@ public class LearningFacadeResponse {
             Long axisId,
             String name,
             int displayOrder,
+            boolean hasUncoveredTopics,
+            int uncoveredTopicCount,
+            boolean isFullyCovered,
             List<TopicItem> topics
     ) {
         public static AxisItem of(LearningAxis axis) {
@@ -124,6 +129,9 @@ public class LearningFacadeResponse {
                     axis.getId(),
                     axis.getName(),
                     axis.getDisplayOrder(),
+                    axis.hasUncoveredTopics(),
+                    axis.countUncoveredTopics(),
+                    axis.isFullyCovered(),
                     axis.getTopics().stream()
                             .map(t -> TopicItem.of(t, breakdownByTopic.get(t.getId())))
                             .collect(Collectors.toList())
@@ -134,7 +142,11 @@ public class LearningFacadeResponse {
     public record CoverageSummary(
             int totalTopics,
             int uncoveredTopics
-    ) {}
+    ) {
+        public static CoverageSummary from(com.example.thirdtool.LearningFacade.domain.model.CoverageSummary domain) {
+            return new CoverageSummary(domain.totalTopics(), domain.uncoveredTopics());
+        }
+    }
 
     // ──────────────────────────────────────────────────────
     // 1. CreateFacade
@@ -175,19 +187,10 @@ public class LearningFacadeResponse {
 
         public static FacadeDetail of(LearningFacade facade,
                                       java.util.Map<Long, MaterialBreakdown> breakdownByTopic) {
-            List<AxisTopic> allTopics = facade.getAxes().stream()
-                    .flatMap(axis -> axis.getTopics().stream())
-                    .collect(Collectors.toList());
-
-            int totalTopics = allTopics.size();
-            int uncoveredTopics = (int) allTopics.stream()
-                    .filter(t -> t.getCoverageStatus() == CoverageStatus.NO_MATERIAL)
-                    .count();
-
             return new FacadeDetail(
                     facade.getId(),
                     facade.getConcept(),
-                    new CoverageSummary(totalTopics, uncoveredTopics),
+                    CoverageSummary.from(facade.getCoverageSummary()),
                     facade.isAxisCountExceedsRecommended(),
                     facade.getAxes().stream()
                             .map(axis -> AxisItem.of(axis, breakdownByTopic))

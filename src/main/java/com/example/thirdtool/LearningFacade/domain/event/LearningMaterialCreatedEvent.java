@@ -9,21 +9,57 @@ package com.example.thirdtool.LearningFacade.domain.event;
  *
  * <p>BC 간 협력 패턴은 ADR007 참조 — 단방향 동기 도메인 이벤트.
  *
- * @param userId             자료 소유 사용자 ID
- * @param materialId         생성된 자료 ID
- * @param materialName       자료 이름 (기본 Deck 이름의 원천)
- * @param axisId             자료가 연결된 축 ID. {@code linkedTopicIds}가 비어있거나 축 식별 불가면 null.
- *                           다중 축에 걸치면 첫 주제의 축 ID로 단순 결정 (Story 5-1 한정).
- * @param requestedDeckName  사용자가 자료 등록 폼에서 별도 지정한 Deck 이름. null이면 {@code materialName} 사용.
- * @param forceCreateDeck    동명 Deck 존재 시 자동 suffix `(2)` 부여로 회피할지 여부.
- *                           false면 동명 발견 시 {@code DECK_NAME_DUPLICATE} 예외로 트랜잭션 롤백 → 409.
+ * <p><strong>설계 결정 — 이벤트 객체로 결과 통신</strong>: 동기 이벤트의 특성상 핸들러가 생성한 Deck 정보가
+ * 호출자에게 필요하다(응답에 deckId 포함). record 대신 mutable class를 사용해 핸들러가 {@code setResult}로
+ * Deck 정보를 설정하고, 호출자가 그 값을 응답 빌드에 사용한다. 일반적 도메인 이벤트는 immutable이지만
+ * 본 동기 이벤트는 BC 간 결과 통신 채널 역할도 겸한다 (ADR007 §결정 참조).
  */
-public record LearningMaterialCreatedEvent(
-        Long userId,
-        Long materialId,
-        String materialName,
-        Long axisId,
-        String requestedDeckName,
-        boolean forceCreateDeck
-) {
+public class LearningMaterialCreatedEvent {
+
+    // ─── 입력 (immutable) ────────────────────────────────────
+
+    private final Long userId;
+    private final Long materialId;
+    private final String materialName;
+    private final Long axisId;
+    private final String requestedDeckName;
+    private final boolean forceCreateDeck;
+
+    // ─── 결과 (핸들러가 set) ──────────────────────────────────
+
+    private Long createdDeckId;
+    private String createdDeckName;
+
+    public LearningMaterialCreatedEvent(
+            Long userId,
+            Long materialId,
+            String materialName,
+            Long axisId,
+            String requestedDeckName,
+            boolean forceCreateDeck) {
+        this.userId = userId;
+        this.materialId = materialId;
+        this.materialName = materialName;
+        this.axisId = axisId;
+        this.requestedDeckName = requestedDeckName;
+        this.forceCreateDeck = forceCreateDeck;
+    }
+
+    public Long userId() { return userId; }
+    public Long materialId() { return materialId; }
+    public String materialName() { return materialName; }
+    public Long axisId() { return axisId; }
+    public String requestedDeckName() { return requestedDeckName; }
+    public boolean forceCreateDeck() { return forceCreateDeck; }
+
+    public Long createdDeckId() { return createdDeckId; }
+    public String createdDeckName() { return createdDeckName; }
+
+    /**
+     * 핸들러가 Deck 생성 직후 호출 — 호출자가 응답에 사용한다.
+     */
+    public void setResult(Long deckId, String deckName) {
+        this.createdDeckId = deckId;
+        this.createdDeckName = deckName;
+    }
 }

@@ -52,7 +52,10 @@ public class LearningMaterialCreatedEventHandler {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Deck deck = Deck.createFromLearningMaterial(user, event.axisId(), event.materialId(), deckName);
-        deckRepository.save(deck);
+        Deck saved = deckRepository.save(deck);
+
+        // 호출자(LearningMaterialCommandService)가 응답에 사용 — 동기 이벤트의 결과 통신 (ADR007).
+        event.setResult(saved.getId(), saved.getName());
     }
 
     private String resolveBaseName(LearningMaterialCreatedEvent event) {

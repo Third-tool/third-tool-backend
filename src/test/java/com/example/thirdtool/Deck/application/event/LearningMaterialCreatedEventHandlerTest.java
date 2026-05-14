@@ -42,6 +42,13 @@ class LearningMaterialCreatedEventHandlerTest {
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        // save 시 id를 주입하고 동일 객체를 반환 (실제 JPA save 동작 모사)
+        when(deckRepository.save(any(Deck.class))).thenAnswer(inv -> {
+            Deck d = inv.getArgument(0);
+            if (d.getId() == null) ReflectionTestUtils.setField(d, "id", 999L);
+            return d;
+        });
     }
 
     private LearningMaterialCreatedEvent event(String requestedDeckName, boolean force) {

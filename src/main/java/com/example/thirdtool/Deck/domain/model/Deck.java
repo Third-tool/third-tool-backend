@@ -71,6 +71,17 @@ public class Deck {
     @JoinColumn(name = "user_id", nullable = false) // ✅ 외래 키 설정
     private UserEntity user;
 
+    // ─── LearningFacade 연결 (Story-005-1) ───────────────────
+    // Long ID 참조 — BC 간 직접 객체 참조 회피 (docs/PACKAGE.md §6).
+    // 자료 삭제 시 learning_material_id만 NULL로 전환 → "자료 미연결 Deck"으로 유지.
+    // axis_id는 자료 삭제와 무관하게 영구 보존 (로드맵 추적성).
+
+    @Column(name = "axis_id", nullable = true)
+    private Long axisId;
+
+    @Column(name = "learning_material_id", nullable = true)
+    private Long learningMaterialId;
+
     // ─── Soft Delete ──────────────────────────────────────
     @Column(nullable = false)
     private boolean deleted = false;
@@ -108,6 +119,47 @@ public class Deck {
         deck.lastAccessed = LocalDateTime.now();
         deck.mode         = DeckMode.ON_FIELD;
         return deck;
+    }
+
+    /**
+     * 학습 자료 등록 흐름에서 호출되는 정적 팩토리 (Story-005-1).
+     * {@code LearningMaterialCreatedEvent} 핸들러가 사용한다.
+     *
+     * @param user      소유 사용자 (자료의 user와 동일)
+     * @param axisId    자료가 연결된 축 ID (없으면 null — Deck은 어디 축에도 안 붙은 상태로 생성)
+     * @param materialId 원천 자료 ID
+     * @param name      Deck 이름 (자료명 또는 사용자가 요청한 별도 이름)
+     */
+    public static Deck createFromLearningMaterial(UserEntity user, Long axisId, Long materialId, String name) {
+        validateName(name);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: user는 null일 수 없습니다.");
+        }
+        if (materialId == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: materialId는 null일 수 없습니다.");
+        }
+
+        Deck deck = new Deck();
+        deck.name               = name.trim();
+        deck.user               = user;
+        deck.axisId             = axisId;
+        deck.learningMaterialId = materialId;
+        deck.parentDeck         = null;
+        deck.depth              = 0;
+        deck.lastAccessed       = LocalDateTime.now();
+        deck.mode               = DeckMode.ON_FIELD;
+        return deck;
+    }
+
+    /**
+     * 원천 학습 자료가 삭제되었을 때 호출 (Story-005-1).
+     * Deck 자체는 유지하고 {@code learningMaterialId}만 null로 전환 — "자료 미연결 Deck".
+     * {@code axisId}는 로드맵 추적성을 위해 보존한다.
+     *
+     * <p><strong>멱등성 보장</strong>: 이미 {@code learningMaterialId == null}이면 효과 없음 (예외 X).
+     */
+    public void markMaterialDeleted() {
+        this.learningMaterialId = null;
     }
 
     public void updateName(String name) {

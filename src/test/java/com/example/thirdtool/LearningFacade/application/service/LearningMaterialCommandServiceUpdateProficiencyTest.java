@@ -51,7 +51,8 @@ class LearningMaterialCommandServiceUpdateProficiencyTest {
         coverageRecalculator = mock(CoverageRecalculator.class);
 
         service = new LearningMaterialCommandService(
-                facadeRepository, materialRepository, topicMaterialRepository, coverageRecalculator);
+                facadeRepository, materialRepository, topicMaterialRepository, coverageRecalculator,
+                mock(org.springframework.context.ApplicationEventPublisher.class));
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);

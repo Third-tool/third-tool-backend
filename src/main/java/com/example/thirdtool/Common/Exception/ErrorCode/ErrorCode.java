@@ -21,6 +21,7 @@ public enum ErrorCode {
     DECK_NAME_DUPLICATE("DECK003", "이미 존재하는 덱 이름입니다.", HttpStatus.CONFLICT),
     DECK_NAME_BLANK("DECK004", "덱 이름은 비어 있을 수 없습니다.", HttpStatus.BAD_REQUEST),
     DECK_FORBIDDEN("DECK005", "본인의 덱이 아닙니다.", HttpStatus.FORBIDDEN),
+    DECK_AUTO_CREATE_FAILED("DECK006", "Deck 자동 생성에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 
     // ─── Card ─────────────────────────────────────────────
     CARD_NOT_FOUND("CARD001",                  "카드를 찾을 수 없습니다.",                                                     HttpStatus.NOT_FOUND),

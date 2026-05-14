@@ -41,16 +41,19 @@ class LearningMaterialCommandServiceCreateTest {
     private LearningAxis axis;
     private AxisTopic topic;
 
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @BeforeEach
     void setUp() {
         facadeRepository = mock(LearningFacadeRepository.class);
         materialRepository = mock(LearningMaterialRepository.class);
         topicMaterialRepository = mock(TopicMaterialRepository.class);
         coverageRecalculator = mock(CoverageRecalculator.class);
+        eventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
 
         service = new LearningMaterialCommandService(
                 facadeRepository, materialRepository, topicMaterialRepository, coverageRecalculator,
-                mock(org.springframework.context.ApplicationEventPublisher.class));
+                eventPublisher);
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);
@@ -190,5 +193,77 @@ class LearningMaterialCommandServiceCreateTest {
 
         verify(topicMaterialRepository, never()).save(any(TopicMaterial.class));
         verify(coverageRecalculator, never()).recalculate(any(AxisTopic.class));
+    }
+
+    // ─── Story-005-1: 이벤트 발행·결과 통신 ──────────────────────────────────────
+
+    @Test
+    @DisplayName("createMaterial_이벤트_발행 — LearningMaterialCreatedEvent 1건 publish")
+    void createMaterial_이벤트_발행() {
+        service.createMaterial(cmd(
+                "도메인 주도 설계", "BOOK", null,
+                "에릭 에반스", null, null, null, null,
+                List.of(100L)));
+
+        ArgumentCaptor<com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent> captor =
+                ArgumentCaptor.forClass(com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent.class);
+        verify(eventPublisher, times(1)).publishEvent(captor.capture());
+
+        com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent event = captor.getValue();
+        assertThat(event.userId()).isEqualTo(1L);
+        assertThat(event.materialName()).isEqualTo("도메인 주도 설계");
+        assertThat(event.axisId()).isEqualTo(10L);  // linkedTopicIds 첫 주제의 축
+        assertThat(event.forceCreateDeck()).isFalse();
+    }
+
+    @Test
+    @DisplayName("createMaterial_linkedTopicIds_없음 — 이벤트의 axisId=null")
+    void createMaterial_axisId_null_이벤트() {
+        service.createMaterial(cmd(
+                "리소스 미연결", "WEB_RESOURCE", null,
+                null, null, null, null, null,
+                List.of()));
+
+        ArgumentCaptor<com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent> captor =
+                ArgumentCaptor.forClass(com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+
+        assertThat(captor.getValue().axisId()).isNull();
+    }
+
+    @Test
+    @DisplayName("createMaterial_핸들러_결과_응답반영 — event.setResult 후 응답에 deckId/deckName")
+    void createMaterial_핸들러_결과_응답반영() {
+        // 핸들러 동작을 시뮬레이션: eventPublisher.publishEvent 호출 시 setResult로 결과 주입
+        doAnswer(inv -> {
+            com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent event =
+                    inv.getArgument(0);
+            event.setResult(999L, "도메인 주도 설계");
+            return null;
+        }).when(eventPublisher).publishEvent(any(com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent.class));
+
+        CreateMaterial response = service.createMaterial(cmd(
+                "도메인 주도 설계", "BOOK", null,
+                null, null, null, null, null,
+                List.of(100L)));
+
+        assertThat(response.deckCreated()).isTrue();
+        assertThat(response.deckId()).isEqualTo(999L);
+        assertThat(response.deckName()).isEqualTo("도메인 주도 설계");
+    }
+
+    @Test
+    @DisplayName("createMaterial_핸들러_예외전파 — 동명 시 핸들러가 throw하면 응답까지 전파")
+    void createMaterial_핸들러_예외전파() {
+        doThrow(new com.example.thirdtool.Common.Exception.BusinessException(ErrorCode.DECK_NAME_DUPLICATE))
+                .when(eventPublisher).publishEvent(any(com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent.class));
+
+        assertThatThrownBy(() -> service.createMaterial(cmd(
+                "도메인 주도 설계", "BOOK", null,
+                null, null, null, null, null,
+                List.of(100L))))
+                .isInstanceOf(com.example.thirdtool.Common.Exception.BusinessException.class)
+                .matches(e -> ((com.example.thirdtool.Common.Exception.BusinessException) e).getErrorCode()
+                        == ErrorCode.DECK_NAME_DUPLICATE);
     }
 }

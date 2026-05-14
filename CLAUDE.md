@@ -22,6 +22,27 @@
 
 ---
 
+## 코드가 진실 소스 (Source of Truth)
+
+다음 영역은 **별도 docs 파일을 두지 않는다** — 코드/Flyway/테스트가 단일 진실 소스이기 때문이다. Plan mode가 매번 코드에서 추출한다.
+
+| 영역 | 진실 소스 |
+| --- | --- |
+| API 명세 | Controller + Request/Response DTO + Swagger UI (`/swagger-ui.html`) |
+| DB 스키마 | Flyway `V*.sql` + JPA 매핑 (`@Entity`, `@Column`) |
+| 테스트 매트릭스 | 테스트 코드 + 메서드명 (`{대상행위}_{상황}_{기대결과}`) |
+| 패키지·디렉토리 사실 | `src/main/java/com/example/thirdtool/` 디렉토리 트리 |
+| 인프라 사실 (AWS 리소스·CI/CD 파이프라인) | `.github/workflows/*.yml` + `application.yml` + AWS 콘솔 |
+
+별도 명세 문서를 만들지 말 것. 위 영역의 변경은 docs 갱신을 묻지 않는다 ([`.claude/rules/workflow.md`](.claude/rules/workflow.md) Step 5 표 참조).
+
+`docs/`에 두는 것은 **코드만으론 알 수 없는 의도와 결정**뿐이다:
+- `docs/DOMAIN.md` — 도메인 의도·용어·불변식 (코드에는 "what"만 있고 "why"가 없음)
+- `docs/PACKAGE.md` — 패키지·BC·레이어 의존 규칙 (코드 구조는 사실이지만 그 *규칙*은 의도)
+- `docs/adr/` — 아키텍처 결정 기록 (대안 비교·거부 사유는 코드에 없음)
+
+---
+
 ## 명령어
 
 빌드 도구는 Gradle Wrapper(`gradlew`/`gradlew.bat`), Java 21 toolchain.

@@ -55,6 +55,15 @@ class LearningMaterialCommandServiceCreateTest {
                 facadeRepository, materialRepository, topicMaterialRepository, coverageRecalculator,
                 eventPublisher);
 
+        // 기본 동작: 이벤트 발행 시 핸들러가 Deck을 만들어 setResult로 결과 반환 (정상 시나리오 모사).
+        // C2 검증(createdDeckId == null → DECK_AUTO_CREATE_FAILED)을 통과시키기 위함.
+        // 특정 테스트에서 null/예외 시나리오는 본문에서 override.
+        doAnswer(inv -> {
+            com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent ev = inv.getArgument(0);
+            ev.setResult(999L, ev.materialName());
+            return null;
+        }).when(eventPublisher).publishEvent(any(com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent.class));
+
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);
 
@@ -232,7 +241,7 @@ class LearningMaterialCommandServiceCreateTest {
     }
 
     @Test
-    @DisplayName("createMaterial_핸들러_결과_응답반영 — event.setResult 후 응답에 deckId/deckName")
+    @DisplayName("createMaterial_핸들러_결과_응답반영 — event.setResult 후 응답에 deckId/deckName + material 필드 함께 검증 (Reviewer C4)")
     void createMaterial_핸들러_결과_응답반영() {
         // 핸들러 동작을 시뮬레이션: eventPublisher.publishEvent 호출 시 setResult로 결과 주입
         doAnswer(inv -> {
@@ -243,13 +252,40 @@ class LearningMaterialCommandServiceCreateTest {
         }).when(eventPublisher).publishEvent(any(com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent.class));
 
         CreateMaterial response = service.createMaterial(cmd(
-                "도메인 주도 설계", "BOOK", null,
-                null, null, null, null, null,
+                "도메인 주도 설계", "BOOK", "https://example.com/ddd",
+                "에릭 에반스", null, null, null, "DDD 책",
                 List.of(100L)));
 
+        // Deck 결과 필드
         assertThat(response.deckCreated()).isTrue();
         assertThat(response.deckId()).isEqualTo(999L);
         assertThat(response.deckName()).isEqualTo("도메인 주도 설계");
+
+        // material 원본 필드도 응답에 정상 포함 (C4 — Response 완전 검증)
+        assertThat(response.name()).isEqualTo("도메인 주도 설계");
+        assertThat(response.materialType()).isEqualTo("BOOK");
+        assertThat(response.url()).isEqualTo("https://example.com/ddd");
+        assertThat(response.author()).isEqualTo("에릭 에반스");
+        assertThat(response.memo()).isEqualTo("DDD 책");
+        assertThat(response.proficiencyLevel()).isEqualTo("UNRATED");
+        // linkedTopics는 JPA 양방향 매핑이 mock 환경에서 자동 동기화 안 되므로 단위 테스트에서 size 검증 제외.
+        // 통합 테스트 (별도 Story) 영역.
+    }
+
+    @Test
+    @DisplayName("createMaterial_핸들러_setResult_누락 — createdDeckId null이면 DECK_AUTO_CREATE_FAILED (Reviewer C2)")
+    void createMaterial_setResult_누락_예외() {
+        // setResult 호출 안 함 — 0개 핸들러 또는 silent fail 시나리오 모사
+        doNothing().when(eventPublisher).publishEvent(
+                any(com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent.class));
+
+        assertThatThrownBy(() -> service.createMaterial(cmd(
+                "도메인 주도 설계", "BOOK", null,
+                null, null, null, null, null,
+                List.of(100L))))
+                .isInstanceOf(com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException.class)
+                .matches(e -> ((com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException) e).getErrorCode()
+                        == ErrorCode.DECK_AUTO_CREATE_FAILED);
     }
 
     @Test

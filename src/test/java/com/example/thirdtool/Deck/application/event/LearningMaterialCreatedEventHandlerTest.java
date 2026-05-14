@@ -155,6 +155,38 @@ class LearningMaterialCreatedEventHandlerTest {
 
     // ─── axisId null ──────────────────────────────────────
 
+    // ─── 경계값 ──────────────────────────────────────
+
+    @Test
+    @DisplayName("handle_requestedDeckName_trim — 앞뒤 공백 제거 후 Deck 이름으로 사용 (Reviewer M5)")
+    void handle_requestedDeckName_trim() {
+        when(deckRepository.existsByUserIdAndNameAndDeletedFalse(1L, "내 Deck")).thenReturn(false);
+
+        handler.handle(event("  내 Deck  ", false));
+
+        ArgumentCaptor<Deck> captor = ArgumentCaptor.forClass(Deck.class);
+        verify(deckRepository).save(captor.capture());
+        assertThat(captor.getValue().getName()).isEqualTo("내 Deck");
+    }
+
+    @Test
+    @DisplayName("handle_force_true_suffix_100_초과 — 100회 도달 시 DECK_NAME_DUPLICATE (Reviewer C3)")
+    void handle_force_true_suffix_100_초과_예외() {
+        // base 이름 + (2)~(100) 까지 모두 존재 — 어디에도 빈 자리가 없음
+        when(deckRepository.existsByUserIdAndNameAndDeletedFalse(1L, "도메인 주도 설계")).thenReturn(true);
+        for (int i = 2; i <= 100; i++) {
+            when(deckRepository.existsByUserIdAndNameAndDeletedFalse(1L, "도메인 주도 설계 (" + i + ")")).thenReturn(true);
+        }
+
+        assertThatThrownBy(() -> handler.handle(event(null, true)))
+                .isInstanceOf(BusinessException.class)
+                .matches(e -> ((BusinessException) e).getErrorCode() == ErrorCode.DECK_NAME_DUPLICATE);
+
+        verify(deckRepository, never()).save(any());
+    }
+
+    // ─── axisId null ──────────────────────────────────────
+
     @Test
     @DisplayName("handle_axisId_null — linkedTopicIds 없는 자료도 Deck 생성")
     void handle_axisId_null_정상() {

@@ -1,6 +1,8 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.Deck.application.service.DeckQueryService;
+import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.AxisTopic;
 import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
@@ -10,6 +12,8 @@ import com.example.thirdtool.LearningFacade.domain.model.MaterialType;
 import com.example.thirdtool.LearningFacade.domain.model.TopicMaterial;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicMaterialRepository;
+import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.AxisItem;
+import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.DeckItem;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.FacadeDetail;
 import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.TopicItem;
 import com.example.thirdtool.LearningFacade.presentation.dto.MaterialBreakdown;
@@ -31,6 +35,7 @@ class LearningFacadeQueryServiceTest {
 
     private LearningFacadeRepository facadeRepository;
     private TopicMaterialRepository topicMaterialRepository;
+    private DeckQueryService deckQueryService;
     private LearningFacadeQueryService service;
 
     private UserEntity user;
@@ -49,7 +54,9 @@ class LearningFacadeQueryServiceTest {
     void setUp() {
         facadeRepository = mock(LearningFacadeRepository.class);
         topicMaterialRepository = mock(TopicMaterialRepository.class);
-        service = new LearningFacadeQueryService(facadeRepository, topicMaterialRepository);
+        deckQueryService = mock(DeckQueryService.class);
+        when(deckQueryService.findByAxisIds(anyCollection())).thenReturn(List.of());
+        service = new LearningFacadeQueryService(facadeRepository, topicMaterialRepository, deckQueryService);
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);
@@ -162,5 +169,63 @@ class LearningFacadeQueryServiceTest {
                 .isInstanceOf(LearningFacadeDomainException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LEARNING_FACADE_NOT_FOUND);
         verify(topicMaterialRepository, never()).findByTopicIdIn(anyList());
+    }
+
+    // ─── Story-005-2: 축별 linkedDecks 매핑 ──────────────────
+
+    @Test
+    @DisplayName("getFacade_연결된_Deck_없음 — 모든 축 linkedDecks 빈 리스트")
+    void getFacade_no_linked_decks_axes_have_empty_list() {
+        when(topicMaterialRepository.findByTopicIdIn(List.of(100L, 101L, 102L)))
+                .thenReturn(List.of());
+        when(deckQueryService.findByAxisIds(List.of(10L))).thenReturn(List.of());
+
+        FacadeDetail detail = service.getFacade(new com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery.GetFacade(user.getId()));
+
+        AxisItem axisItem = detail.axes().get(0);
+        assertThat(axisItem.linkedDecks()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getFacade_연결된_Deck_여러건 — axisId 기준 그룹핑되어 매핑된다")
+    void getFacade_linked_decks_grouped_by_axisId() {
+        when(topicMaterialRepository.findByTopicIdIn(List.of(100L, 101L, 102L)))
+                .thenReturn(List.of());
+
+        Deck deck1 = Deck.createFromLearningMaterial(user, 10L, 200L, "DDD");
+        Deck deck2 = Deck.createFromLearningMaterial(user, 10L, 201L, "Clean Architecture");
+        ReflectionTestUtils.setField(deck1, "id", 500L);
+        ReflectionTestUtils.setField(deck2, "id", 501L);
+        when(deckQueryService.findByAxisIds(List.of(10L))).thenReturn(List.of(deck1, deck2));
+
+        FacadeDetail detail = service.getFacade(new com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery.GetFacade(user.getId()));
+
+        AxisItem axisItem = detail.axes().get(0);
+        assertThat(axisItem.linkedDecks()).hasSize(2);
+        assertThat(axisItem.linkedDecks().stream().map(DeckItem::deckId)).containsExactlyInAnyOrder(500L, 501L);
+        assertThat(axisItem.linkedDecks().stream().map(DeckItem::deckName))
+                .containsExactlyInAnyOrder("DDD", "Clean Architecture");
+        assertThat(axisItem.linkedDecks()).allSatisfy(d ->
+                assertThat(d.progressStatus()).isEqualTo("NOT_STARTED"));
+        assertThat(axisItem.linkedDecks()).allSatisfy(d ->
+                assertThat(d.isMaterialUnlinked()).isFalse());
+    }
+
+    @Test
+    @DisplayName("getFacade_자료_미연결_Deck — isMaterialUnlinked=true 노출")
+    void getFacade_material_unlinked_deck_flag_true() {
+        when(topicMaterialRepository.findByTopicIdIn(List.of(100L, 101L, 102L)))
+                .thenReturn(List.of());
+
+        Deck orphan = Deck.createFromLearningMaterial(user, 10L, 999L, "고아 Deck");
+        orphan.markMaterialDeleted();
+        ReflectionTestUtils.setField(orphan, "id", 600L);
+        when(deckQueryService.findByAxisIds(List.of(10L))).thenReturn(List.of(orphan));
+
+        FacadeDetail detail = service.getFacade(new com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery.GetFacade(user.getId()));
+
+        AxisItem axisItem = detail.axes().get(0);
+        assertThat(axisItem.linkedDecks()).hasSize(1);
+        assertThat(axisItem.linkedDecks().get(0).isMaterialUnlinked()).isTrue();
     }
 }

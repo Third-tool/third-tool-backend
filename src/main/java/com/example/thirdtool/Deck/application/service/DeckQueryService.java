@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,6 +54,18 @@ public class DeckQueryService {
                 pageable.getPageNumber(),
                 pageable.getPageSize()
         );
+    }
+
+    /**
+     * 축 ID 목록에 귀속된 활성 Deck 일괄 조회 (Story-005-2).
+     * LearningFacade BC가 facade 상세 조회 시 축별 linkedDecks 매핑 용도로 호출.
+     * 빈 collection이면 빈 리스트 단락 — DB 호출 회피.
+     */
+    public List<Deck> findByAxisIds(Collection<Long> axisIds) {
+        if (axisIds == null || axisIds.isEmpty()) {
+            return List.of();
+        }
+        return deckRepository.findByAxisIdInAndDeletedFalse(axisIds);
     }
 
     /**

@@ -1,9 +1,12 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.Deck.application.service.DeckQueryService;
+import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.AxisTopic;
+import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
 import com.example.thirdtool.LearningFacade.domain.model.LearningFacade;
 import com.example.thirdtool.LearningFacade.domain.model.MaterialType;
 import com.example.thirdtool.LearningFacade.domain.model.TopicMaterial;
@@ -26,6 +29,7 @@ public class LearningFacadeQueryService {
 
     private final LearningFacadeRepository facadeRepository;
     private final TopicMaterialRepository topicMaterialRepository;
+    private final DeckQueryService deckQueryService;
 
     @Transactional(readOnly = true)
     public FacadeDetail getFacade(LearningFacadeQuery.GetFacade query) {
@@ -38,7 +42,15 @@ public class LearningFacadeQueryService {
                 .collect(Collectors.toList());
 
         Map<Long, MaterialBreakdown> breakdownByTopic = computeBreakdown(topicIds);
-        return FacadeDetail.of(facade, breakdownByTopic);
+
+        // Story-005-2: 축별 연결 Deck 목록 일괄 조회 (N+1 회피).
+        List<Long> axisIds = facade.getAxes().stream()
+                .map(LearningAxis::getId)
+                .collect(Collectors.toList());
+        Map<Long, List<Deck>> linkedDecksByAxis = deckQueryService.findByAxisIds(axisIds).stream()
+                .collect(Collectors.groupingBy(Deck::getAxisId));
+
+        return FacadeDetail.of(facade, breakdownByTopic, linkedDecksByAxis);
     }
 
     // table-spec §3-1 (4): 저장하지 않고 인메모리 그룹핑. 주제당 자료 수가 수십 건 수준이라 한 번의 IN 쿼리로 충분.

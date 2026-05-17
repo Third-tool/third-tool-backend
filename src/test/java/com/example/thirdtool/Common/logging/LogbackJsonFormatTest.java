@@ -60,6 +60,18 @@ class LogbackJsonFormatTest {
     }
 
     @Test
+    void dev_profile_로그도_prod와_동일하게_JSON_한_줄로_출력된다() throws Exception {
+        configureLogback("dev");
+        Logger logger = LoggerFactory.getLogger("c.t.controller.CardController");
+
+        logger.info("Card list fetched");
+
+        JsonNode json = MAPPER.readTree(readSingleLine());
+        assertThat(json.get("application").asText()).isEqualTo("thirdtool");
+        assertThat(json.get("message").asText()).isEqualTo("Card list fetched");
+    }
+
+    @Test
     void local_profile_로그는_JSON이_아닌_평문으로_출력된다() throws Exception {
         configureLogback("local");
         Logger logger = LoggerFactory.getLogger("c.t.controller.CardController");
@@ -136,6 +148,12 @@ class LogbackJsonFormatTest {
         assertThat(json.get("requestId").asText()).isEqualTo("abc-123");
     }
 
+    /**
+     * logback-spring.xml을 LogbackLoggingSystem으로 초기화하고, 활성 ConsoleAppender의
+     * OutputStream을 ByteArrayOutputStream으로 교체해 한 테스트 내 출력을 캡처한다.
+     * 동기 ConsoleAppender 가정 — AsyncAppender 도입 시 캡처 패턴을 ListAppender 기반으로 재설계 필요.
+     * Spring Boot 내부 API(LogbackLoggingSystem) 의존 — 메이저 업그레이드 시 호환성 회귀 점검 (ADR008).
+     */
     private void configureLogback(String activeProfile) {
         MockEnvironment env = new MockEnvironment();
         env.setActiveProfiles(activeProfile);

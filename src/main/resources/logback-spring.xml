@@ -46,7 +46,8 @@
 
     <springProfile name="prod">
         <logger name="com.example.thirdtool" level="INFO"/>
-        <logger name="org.hibernate.SQL" level="OFF"/>
+        <!-- SQL 텍스트는 WARN으로 보존(장애 대응 escape hatch), 바인딩 파라미터는 OFF로 차단(PII). ADR008 §재검토. -->
+        <logger name="org.hibernate.SQL" level="WARN"/>
         <logger name="org.hibernate.orm.jdbc.bind" level="OFF"/>
     </springProfile>
 

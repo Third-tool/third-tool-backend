@@ -71,6 +71,9 @@ dependencies {
     implementation 'org.springframework:spring-web'   // MultipartFile 인터페이스
     implementation 'org.springframework:spring-test'  // ✅ MockMultipartFile (런타임에서도 사용)
 
+    // 구조화 로그 (ADR008) — profile별 JSON Appender에서 사용
+    implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+
 }
 
 // Querydsl 설정부

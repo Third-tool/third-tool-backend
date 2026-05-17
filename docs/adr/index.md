@@ -9,3 +9,4 @@
 | [ADR005](ADR005.md) | Controller↔Service 경계에 Command/Query record 도입 | Accepted | 2026-05-12 |
 | [ADR006](ADR006.md) | 문서 체계를 docs/ 단일 진입으로 압축한다 | Accepted | 2026-05-14 |
 | [ADR007](ADR007.md) | BC 간 협력에 동기 도메인 이벤트를 도입한다 | Accepted | 2026-05-14 |
+| [ADR008](ADR008.md) | 로깅 인프라 — profile별 Appender 분기 + LogstashEncoder + MDC 화이트리스트 | Accepted | 2026-05-17 |

@@ -65,15 +65,11 @@ public class JwtTokenIssuer implements TokenIssuer {
     }
 
     private void upsertRefreshWhitelist(String username, String refreshToken) {
-        // Story 2-3에서 RefreshEntity.updateRefresh() 도메인 메서드로 정리 예정.
-        // 본 Story는 기존 JwtService.addRefresh 로직을 그대로 흡수.
-        RefreshEntity existing = refreshRepository.findEntityByUsername(username)
-                                                  .orElse(null);
-        RefreshEntity entity = RefreshEntity.builder()
-                                            .id(existing != null ? existing.getId() : null)
-                                            .username(username)
-                                            .refresh(refreshToken)
-                                            .build();
-        refreshRepository.save(entity);
+        // Story 2-3: RefreshEntity.updateRefresh()로 dirty checking, 신규는 ofNew로 정적 팩토리
+        refreshRepository.findEntityByUsername(username)
+                         .ifPresentOrElse(
+                                 existing -> existing.updateRefresh(refreshToken),
+                                 () -> refreshRepository.save(RefreshEntity.ofNew(username, refreshToken))
+                         );
     }
 }

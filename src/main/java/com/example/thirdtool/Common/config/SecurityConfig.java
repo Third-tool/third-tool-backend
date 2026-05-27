@@ -1,6 +1,7 @@
 package com.example.thirdtool.Common.config;
 
 
+import com.example.thirdtool.Common.Util.JWTUtil;
 import com.example.thirdtool.Common.security.filter.JWTFilter;
 import com.example.thirdtool.User.domain.model.CustomOAuth2User;
 import com.example.thirdtool.User.domain.model.UserRoleType;
@@ -54,11 +55,14 @@ public class SecurityConfig {
     };
 
     private final UserRepository userRepository;
+    private final JWTUtil jwtUtil;
 
     public SecurityConfig(
-            UserRepository userRepository
+            UserRepository userRepository,
+            JWTUtil jwtUtil
                          ) {
         this.userRepository = userRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostConstruct
@@ -178,7 +182,7 @@ public class SecurityConfig {
         // ==============================
         // 6️⃣ JWT 인증 필터 추가
         // ==============================
-        http.addFilterBefore(new JWTFilter(userRepository), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JWTFilter(userRepository, jwtUtil), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

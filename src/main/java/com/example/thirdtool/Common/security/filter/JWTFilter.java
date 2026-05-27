@@ -5,6 +5,7 @@ import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.Util.JWTUtil;
 import com.example.thirdtool.Common.Util.WhitelistPath;
+import com.example.thirdtool.Common.security.auth.token.TokenType;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.repository.UserRepository;
 import jakarta.servlet.FilterChain;
@@ -29,6 +30,7 @@ import java.util.List;
 public class JWTFilter extends OncePerRequestFilter {
 
     private final UserRepository userRepository;
+    private final JWTUtil jwtUtil;
 
 
     @Override
@@ -79,10 +81,10 @@ public class JWTFilter extends OncePerRequestFilter {
 
         // 4️⃣ JWT 유효성 검증
         try {
-            if (JWTUtil.isValid(accessToken, true)) {
-                String username = JWTUtil.getUsername(accessToken);
-                String role = JWTUtil.getRole(accessToken);
-                log.info("[JWTFilter] ✅ JWT username claim = {}", JWTUtil.getUsername(accessToken));
+            if (jwtUtil.isValid(accessToken, TokenType.ACCESS)) {
+                String username = jwtUtil.getUsername(accessToken);
+                String role = jwtUtil.getRole(accessToken);
+                log.info("[JWTFilter] ✅ JWT username claim = {}", username);
                 log.info("[JWTFilter] ✅ JWT 유효함 → username={}, role={}", username, role);
 
                 // 5️⃣ DB에서 사용자 확인

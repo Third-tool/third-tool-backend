@@ -2,6 +2,7 @@ package com.example.thirdtool.User.presentation;
 
 import com.example.thirdtool.Common.Util.JWTUtil;
 import com.example.thirdtool.Common.security.auth.jwt.JwtService;
+import com.example.thirdtool.Common.security.auth.token.TokenType;
 import com.example.thirdtool.User.dto.*;
 import com.example.thirdtool.User.application.UserService;
 import com.example.thirdtool.User.domain.model.UserEntity;
@@ -22,11 +23,14 @@ public class UserController {
 
     private final UserService userService;
     private final JwtService jwtService;
+    private final JWTUtil jwtUtil;
 
     public UserController(UserService userService,
-                          JwtService jwtService) {
+                          JwtService jwtService,
+                          JWTUtil jwtUtil) {
         this.userService = userService;
         this.jwtService = jwtService;
+        this.jwtUtil = jwtUtil;
     }
 
     // ✅ 자체 로그인 (JWT 발급)
@@ -41,8 +45,8 @@ public class UserController {
         String role = "ROLE_" + user.getRoleType().name();
 
         // 3️⃣ JWT 발급
-        String accessToken = JWTUtil.createJWT(user.getUsername(), role, true);
-        String refreshToken = JWTUtil.createJWT(user.getUsername(), role, false);
+        String accessToken = jwtUtil.createJWT(user.getUsername(), role, jwtUtil.accessTokenTtl(), TokenType.ACCESS);
+        String refreshToken = jwtUtil.createJWT(user.getUsername(), role, jwtUtil.refreshTokenTtl(), TokenType.REFRESH);
 
         // 4️⃣ RefreshToken 저장
         jwtService.addRefresh(user.getUsername(), refreshToken);

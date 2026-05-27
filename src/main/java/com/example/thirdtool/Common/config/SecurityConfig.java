@@ -2,6 +2,7 @@ package com.example.thirdtool.Common.config;
 
 
 import com.example.thirdtool.Common.Util.JWTUtil;
+import com.example.thirdtool.Common.security.auth.JwtAuthenticationEntryPoint;
 import com.example.thirdtool.Common.security.filter.JWTFilter;
 import com.example.thirdtool.User.domain.model.CustomOAuth2User;
 import com.example.thirdtool.User.domain.model.UserRoleType;
@@ -56,13 +57,16 @@ public class SecurityConfig {
 
     private final UserRepository userRepository;
     private final JWTUtil jwtUtil;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     public SecurityConfig(
             UserRepository userRepository,
-            JWTUtil jwtUtil
+            JWTUtil jwtUtil,
+            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint
                          ) {
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
     }
 
     @PostConstruct
@@ -167,13 +171,11 @@ public class SecurityConfig {
                                       );
 
         // ==============================
-        // 5️⃣ 예외 처리 (401 / 403)
+        // 5️⃣ 예외 처리 (401 / 403) — Story 3-1에서 EntryPoint 통일
         // ==============================
         http
                 .exceptionHandling(e -> e
-                                .authenticationEntryPoint((req, res, ex) -> {
-                                    res.sendError(HttpServletResponse.SC_UNAUTHORIZED);  // 401
-                                })
+                                .authenticationEntryPoint(jwtAuthenticationEntryPoint)  // {code, message, path, timestamp}
                                 .accessDeniedHandler((req, res, ex) -> {
                                     res.sendError(HttpServletResponse.SC_FORBIDDEN);     // 403
                                 })
@@ -182,7 +184,8 @@ public class SecurityConfig {
         // ==============================
         // 6️⃣ JWT 인증 필터 추가
         // ==============================
-        http.addFilterBefore(new JWTFilter(userRepository, jwtUtil), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JWTFilter(userRepository, jwtUtil, jwtAuthenticationEntryPoint),
+                UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

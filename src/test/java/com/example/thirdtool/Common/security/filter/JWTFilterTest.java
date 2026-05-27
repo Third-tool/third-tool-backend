@@ -1,10 +1,12 @@
 package com.example.thirdtool.Common.security.filter;
 
 import com.example.thirdtool.Common.Util.JWTUtil;
+import com.example.thirdtool.Common.security.auth.JwtAuthenticationEntryPoint;
 import com.example.thirdtool.Common.security.auth.jwt.JwtProperties;
 import com.example.thirdtool.Common.security.auth.token.TokenType;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +45,8 @@ class JWTFilterTest {
         JwtProperties props = new JwtProperties(SECRET, Duration.ofMinutes(30), Duration.ofDays(7));
         jwtUtil = new JWTUtil(props);
         userRepository = mock(UserRepository.class);
-        filter = new JWTFilter(userRepository, jwtUtil);
+        JwtAuthenticationEntryPoint entryPoint = new JwtAuthenticationEntryPoint(new ObjectMapper());
+        filter = new JWTFilter(userRepository, jwtUtil, entryPoint);
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
         chain = mock(FilterChain.class);

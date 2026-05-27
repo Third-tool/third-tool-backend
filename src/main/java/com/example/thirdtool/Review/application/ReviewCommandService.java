@@ -101,6 +101,10 @@ public class ReviewCommandService {
             card.archive();
             CardStatus after = card.getStatus();
             historyAppender.append(card, before, after, ArchiveReason.MAX_VIEW);
+
+            // Story-005-2: 카드 archive 후 Deck progressStatus 자동 재계산.
+            // 모든 활성 Card가 ARCHIVE면 COMPLETED로 전환.
+            card.getDeck().recalculateProgressStatus();
         }
         cardRepository.save(card);
         return isLastView;

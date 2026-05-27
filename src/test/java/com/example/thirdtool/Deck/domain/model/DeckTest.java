@@ -1,5 +1,6 @@
 package com.example.thirdtool.Deck.domain.model;
 
+import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.User.domain.model.UserEntity;
@@ -8,8 +9,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @DisplayName("Deck — createFromLearningMaterial + markMaterialDeleted (Story-005-1)")
 class DeckTest {
@@ -114,5 +120,132 @@ class DeckTest {
 
         assertThat(deck.getLearningMaterialId()).isNull();
         assertThat(deck.getAxisId()).isEqualTo(100L);
+    }
+
+    // ─── DeckProgressStatus (Story-005-2) ──────────────────────────
+
+    private Card mockCard(boolean archived, boolean deleted) {
+        Card card = mock(Card.class);
+        when(card.isArchived()).thenReturn(archived);
+        when(card.isDeleted()).thenReturn(deleted);
+        return card;
+    }
+
+    private void injectCards(Deck deck, Card... cards) {
+        List<Card> list = new ArrayList<>(List.of(cards));
+        ReflectionTestUtils.setField(deck, "cards", list);
+    }
+
+    @Test
+    @DisplayName("기본 progressStatus — Deck 생성 직후 NOT_STARTED")
+    void 기본_progressStatus_NOT_STARTED() {
+        Deck deck = Deck.of("새 Deck", null, user);
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.NOT_STARTED);
+    }
+
+    @Test
+    @DisplayName("markInProgress — NOT_STARTED → IN_PROGRESS")
+    void markInProgress_NOT_STARTED_전환() {
+        Deck deck = Deck.of("새 Deck", null, user);
+
+        deck.markInProgress();
+
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.IN_PROGRESS);
+    }
+
+    @Test
+    @DisplayName("markInProgress_멱등 — 이미 IN_PROGRESS면 무시")
+    void markInProgress_이미IN_PROGRESS_무시() {
+        Deck deck = Deck.of("새 Deck", null, user);
+        deck.markInProgress();
+
+        deck.markInProgress();  // 2회 호출
+
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.IN_PROGRESS);
+    }
+
+    @Test
+    @DisplayName("markInProgress_COMPLETED_무시 — 회귀는 recalculate가 담당")
+    void markInProgress_COMPLETED_무시() {
+        Deck deck = Deck.of("Deck", null, user);
+        injectCards(deck, mockCard(true, false));
+        deck.recalculateProgressStatus();
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.COMPLETED);
+
+        deck.markInProgress();  // COMPLETED 상태에서 호출 — 무시
+
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("recalculate_빈Deck — NOT_STARTED 유지")
+    void recalculate_빈Deck_NOT_STARTED() {
+        Deck deck = Deck.of("빈 Deck", null, user);
+
+        deck.recalculateProgressStatus();
+
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.NOT_STARTED);
+    }
+
+    @Test
+    @DisplayName("recalculate_모두ARCHIVE — COMPLETED")
+    void recalculate_모두ARCHIVE_COMPLETED() {
+        Deck deck = Deck.of("Deck", null, user);
+        injectCards(deck, mockCard(true, false), mockCard(true, false));
+
+        deck.recalculateProgressStatus();
+
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("recalculate_일부ARCHIVE — IN_PROGRESS")
+    void recalculate_일부ARCHIVE_IN_PROGRESS() {
+        Deck deck = Deck.of("Deck", null, user);
+        injectCards(deck, mockCard(true, false), mockCard(false, false));
+
+        deck.recalculateProgressStatus();
+
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.IN_PROGRESS);
+    }
+
+    @Test
+    @DisplayName("recalculate_soft delete된 Card 제외 — 활성만 기준")
+    void recalculate_softDelete_제외() {
+        Deck deck = Deck.of("Deck", null, user);
+        // 활성 1개(ARCHIVE) + soft delete 1개(ON_FIELD) — 활성만 보면 모두 ARCHIVE → COMPLETED
+        injectCards(deck, mockCard(true, false), mockCard(false, true));
+
+        deck.recalculateProgressStatus();
+
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("recalculate_모두 soft delete — NOT_STARTED")
+    void recalculate_모두soft_delete_NOT_STARTED() {
+        Deck deck = Deck.of("Deck", null, user);
+        injectCards(deck, mockCard(true, true), mockCard(false, true));
+
+        deck.recalculateProgressStatus();
+
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.NOT_STARTED);
+    }
+
+    @Test
+    @DisplayName("recalculate_COMPLETED→returnToField로 회귀 시 IN_PROGRESS")
+    void recalculate_COMPLETED_회귀() {
+        Deck deck = Deck.of("Deck", null, user);
+        Card a = mockCard(true, false);
+        Card b = mockCard(true, false);
+        injectCards(deck, a, b);
+        deck.recalculateProgressStatus();
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.COMPLETED);
+
+        // a를 ON_FIELD로 회귀 시뮬레이션
+        when(a.isArchived()).thenReturn(false);
+        deck.recalculateProgressStatus();
+
+        assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.IN_PROGRESS);
     }
 }

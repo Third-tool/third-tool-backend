@@ -4,6 +4,7 @@ import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialCommand;
 import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialQuery;
 import com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent;
+import com.example.thirdtool.LearningFacade.domain.event.LearningMaterialDeletedEvent;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.*;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
@@ -212,6 +213,9 @@ public class LearningMaterialCommandService {
         List<AxisTopic> affectedTopics = new ArrayList<>(material.getTopicMappings().stream()
                 .map(TopicMaterial::getTopic)
                 .toList());
+
+        // Story-005-2: Deck.learningMaterialId를 null로 끊은 뒤 자료 삭제 (FK 안전 — ADR007).
+        eventPublisher.publishEvent(new LearningMaterialDeletedEvent(command.userId(), command.materialId()));
 
         materialRepository.delete(material);
         affectedTopics.forEach(coverageRecalculator::recalculate);

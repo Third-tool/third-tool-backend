@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,6 +52,19 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
          * 기본 5개. 개수 변경이 필요하면 DeckQueryRepository의 QueryDSL 메서드를 사용한다.
          */
         List<Deck> findTop5ByUserIdAndDeletedFalseOrderByLastAccessedDesc(Long userId);
+
+        // ─── LearningFacade 연결 조회 (Story-005-2) ───────────────
+
+        /**
+         * 축 ID 목록에 귀속된 Deck 일괄 조회. 논리 삭제된 Deck 제외.
+         * <p>축별 N+1 회피 — LearningFacadeQueryService.getFacade가 한 번에 조회한다.
+         */
+        List<Deck> findByAxisIdInAndDeletedFalse(Collection<Long> axisIds);
+
+        /**
+         * 특정 학습 자료에 연결된 활성 Deck 목록 조회. 자료 삭제 시 markMaterialDeleted 호출 대상.
+         */
+        List<Deck> findByLearningMaterialIdAndDeletedFalse(Long learningMaterialId);
 
         // ─── 중복 검사 ────────────────────────────────────────
 

@@ -46,6 +46,11 @@ public class CardCommandService {
 
         Card card = Card.create(deck, mainNote, summary, request.keywords(), tags);
         cardRepository.save(card);
+
+        // Story-005-2: 첫 Card 추가 시 Deck progressStatus를 NOT_STARTED → IN_PROGRESS로 자동 전환.
+        // markInProgress는 멱등 — 이미 IN_PROGRESS / COMPLETED면 무시. JPA dirty checking으로 자동 save.
+        deck.markInProgress();
+
         return CardResponse.Create.of(card);
     }
 
@@ -120,6 +125,10 @@ public class CardCommandService {
     public void softDelete(Long cardId) {
         Card card = findActiveCard(cardId);
         card.softDelete();
+
+        // Story-005-2: 카드 soft delete 후 Deck progressStatus 자동 재계산.
+        // 모든 활성 Card가 ARCHIVE면 COMPLETED, 0개면 NOT_STARTED로 회귀.
+        card.getDeck().recalculateProgressStatus();
     }
 
     // ─── 내부 유틸 ────────────────────────────────────────

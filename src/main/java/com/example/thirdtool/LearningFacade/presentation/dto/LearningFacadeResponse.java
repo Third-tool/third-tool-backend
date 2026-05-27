@@ -1,5 +1,6 @@
 package com.example.thirdtool.LearningFacade.presentation.dto;
 
+import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.LearningFacade.domain.model.*;
 
 import java.time.LocalDateTime;
@@ -110,6 +111,22 @@ public class LearningFacadeResponse {
         }
     }
 
+    public record DeckItem(
+            Long deckId,
+            String deckName,
+            String progressStatus,
+            boolean isMaterialUnlinked
+    ) {
+        public static DeckItem of(Deck deck) {
+            return new DeckItem(
+                    deck.getId(),
+                    deck.getName(),
+                    deck.getProgressStatus().name(),
+                    deck.getLearningMaterialId() == null
+            );
+        }
+    }
+
     public record AxisItem(
             Long axisId,
             String name,
@@ -117,14 +134,21 @@ public class LearningFacadeResponse {
             boolean hasUncoveredTopics,
             int uncoveredTopicCount,
             boolean isFullyCovered,
-            List<TopicItem> topics
+            List<TopicItem> topics,
+            List<DeckItem> linkedDecks
     ) {
         public static AxisItem of(LearningAxis axis) {
-            return of(axis, java.util.Map.of());
+            return of(axis, java.util.Map.of(), List.of());
         }
 
         public static AxisItem of(LearningAxis axis,
                                   java.util.Map<Long, MaterialBreakdown> breakdownByTopic) {
+            return of(axis, breakdownByTopic, List.of());
+        }
+
+        public static AxisItem of(LearningAxis axis,
+                                  java.util.Map<Long, MaterialBreakdown> breakdownByTopic,
+                                  List<Deck> decks) {
             return new AxisItem(
                     axis.getId(),
                     axis.getName(),
@@ -134,6 +158,9 @@ public class LearningFacadeResponse {
                     axis.isFullyCovered(),
                     axis.getTopics().stream()
                             .map(t -> TopicItem.of(t, breakdownByTopic.get(t.getId())))
+                            .collect(Collectors.toList()),
+                    (decks == null ? List.<Deck>of() : decks).stream()
+                            .map(DeckItem::of)
                             .collect(Collectors.toList())
             );
         }
@@ -182,18 +209,27 @@ public class LearningFacadeResponse {
             LocalDateTime updatedAt
     ) {
         public static FacadeDetail of(LearningFacade facade) {
-            return of(facade, java.util.Map.of());
+            return of(facade, java.util.Map.of(), java.util.Map.of());
         }
 
         public static FacadeDetail of(LearningFacade facade,
                                       java.util.Map<Long, MaterialBreakdown> breakdownByTopic) {
+            return of(facade, breakdownByTopic, java.util.Map.of());
+        }
+
+        public static FacadeDetail of(LearningFacade facade,
+                                      java.util.Map<Long, MaterialBreakdown> breakdownByTopic,
+                                      java.util.Map<Long, List<Deck>> linkedDecksByAxis) {
             return new FacadeDetail(
                     facade.getId(),
                     facade.getConcept(),
                     CoverageSummary.from(facade.getCoverageSummary()),
                     facade.isAxisCountExceedsRecommended(),
                     facade.getAxes().stream()
-                            .map(axis -> AxisItem.of(axis, breakdownByTopic))
+                            .map(axis -> AxisItem.of(
+                                    axis,
+                                    breakdownByTopic,
+                                    linkedDecksByAxis.getOrDefault(axis.getId(), List.of())))
                             .collect(Collectors.toList()),
                     facade.getCreatedAt(),
                     facade.getUpdatedAt()

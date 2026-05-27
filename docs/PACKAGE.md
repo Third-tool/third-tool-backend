@@ -189,8 +189,10 @@ public LearningFacadeResponse.UpdateAxisName updateAxisName(
 | `Card → Deck` (`Deck` 참조) | ✅ | Card는 Deck 소속 |
 | `Deck → User` (`UserEntity` 참조) | ✅ | Deck이 소유 유저 보유 |
 | `Review → Card, Deck` | ✅ | ReviewSession이 카드를 순회 (ID 참조 권장, Aggregate 직접 포함 지양) |
-| `Deck → LearningFacade` (이벤트 import) | ✅ | `LearningMaterialCreatedEvent` 수신 — 동기 도메인 이벤트 단방향 협력 ([ADR007](adr/ADR007.md)) |
-| `BC ↔ BC` 양방향 의존 | ❌ | 사이클 → 양쪽 분리 또는 Domain Event 도입 검토 |
+| `Deck → LearningFacade` (이벤트 import) | ✅ | `LearningMaterialCreatedEvent` / `LearningMaterialDeletedEvent` 수신 — 동기 도메인 이벤트 협력 ([ADR007](adr/ADR007.md)) |
+| `LearningFacade → Deck` (Application 경유 read) | ✅ | `LearningFacadeQueryService`가 `DeckQueryService.findByAxisIds(...)` 호출 — facade 응답의 축별 linkedDecks 매핑(Story-005-2). **Repository 직접 호출 금지** — Application Service 경유만. presentation DTO(`AxisItem.linkedDecks`, `DeckItem`)는 Deck 도메인 객체 import 허용 |
+| `Card → Deck` 도메인 행위 호출 | ✅ | `CardCommandService` / `ReviewCommandService`가 카드 추가/archive 후 `deck.markInProgress()` / `recalculateProgressStatus()` 호출 (Story-005-2). Card 도메인 자체는 Deck 상태를 직접 변경하지 않음 |
+| `BC ↔ BC` 양방향 의존 | ⚠️ | 위 `Deck ↔ LearningFacade`처럼 read 협력 + 이벤트 협력이 양방향이 될 수 있으나, 각각 단방향 책임 경계가 명확해야 함(이벤트 발행 BC vs 응답 조립 BC). 도메인 동기 결합 사이클은 여전히 금지 |
 | `Common → 특정 BC` | ❌ | Common은 BC 비의존 |
 | `infra → 특정 BC` | ❌ | infra는 어댑터, BC 비의존 |
 

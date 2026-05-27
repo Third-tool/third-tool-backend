@@ -28,12 +28,13 @@ public class JwtController {
         return jwtService.cookie2Header(request, response);
     }
 
-    // Refresh 토큰으로 Access 토큰 재발급 (Rotate 포함)
+    // Refresh 토큰으로 Access 토큰 재발급 (Rotate 포함) — AT는 Set-Cookie, 새 RT는 응답 바디
     @PostMapping(value = "/jwt/refresh", consumes = MediaType.APPLICATION_JSON_VALUE)
     public JWTResponseDTO jwtRefreshApi(
-            @Validated @RequestBody RefreshRequestDTO dto
+            @Validated @RequestBody RefreshRequestDTO dto,
+            HttpServletResponse response
                                        ) {
-        return jwtService.refreshRotate(dto);
+        return jwtService.refreshRotate(dto, response);
     }
 
 }

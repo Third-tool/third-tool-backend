@@ -48,6 +48,8 @@ public class QDeck extends EntityPathBase<Deck> {
 
     public final QDeck parentDeck;
 
+    public final EnumPath<DeckProgressStatus> progressStatus = createEnum("progressStatus", DeckProgressStatus.class);
+
     public final DateTimePath<java.time.LocalDateTime> publishedAt = createDateTime("publishedAt", java.time.LocalDateTime.class);
 
     public final ListPath<Deck, QDeck> subDecks = this.<Deck, QDeck>createList("subDecks", Deck.class, QDeck.class, PathInits.DIRECT2);

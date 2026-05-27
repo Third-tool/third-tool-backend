@@ -208,3 +208,8 @@ ADR 트리거는 Step 1~5와 독립으로 작업 중 즉시 — `docs(adr): ...`
 - `update-docs/` — Claude Code 기록 출력 (architecture·dict·table-spec·test·adr). 폐기. ADR은 `docs/adr/` tracked로 정착.
 - `docs/architecture/`, `docs/database/` — 흡수/폐기 후 `docs/PACKAGE.md` 단일 파일로 정착.
 - `.claude/rules/private-docs.md`, `update-docs.md`, `update-docs/*.md`, `{domain,api,db,test}-conventions.md` — 모두 폐기. `conventions.md` + `review.md` + `adr.md`로 압축.
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->

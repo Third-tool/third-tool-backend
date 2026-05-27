@@ -94,6 +94,26 @@ class JwtTokenIssuerTest {
     }
 
     @Nested
+    @DisplayName("AC4 — DB 화이트리스트 저장 실패 시 Cookie 발급도 롤백")
+    class TransactionBoundary {
+
+        @Test
+        @DisplayName("DB save 실패 시 Set-Cookie 헤더가 응답에 추가되지 않는다")
+        void issue_dbSaveFails_noCookieWritten() {
+            when(refreshRepository.save(any(RefreshEntity.class)))
+                    .thenThrow(new RuntimeException("DB down"));
+
+            UserEntity user = UserEntity.ofLocal("alice", "encoded", "alice-nick", "alice@example.com");
+
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                    () -> issuer.issue(user, response)
+            ).isInstanceOf(RuntimeException.class);
+
+            assertThat(response.getHeader("Set-Cookie")).isNull();
+        }
+    }
+
+    @Nested
     @DisplayName("reissue — refresh rotate 경로")
     class Reissue {
 

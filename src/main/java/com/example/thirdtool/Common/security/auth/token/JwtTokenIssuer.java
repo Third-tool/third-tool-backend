@@ -41,8 +41,10 @@ public class JwtTokenIssuer implements TokenIssuer {
         String accessToken = jwtUtil.createJWT(username, role, jwtUtil.accessTokenTtl(), TokenType.ACCESS);
         String refreshToken = jwtUtil.createJWT(username, role, jwtUtil.refreshTokenTtl(), TokenType.REFRESH);
 
-        writeAccessTokenCookie(response, accessToken);
+        // 순서 중요: DB 화이트리스트 저장이 성공한 뒤에 Set-Cookie 헤더 추가.
+        // 역순일 경우 DB save 실패 시 응답 헤더에 cookie가 남아 부분 실패 윈도우 발생.
         upsertRefreshWhitelist(username, refreshToken);
+        writeAccessTokenCookie(response, accessToken);
 
         return refreshToken;
     }

@@ -28,6 +28,11 @@ public class JwtService {
         this.tokenIssuer = tokenIssuer;
     }
 
+    /**
+     * @deprecated Story 2-2에서 /jwt/exchange 엔드포인트와 함께 제거 예정.
+     * 임시로 TokenIssuer.reissue를 위임해 JWTUtil.createJWT 직접 호출은 0건으로 유지.
+     */
+    @Deprecated
     @Transactional
     public JWTResponseDTO cookie2Header(
             HttpServletRequest request,
@@ -59,33 +64,20 @@ public class JwtService {
             throw new RuntimeException("유효하지 않은 refreshToken입니다.");
         }
 
-        // 정보 추출
+        // 정보 추출 후 TokenIssuer 위임 (단일 진입점 보장)
         String username = jwtUtil.getUsername(refreshToken);
         String role = jwtUtil.getRole(refreshToken);
+        String newRefreshToken = tokenIssuer.reissue(username, role, response);
 
-        // 토큰 생성
-        String newAccessToken = jwtUtil.createJWT(username, role, jwtUtil.accessTokenTtl(), TokenType.ACCESS);
-        String newRefreshToken = jwtUtil.createJWT(username, role, jwtUtil.refreshTokenTtl(), TokenType.REFRESH);
+        // 기존 RT 쿠키 제거
+        Cookie expiredCookie = new Cookie("refreshToken", null);
+        expiredCookie.setHttpOnly(true);
+        expiredCookie.setSecure(false);
+        expiredCookie.setPath("/");
+        expiredCookie.setMaxAge(0);
+        response.addCookie(expiredCookie);
 
-        // 기존 Refresh 토큰 DB 삭제 후 신규 추가
-        RefreshEntity newRefreshEntity = RefreshEntity.builder()
-                                                      .username(username)
-                                                      .refresh(newRefreshToken)
-                                                      .build();
-
-        removeRefresh(refreshToken);
-        refreshRepository.flush(); // 같은 트랜잭션 내부라 : 삭제 -> 생성 문제 해결
-        refreshRepository.save(newRefreshEntity);
-
-        // 기존 쿠키 제거
-        Cookie refreshCookie = new Cookie("refreshToken", null);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(false);
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(10);
-        response.addCookie(refreshCookie);
-
-        return new JWTResponseDTO(newAccessToken, newRefreshToken);
+        return new JWTResponseDTO(null, newRefreshToken);
     }
 
     // Refresh 토큰으로 Access 토큰 재발급 로직 (Rotate 포함) — AT Cookie + RT 바디

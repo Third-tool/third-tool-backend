@@ -8,7 +8,7 @@ import com.example.thirdtool.User.infrastructure.kakao.dto.KakaoTokenResponse;
 import com.example.thirdtool.User.infrastructure.kakao.dto.KakaoUserInfo;
 import com.example.thirdtool.User.application.UserService;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
-import com.example.thirdtool.User.dto.TokenResponse;
+import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;

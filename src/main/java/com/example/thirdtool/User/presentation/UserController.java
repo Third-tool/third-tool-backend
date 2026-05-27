@@ -1,5 +1,6 @@
 package com.example.thirdtool.User.presentation;
 
+import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
 import com.example.thirdtool.Common.security.auth.token.TokenIssuer;
 import com.example.thirdtool.User.dto.*;
 import com.example.thirdtool.User.application.UserService;
@@ -42,9 +43,7 @@ public class UserController {
         String refreshToken = tokenIssuer.issue(user, response);
 
         // 3️⃣ 응답 (AT는 Cookie로 이미 전달됨)
-        // Story 1-5에서 TokenResponse.accessToken 필드가 제거될 예정. 임시로 null 전달.
-        TokenResponse tokenResponse = new TokenResponse(null, refreshToken);
-        return ResponseEntity.ok(tokenResponse);
+        return ResponseEntity.ok(new TokenResponse(refreshToken));
     }
 
     // 자체 로그인 유저 존재 확인

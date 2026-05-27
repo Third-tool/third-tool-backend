@@ -1,5 +1,7 @@
 package com.example.thirdtool.Common.security.auth.jwt;
 
+import com.example.thirdtool.Common.Exception.BusinessException;
+import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.security.auth.RefreshEntity;
 import com.example.thirdtool.Common.security.auth.RefreshRepository;
 import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
@@ -42,7 +44,7 @@ public class JwtService {
         // 쿠키 리스트
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
-            throw new RuntimeException("쿠키가 존재하지 않습니다.");
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_MISSING);
         }
 
         // Refresh 토큰 획득
@@ -55,13 +57,12 @@ public class JwtService {
         }
 
         if (refreshToken == null) {
-            throw new RuntimeException("refreshToken 쿠키가 없습니다.");
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_MISSING);
         }
 
         // Refresh 토큰 검증
-        boolean isValid = jwtUtil.isValid(refreshToken, TokenType.REFRESH);
-        if (!isValid) {
-            throw new RuntimeException("유효하지 않은 refreshToken입니다.");
+        if (!jwtUtil.isValid(refreshToken, TokenType.REFRESH)) {
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_INVALID);
         }
 
         // 정보 추출 후 TokenIssuer 위임 (단일 진입점 보장)
@@ -84,35 +85,29 @@ public class JwtService {
     @Transactional
     public TokenResponse refreshRotate(RefreshRequestDTO dto, HttpServletResponse response) {
         String refreshToken = dto.getRefreshToken();
-        log.info("[REFRESH-ROTATE] refresh 요청 수신");
 
-        // Refresh 토큰 검증
-        boolean isValid = jwtUtil.isValid(refreshToken, TokenType.REFRESH);
-
-        if (!isValid) {
-            log.error("[REFRESH-ROTATE] RefreshToken이 유효하지 않음 (JWT 파싱/만료 문제)");
-            // Story 2-1에서 REFRESH_TOKEN_INVALID ErrorCode로 정리 예정
-            throw new RuntimeException("유효하지 않은 refreshToken입니다.-jwt가 이상하지롱");
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_MISSING);
         }
 
-        // RefreshEntity 존재 확인 (화이트리스트)
-        boolean exists = existsRefresh(refreshToken);
-
-        if (!exists) {
-            log.error("[REFRESH-ROTATE] RefreshToken이 DB에 존재하지 않음");
-            // Story 2-1에서 REFRESH_TOKEN_NOT_FOUND ErrorCode로 정리 예정
-            throw new RuntimeException("유효하지 않은 refreshToken입니다.-리프레쉬가 진짜 없지롱");
+        // 1. JWT 파싱/만료 검증
+        if (!jwtUtil.isValid(refreshToken, TokenType.REFRESH)) {
+            log.warn("[REFRESH-ROTATE] RT 파싱 또는 만료 실패");
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_INVALID);
         }
 
-        // 정보 추출
+        // 2. DB 화이트리스트 존재 확인
+        if (!existsRefresh(refreshToken)) {
+            // 토큰 자체는 유효한데 DB에 없으면 이미 rotate된 RT를 재사용한 것으로 간주
+            log.warn("[REFRESH-ROTATE] RT 화이트리스트 미존재 — 재사용 시도 가능성");
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_REUSED);
+        }
+
         String username = jwtUtil.getUsername(refreshToken);
         String role = jwtUtil.getRole(refreshToken);
-        log.info("[REFRESH-ROTATE] 토큰 검증 통과 - username 식별");
+        log.debug("[REFRESH-ROTATE] RT 검증 통과 - username={}", username);
 
-        // TokenIssuer를 통해 AT Cookie + 새 RT 발급 (DB 화이트리스트 갱신 포함)
         String newRefreshToken = tokenIssuer.reissue(username, role, response);
-
-        // 응답 바디 (accessToken 필드는 Story 1-5에서 제거 예정. 임시 null 전달)
         return new TokenResponse(newRefreshToken);
     }
 

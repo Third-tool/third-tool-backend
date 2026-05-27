@@ -52,15 +52,14 @@ class JWTUtilTest {
         }
 
         @Test
-        @DisplayName("ttl이 다르면 같은 사용자라도 토큰 문자열은 동일할 수 없다")
-        void createJWT_다른ttl_다른토큰() {
-            String a = jwtUtil.createJWT("alice", "ROLE_USER", Duration.ofMinutes(30), TokenType.ACCESS);
-            String b = jwtUtil.createJWT("alice", "ROLE_USER", Duration.ofHours(1), TokenType.ACCESS);
+        @DisplayName("같은 사용자에 ACCESS/REFRESH 두 타입을 동시 발급해도 각각 유효하다")
+        void createJWT_두타입_동시발급_각각유효() {
+            String access = jwtUtil.createJWT("alice", "ROLE_USER", ACCESS_TTL, TokenType.ACCESS);
+            String refresh = jwtUtil.createJWT("alice", "ROLE_USER", REFRESH_TTL, TokenType.REFRESH);
 
-            // 발급 시각이 동일한 ms이면 같을 수도 있으니 만료 시각만 다르게 직접 비교
-            // 실제로는 시각 차이로 issuedAt도 달라지지만 안전한 비교는 둘 다 valid한 것만
-            assertThat(jwtUtil.isValid(a, TokenType.ACCESS)).isTrue();
-            assertThat(jwtUtil.isValid(b, TokenType.ACCESS)).isTrue();
+            assertThat(jwtUtil.isValid(access, TokenType.ACCESS)).isTrue();
+            assertThat(jwtUtil.isValid(refresh, TokenType.REFRESH)).isTrue();
+            assertThat(access).isNotEqualTo(refresh);
         }
     }
 
@@ -108,9 +107,15 @@ class JWTUtilTest {
         }
 
         @Test
-        @DisplayName("null 또는 빈 문자열은 false (예외 없음)")
-        void isValid_null또는blank_false() {
+        @DisplayName("빈 문자열 토큰은 false (예외 없음)")
+        void isValid_emptyToken_false() {
             assertThat(jwtUtil.isValid("", TokenType.ACCESS)).isFalse();
+        }
+
+        @Test
+        @DisplayName("null 토큰은 false (IllegalArgumentException 내부 흡수)")
+        void isValid_nullToken_false() {
+            assertThat(jwtUtil.isValid(null, TokenType.ACCESS)).isFalse();
         }
 
         @Test
@@ -164,6 +169,39 @@ class JWTUtilTest {
             String token = jwtUtil.createJWT("charlie", "ROLE_ADMIN", ACCESS_TTL, TokenType.ACCESS);
 
             assertThat(jwtUtil.getRole(token)).isEqualTo("ROLE_ADMIN");
+        }
+
+        @Test
+        @DisplayName("getUsername에 위조 토큰 전달 시 JwtException 발생 (호출자는 isValid 통과 후 호출 전제)")
+        void getUsername_garbageToken_throwsJwtException() {
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                    () -> jwtUtil.getUsername("garbage.token.string")
+            ).isInstanceOf(io.jsonwebtoken.JwtException.class);
+        }
+
+        @Test
+        @DisplayName("getRole에 위조 토큰 전달 시 JwtException 발생 (호출자는 isValid 통과 후 호출 전제)")
+        void getRole_garbageToken_throwsJwtException() {
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                    () -> jwtUtil.getRole("garbage.token.string")
+            ).isInstanceOf(io.jsonwebtoken.JwtException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("TokenType — claim 매핑")
+    class TokenTypeClaimMapping {
+
+        @Test
+        @DisplayName("ACCESS.claim()은 'access'다")
+        void access_claim_isAccess() {
+            assertThat(TokenType.ACCESS.claim()).isEqualTo("access");
+        }
+
+        @Test
+        @DisplayName("REFRESH.claim()은 'refresh'다")
+        void refresh_claim_isRefresh() {
+            assertThat(TokenType.REFRESH.claim()).isEqualTo("refresh");
         }
     }
 }

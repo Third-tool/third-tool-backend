@@ -3,6 +3,7 @@ package com.example.thirdtool.Common.security.auth.token;
 import com.example.thirdtool.Common.Util.JWTUtil;
 import com.example.thirdtool.Common.security.auth.RefreshEntity;
 import com.example.thirdtool.Common.security.auth.RefreshRepository;
+import com.example.thirdtool.Common.security.auth.jwt.JwtCookieProperties;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
@@ -13,14 +14,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class JwtTokenIssuer implements TokenIssuer {
 
-    private static final String ACCESS_COOKIE_NAME = "access_token";
-
     private final JWTUtil jwtUtil;
     private final RefreshRepository refreshRepository;
+    private final JwtCookieProperties cookieProperties;
 
-    public JwtTokenIssuer(JWTUtil jwtUtil, RefreshRepository refreshRepository) {
+    public JwtTokenIssuer(JWTUtil jwtUtil,
+                          RefreshRepository refreshRepository,
+                          JwtCookieProperties cookieProperties) {
         this.jwtUtil = jwtUtil;
         this.refreshRepository = refreshRepository;
+        this.cookieProperties = cookieProperties;
     }
 
     @Override
@@ -50,12 +53,12 @@ public class JwtTokenIssuer implements TokenIssuer {
     }
 
     private void writeAccessTokenCookie(HttpServletResponse response, String accessToken) {
-        ResponseCookie cookie = ResponseCookie.from(ACCESS_COOKIE_NAME, accessToken)
-                                              .httpOnly(true)
-                                              // Story 1-3에서 프로파일별 외부화 예정. 1-2에서는 안전한 기본값.
-                                              .secure(false)
-                                              .sameSite("Strict")
-                                              .path("/")
+        // Story 1-3: 쿠키 속성을 jwt.cookie.* 프로파일 외부화 값에서 주입
+        ResponseCookie cookie = ResponseCookie.from(cookieProperties.name(), accessToken)
+                                              .httpOnly(cookieProperties.httpOnly())
+                                              .secure(cookieProperties.secure())
+                                              .sameSite(cookieProperties.sameSite())
+                                              .path(cookieProperties.path())
                                               .maxAge(jwtUtil.accessTokenTtl())
                                               .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());

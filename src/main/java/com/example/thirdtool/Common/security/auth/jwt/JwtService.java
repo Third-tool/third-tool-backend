@@ -4,6 +4,7 @@ import com.example.thirdtool.Common.security.auth.RefreshEntity;
 import com.example.thirdtool.Common.security.auth.RefreshRepository;
 import com.example.thirdtool.Common.security.auth.dto.JWTResponseDTO;
 import com.example.thirdtool.Common.security.auth.dto.RefreshRequestDTO;
+import com.example.thirdtool.Common.security.auth.token.TokenType;
 import com.example.thirdtool.Common.Util.JWTUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,9 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class JwtService {
 
     private final RefreshRepository refreshRepository;
+    private final JWTUtil jwtUtil;
 
-    public JwtService(RefreshRepository refreshRepository) {
+    public JwtService(RefreshRepository refreshRepository, JWTUtil jwtUtil) {
         this.refreshRepository = refreshRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     @Transactional
@@ -48,18 +51,18 @@ public class JwtService {
         }
 
         // Refresh 토큰 검증
-        Boolean isValid = JWTUtil.isValid(refreshToken, false);
+        boolean isValid = jwtUtil.isValid(refreshToken, TokenType.REFRESH);
         if (!isValid) {
             throw new RuntimeException("유효하지 않은 refreshToken입니다.");
         }
 
         // 정보 추출
-        String username = JWTUtil.getUsername(refreshToken);
-        String role = JWTUtil.getRole(refreshToken);
+        String username = jwtUtil.getUsername(refreshToken);
+        String role = jwtUtil.getRole(refreshToken);
 
         // 토큰 생성
-        String newAccessToken = JWTUtil.createJWT(username, role, true);
-        String newRefreshToken = JWTUtil.createJWT(username, role, false);
+        String newAccessToken = jwtUtil.createJWT(username, role, jwtUtil.accessTokenTtl(), TokenType.ACCESS);
+        String newRefreshToken = jwtUtil.createJWT(username, role, jwtUtil.refreshTokenTtl(), TokenType.REFRESH);
 
         // 기존 Refresh 토큰 DB 삭제 후 신규 추가
         RefreshEntity newRefreshEntity = RefreshEntity.builder()
@@ -90,7 +93,7 @@ public class JwtService {
         log.info("[REFRESH-ROTATE] 전달받은 RefreshToken: {}", refreshToken);
 
         // Refresh 토큰 검증
-        Boolean isValid = JWTUtil.isValid(refreshToken, false);
+        boolean isValid = jwtUtil.isValid(refreshToken, TokenType.REFRESH);
         log.info("[REFRESH-ROTATE] JWTUtil.isValid 결과: {}", isValid);
 
         if (!isValid) {
@@ -108,13 +111,13 @@ public class JwtService {
         }
 
         // 정보 추출
-        String username = JWTUtil.getUsername(refreshToken);
-        String role = JWTUtil.getRole(refreshToken);
+        String username = jwtUtil.getUsername(refreshToken);
+        String role = jwtUtil.getRole(refreshToken);
         log.info("[REFRESH-ROTATE] 토큰에서 추출한 username={}, role={}", username, role);
 
         // 토큰 생성
-        String newAccessToken = JWTUtil.createJWT(username, role, true);
-        String newRefreshToken = JWTUtil.createJWT(username, role, false);
+        String newAccessToken = jwtUtil.createJWT(username, role, jwtUtil.accessTokenTtl(), TokenType.ACCESS);
+        String newRefreshToken = jwtUtil.createJWT(username, role, jwtUtil.refreshTokenTtl(), TokenType.REFRESH);
         log.info("[REFRESH-ROTATE] 새 AccessToken 생성 완료");
         log.info("[REFRESH-ROTATE] 새 RefreshToken 생성 완료");
 
@@ -179,6 +182,6 @@ public class JwtService {
     }
 
     public String getUsername(String refreshToken) {
-        return JWTUtil.getUsername(refreshToken);
+        return jwtUtil.getUsername(refreshToken);
     }
 }

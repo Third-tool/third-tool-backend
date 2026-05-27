@@ -3,6 +3,7 @@ package com.example.thirdtool.User.application;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.Util.JWTUtil;
+import com.example.thirdtool.Common.security.auth.token.TokenType;
 import com.example.thirdtool.User.domain.model.CustomOAuth2User;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
 import com.example.thirdtool.User.domain.model.UserEntity;
@@ -34,17 +35,20 @@ public class UserService extends DefaultOAuth2UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final JWTUtil jwtUtil;
     private final KakaoMemberRepository kakaoMemberRepository;
     private final NaverMemberRepository naverMemberRepository;
 
     public UserService(PasswordEncoder passwordEncoder,
                        UserRepository userRepository,
                        JwtService jwtService,
+                       JWTUtil jwtUtil,
                        KakaoMemberRepository kakaoMemberRepository,
                        NaverMemberRepository naverMemberRepository) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.jwtUtil = jwtUtil;
         this.kakaoMemberRepository = kakaoMemberRepository;
         this.naverMemberRepository = naverMemberRepository;
     }
@@ -140,8 +144,8 @@ public class UserService extends DefaultOAuth2UserService {
 
         // JWT(Access/Refresh) 발급
         String role = "ROLE_" + user.getRoleType().name();
-        String accessToken = JWTUtil.createJWT(user.getUsername(), role, true);
-        String refreshToken = JWTUtil.createJWT(user.getUsername(), role, false);
+        String accessToken = jwtUtil.createJWT(user.getUsername(), role, jwtUtil.accessTokenTtl(), TokenType.ACCESS);
+        String refreshToken = jwtUtil.createJWT(user.getUsername(), role, jwtUtil.refreshTokenTtl(), TokenType.REFRESH);
 
         // Refresh 토큰 DB 저장
         jwtService.addRefresh(user.getUsername(), refreshToken);

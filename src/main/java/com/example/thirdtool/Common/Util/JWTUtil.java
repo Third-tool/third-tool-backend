@@ -3,7 +3,9 @@ package com.example.thirdtool.Common.Util;
 
 import com.example.thirdtool.Common.security.auth.jwt.JwtProperties;
 import com.example.thirdtool.Common.security.auth.token.TokenType;
+import com.example.thirdtool.Common.security.auth.token.TokenValidationResult;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
@@ -39,21 +41,27 @@ public class JWTUtil {
     }
 
     public boolean isValid(String token, TokenType expectedType) {
+        return classify(token, expectedType).isValid();
+    }
+
+    /**
+     * 검증 결과를 세분화 (Story 3-2).
+     * EXPIRED / INVALID / TYPE_MISMATCH / VALID 4가지 분류.
+     */
+    public TokenValidationResult classify(String token, TokenType expectedType) {
         try {
             Claims claims = parseClaims(token);
             String type = claims.get("type", String.class);
-            if (type == null) {
-                log.warn("[JWT-VALIDATION] type claim 누락");
-                return false;
-            }
-            if (!type.equals(expectedType.claim())) {
+            if (type == null || !type.equals(expectedType.claim())) {
                 log.warn("[JWT-VALIDATION] type 불일치 - 예상={}, 실제={}", expectedType.claim(), type);
-                return false;
+                return TokenValidationResult.TYPE_MISMATCH;
             }
-            return true;
+            return TokenValidationResult.VALID;
+        } catch (ExpiredJwtException e) {
+            return TokenValidationResult.EXPIRED;
         } catch (JwtException | IllegalArgumentException e) {
             log.debug("[JWT-VALIDATION] 검증 실패: {}", e.getMessage());
-            return false;
+            return TokenValidationResult.INVALID;
         }
     }
 

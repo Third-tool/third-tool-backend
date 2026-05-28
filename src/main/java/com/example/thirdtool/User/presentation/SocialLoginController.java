@@ -3,7 +3,7 @@ package com.example.thirdtool.User.presentation;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
 import com.example.thirdtool.User.application.SocialOAuthFlow;
-import com.example.thirdtool.User.application.UserService;
+import com.example.thirdtool.User.application.UserCommandService;
 import com.example.thirdtool.User.domain.exception.UserDomainException;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
 import com.example.thirdtool.User.domain.model.SocialUserInfo;
@@ -32,11 +32,11 @@ import java.util.stream.Collectors;
 @RequestMapping("/social")
 public class SocialLoginController {
 
-    private final UserService userService;
+    private final UserCommandService userCommandService;
     private final Map<SocialProviderType, SocialOAuthFlow> oauthFlows;
 
-    public SocialLoginController(UserService userService, List<SocialOAuthFlow> flows) {
-        this.userService = userService;
+    public SocialLoginController(UserCommandService userCommandService, List<SocialOAuthFlow> flows) {
+        this.userCommandService = userCommandService;
         this.oauthFlows = flows.stream()
                                .collect(Collectors.toMap(SocialOAuthFlow::getProviderType, Function.identity()));
     }
@@ -65,7 +65,7 @@ public class SocialLoginController {
         }
 
         SocialUserInfo info = flow.authenticate(code, state);
-        TokenResponse tokens = userService.socialLogin(
+        TokenResponse tokens = userCommandService.socialLogin(
                 info.provider(),
                 info.socialId(),
                 info.nickname(),

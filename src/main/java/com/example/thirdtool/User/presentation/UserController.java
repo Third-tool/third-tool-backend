@@ -2,9 +2,10 @@ package com.example.thirdtool.User.presentation;
 
 import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
 import com.example.thirdtool.Common.security.auth.token.TokenIssuer;
-import com.example.thirdtool.User.dto.*;
-import com.example.thirdtool.User.application.UserService;
+import com.example.thirdtool.User.application.UserCommandService;
+import com.example.thirdtool.User.application.UserQueryService;
 import com.example.thirdtool.User.domain.model.UserEntity;
+import com.example.thirdtool.User.dto.*;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
@@ -21,12 +22,15 @@ import java.util.Map;
 @RestController
 public class UserController {
 
-    private final UserService userService;
+    private final UserCommandService userCommandService;
+    private final UserQueryService userQueryService;
     private final TokenIssuer tokenIssuer;
 
-    public UserController(UserService userService,
+    public UserController(UserCommandService userCommandService,
+                          UserQueryService userQueryService,
                           TokenIssuer tokenIssuer) {
-        this.userService = userService;
+        this.userCommandService = userCommandService;
+        this.userQueryService = userQueryService;
         this.tokenIssuer = tokenIssuer;
     }
 
@@ -36,60 +40,51 @@ public class UserController {
                                                     HttpServletResponse response) {
 
         SecurityContextHolder.clearContext();
-        // 1️⃣ 유저 인증
-        UserEntity user = userService.loginLocal(dto.getUsername(), dto.getPassword());
-
-        // 2️⃣ 토큰 발급 — AT는 Set-Cookie, RT는 응답 바디
+        UserEntity user = userCommandService.loginLocal(dto.getUsername(), dto.getPassword());
         String refreshToken = tokenIssuer.issue(user, response);
-
-        // 3️⃣ 응답 (AT는 Cookie로 이미 전달됨)
         return ResponseEntity.ok(new TokenResponse(refreshToken));
     }
 
-    // 자체 로그인 유저 존재 확인
+    // 자체 로그인 유저 존재 확인 (Query)
     @PostMapping(value = "/user/exist")
     public ResponseEntity<Boolean> existUserApi(
             @Validated @RequestBody UserExistRequestDTO dto
                                                ) {
-        return ResponseEntity.ok(userService.existUser(dto));
+        return ResponseEntity.ok(userQueryService.existUser(dto));
     }
 
-    // 회원가입
+    // 회원가입 (Command)
     @PostMapping(value = "/user", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Long>> joinApi(
             @Validated @RequestBody UserSignUpRequestDTO dto
                                                     ) {
-        Long id = userService.addUser(dto);
+        Long id = userCommandService.addUser(dto);
         Map<String, Long> responseBody = Collections.singletonMap("userEntityId", id);
         return ResponseEntity.status(201).body(responseBody);
     }
 
-    // ✅ 유저 정보
+    // ✅ 유저 정보 (Query)
     @GetMapping(value = "/user")
     public UserResponseDTO userMeApi(@AuthenticationPrincipal UserEntity user) {
-        return userService.readUser(user.getUsername());
+        return userQueryService.readUser(user.getUsername());
     }
 
-    // ✅ 유저 수정 (자체 로그인 유저만)
+    // ✅ 유저 수정 (자체 로그인 유저만) (Command)
     @PutMapping(value = "/user", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> updateUserApi(
             @AuthenticationPrincipal String username,
             @Validated @RequestBody UserUpdateRequestDTO dto
                                              ) throws AccessDeniedException {
-        // 서비스 메서드에 username을 넘겨 로직 처리
-        return ResponseEntity.status(200).body(userService.updateUser(username, dto));
+        return ResponseEntity.status(200).body(userCommandService.updateUser(username, dto));
     }
 
-    // ✅ 유저 제거 (자체/소셜)
+    // ✅ 유저 제거 (자체/소셜) (Command)
     @DeleteMapping(value = "/user")
     public ResponseEntity<Boolean> deleteUserApi(
             @AuthenticationPrincipal String username,
             @Validated @RequestBody UserDeleteRequestDTO dto
                                                 ) throws AccessDeniedException {
-        // 서비스 메서드에 username을 넘겨 로직 처리
-        userService.deleteUser(username, dto);
+        userCommandService.deleteUser(username, dto);
         return ResponseEntity.status(200).body(true);
     }
-
-
 }

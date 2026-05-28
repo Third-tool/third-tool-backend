@@ -16,7 +16,7 @@ import com.example.thirdtool.User.domain.model.SocialUserInfo;
  *   <li>본 인터페이스 {@code SocialOAuthFlow} 구현 — Authorization Code → SocialUserInfo</li>
  *   <li>{@link com.example.thirdtool.User.application.SocialMemberFactory} 구현 — SocialUserInfo → SocialMember 저장</li>
  * </ul>
- * UserService / SocialLoginController / Registrar는 무변경.
+ * UserCommandService / SocialLoginController / Registrar는 무변경.
  *
  * <p>구현체는 {@code User/infrastructure/{provider}/} 패키지에 둔다
  * (외부 OAuth API 호출의 어댑터이므로 infrastructure 계층).

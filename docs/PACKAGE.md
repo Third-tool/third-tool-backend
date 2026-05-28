@@ -159,7 +159,7 @@ public LearningFacadeResponse.UpdateAxisName updateAxisName(
 - `domain/exception/` — `UserDomainException` (Story-5-1, Card BC 패턴 답습)
 - `application/` (포트) — `SocialOAuthFlow`(Story-4-2), `SocialMemberFactory`(Story-4-3) — 인프라 어댑터 교환점
 - `domain/repository/` — `UserRepository`(Port) **← 표준은 `infrastructure/persistence/`, 레거시**
-- `application/` — `UserService`
+- `application/` — `UserCommandService`(쓰기 5 유스케이스), `UserQueryService`(@Transactional(readOnly=true) 조회 2 유스케이스) — Story-4-4 분리
 - `dto/` (BC 루트) — Request/Response DTO 다수 **← 표준은 `presentation/dto/`, 레거시**
 
 ### UserSchedule

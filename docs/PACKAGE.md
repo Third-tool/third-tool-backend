@@ -155,7 +155,9 @@ public LearningFacadeResponse.UpdateAxisName updateAxisName(
 - `infrastructure/persistence/` — Repository Port + Adapter 다수 (LearningFacade/AxisTopic/LearningMaterial/TopicMaterial/TopicRevision/RevisionReasonOption/TopicDeletionRecord 각각)
 
 ### User
-- `domain/model/` — `UserEntity`(AR), `SocialMember`(Abstract Entity), `KakaoMember`, `NaverMember`, `SocialProviderType`(E), `UserRoleType`(E)
+- `domain/model/` — `UserEntity`(AR), `SocialMember`(Abstract Entity), `KakaoMember`, `NaverMember`, `SocialProviderType`(E), `UserRoleType`(E), `SocialUserInfo`(VO, Story-4-2), `SocialMemberRegistrar`(Domain Service, Story-4-3)
+- `domain/exception/` — `UserDomainException` (Story-5-1, Card BC 패턴 답습)
+- `application/` (포트) — `SocialOAuthFlow`(Story-4-2), `SocialMemberFactory`(Story-4-3) — 인프라 어댑터 교환점
 - `domain/repository/` — `UserRepository`(Port) **← 표준은 `infrastructure/persistence/`, 레거시**
 - `application/` — `UserService`
 - `dto/` (BC 루트) — Request/Response DTO 다수 **← 표준은 `presentation/dto/`, 레거시**

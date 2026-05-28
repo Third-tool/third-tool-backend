@@ -4,13 +4,12 @@ import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.security.auth.jwt.JwtService;
 import com.example.thirdtool.Common.security.auth.token.TokenIssuer;
 import com.example.thirdtool.User.domain.exception.UserDomainException;
+import com.example.thirdtool.User.domain.model.SocialMemberRegistrar;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.model.UserRoleType;
 import com.example.thirdtool.User.domain.repository.UserRepository;
 import com.example.thirdtool.User.dto.UserSignUpRequestDTO;
-import com.example.thirdtool.User.infrastructure.Naver.NaverMemberRepository;
-import com.example.thirdtool.User.infrastructure.kakao.KakaoMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,9 +46,7 @@ class UserServiceLoginExceptionTest {
     @Mock
     private TokenIssuer tokenIssuer;
     @Mock
-    private KakaoMemberRepository kakaoMemberRepository;
-    @Mock
-    private NaverMemberRepository naverMemberRepository;
+    private SocialMemberRegistrar socialMemberRegistrar;
 
     @InjectMocks
     private UserService userService;

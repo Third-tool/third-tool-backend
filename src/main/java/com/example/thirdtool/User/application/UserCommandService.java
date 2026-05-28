@@ -2,6 +2,7 @@ package com.example.thirdtool.User.application;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
+import com.example.thirdtool.Common.security.auth.jwt.JwtService;
 import com.example.thirdtool.Common.security.auth.token.TokenIssuer;
 import com.example.thirdtool.User.domain.exception.UserDomainException;
 import com.example.thirdtool.User.domain.model.SocialMemberRegistrar;
@@ -9,18 +10,34 @@ import com.example.thirdtool.User.domain.model.SocialProviderType;
 import com.example.thirdtool.User.domain.model.SocialUserInfo;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.model.UserRoleType;
-import com.example.thirdtool.User.dto.*;
 import com.example.thirdtool.User.domain.repository.UserRepository;
-
-import com.example.thirdtool.Common.security.auth.jwt.JwtService;
+import com.example.thirdtool.User.dto.UserDeleteRequestDTO;
+import com.example.thirdtool.User.dto.UserSignUpRequestDTO;
+import com.example.thirdtool.User.dto.UserUpdateRequestDTO;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * User BC Command Service — 상태 변경(쓰기) 유스케이스 5종.
+ *
+ * <p>Story-4-4: 기존 단일 {@code UserService}를 Command/Query로 분리. 본 클래스는
+ * Command 측. 모든 메서드는 {@link Transactional}로 감싸여 비즈니스 단위 트랜잭션을
+ * 형성한다.
+ *
+ * <p>책임 범위:
+ * <ul>
+ *   <li>{@link #addUser} — 자체 로그인 회원가입</li>
+ *   <li>{@link #loginLocal} — 자체 로그인 인증 (실패 사유 코드 분기)</li>
+ *   <li>{@link #updateUser} — 자체 사용자 정보 수정</li>
+ *   <li>{@link #deleteUser} — 사용자 제거 + RT 화이트리스트 해제</li>
+ *   <li>{@link #socialLogin} — 소셜 로그인 또는 가입 + 토큰 발급</li>
+ * </ul>
+ */
 @Service
-public class UserService {
+public class UserCommandService {
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
@@ -28,11 +45,11 @@ public class UserService {
     private final TokenIssuer tokenIssuer;
     private final SocialMemberRegistrar socialMemberRegistrar;
 
-    public UserService(PasswordEncoder passwordEncoder,
-                       UserRepository userRepository,
-                       JwtService jwtService,
-                       TokenIssuer tokenIssuer,
-                       SocialMemberRegistrar socialMemberRegistrar) {
+    public UserCommandService(PasswordEncoder passwordEncoder,
+                              UserRepository userRepository,
+                              JwtService jwtService,
+                              TokenIssuer tokenIssuer,
+                              SocialMemberRegistrar socialMemberRegistrar) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
@@ -40,17 +57,8 @@ public class UserService {
         this.socialMemberRegistrar = socialMemberRegistrar;
     }
 
-
-    // 자체 로그인 회원 가입 (존재 여부)
-    @Transactional(readOnly = true)
-    public Boolean existUser(UserExistRequestDTO dto) {
-        return userRepository.existsByUsername(dto.getUsername());
-    }
-
-    // 자체 로그인 회원 가입
     @Transactional
     public Long addUser(UserSignUpRequestDTO dto) {
-
         if (userRepository.existsByUsername(dto.getUsername())) {
             throw UserDomainException.of(ErrorCode.USER_ALREADY_EXISTS);
         }
@@ -59,16 +67,21 @@ public class UserService {
                 passwordEncoder.encode(dto.getPassword()),
                 dto.getNickname(),
                 dto.getEmail()
-                                              );
-
+        );
         return userRepository.save(entity).getId();
     }
 
-    // ✅ JWT 기반 자체 로그인 처리
-    // 보안: "사용자 없음"과 "비밀번호 불일치"는 외부에 동일 응답(PASSWORD_NOT_MATCHED, 401)으로 통일.
-    //       HTTP status code/code/message 모두 동일하게 노출해 enumeration attack 차단.
-    // 운영: IS_SOCIAL(소셜 계정 자체 로그인) / USER_LOCKED(잠긴 계정)은 별도 ErrorCode로 분기.
-    //       이 둘은 본인이 자기 계정 상태로 즉시 인지 가능한 정보라 누출 위험이 낮고 UX·운영에 필요.
+    /**
+     * JWT 기반 자체 로그인.
+     *
+     * <p>보안 정책: "사용자 없음"과 "비밀번호 불일치"는 외부에 동일 응답
+     * (PASSWORD_NOT_MATCHED, 401)으로 통일. HTTP status code / code / message
+     * 모두 동일하게 노출해 enumeration attack 차단.
+     *
+     * <p>운영 정보: IS_SOCIAL(소셜 계정 자체 로그인) / USER_LOCKED(잠긴 계정)은
+     * 별도 ErrorCode로 분기. 본인이 자기 계정 상태로 즉시 인지 가능한 정보라
+     * 누출 위험이 낮고 UX·운영에 필요.
+     */
     @Transactional
     public UserEntity loginLocal(String username, String password) {
         UserEntity user = userRepository.findByUsername(username)
@@ -86,26 +99,18 @@ public class UserService {
         return user;
     }
 
-    // 자체 로그인 회원 정보 수정
     @Transactional
     public Long updateUser(String username, UserUpdateRequestDTO dto) throws AccessDeniedException {
         UserEntity entity = userRepository.findByUsernameAndIsLockAndIsSocial(username, false, false)
                                           .orElseThrow(() -> UserDomainException.of(ErrorCode.USER_NOT_FOUND));
-
-        // 수정 권한 검증은 컨트롤러 또는 서비스 진입 전에 처리
-        // if (!username.equals(entity.getUsername())) {
-        //     throw new AccessDeniedException("본인 계정만 수정 가능");
-        // }
-
         entity.updateUser(dto);
         return userRepository.save(entity).getId();
     }
 
     @Transactional
     public void deleteUser(String username, UserDeleteRequestDTO dto) throws AccessDeniedException {
-
-        // 권한 검증 로직은 컨트롤러나 별도의 서비스에서 처리하는 것이 좋습니다.
-        // 현재는 편의상 UserService에 남겨둠.
+        // 권한 검증 로직은 컨트롤러나 별도의 서비스에서 처리하는 것이 좋으나 Story-5-3 범위.
+        // 본 Story 4-4는 Command/Query 분리만 — SecurityContextHolder 호출은 그대로 유지.
         String sessionRole = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority();
         boolean isAdmin = sessionRole.equals("ROLE_" + UserRoleType.ADMIN.name());
 
@@ -117,15 +122,12 @@ public class UserService {
         jwtService.removeRefreshUser(dto.getUsername());
     }
 
-
-    // ✅ JWT 기반 소셜 로그인 처리 및 토큰 발급
-    // Story-4-3: KakaoMemberRepository / NaverMemberRepository 직접 의존 제거.
-    // 제공자별 SocialMember 저장은 SocialMemberRegistrar 도메인 서비스에 위임.
-    //
-    // 트랜잭션 보존 (AC3): @Transactional이 본 메서드를 감싼다. orElseGet 내부에서
-    // userRepository.save → socialMemberRegistrar.register 순으로 진행하는데, Registrar가
-    // SOCIAL_MEMBER_ALREADY_LINKED 또는 DB 예외(DataIntegrityViolationException 등) RuntimeException을
-    // 던지면 Spring이 본 트랜잭션 전체를 자동 롤백 → UserEntity 저장도 함께 무효화된다.
+    /**
+     * 소셜 로그인 + (필요 시) 자동 가입.
+     *
+     * <p>Spring {@link Transactional}이 본 메서드를 감싼다 — {@link SocialMemberRegistrar#register}
+     * 예외 시 UserEntity 저장 포함 전체 롤백 (Story-4-3 AC3).
+     */
     @Transactional
     public TokenResponse socialLogin(SocialProviderType socialType,
                                      String socialId,
@@ -137,12 +139,8 @@ public class UserService {
 
         UserEntity user = userRepository.findByUsername(username)
                                         .orElseGet(() -> {
-                                            // 사용자가 존재하지 않으면 새로 등록
                                             UserEntity newUser = UserEntity.ofSocial(username, socialType, nickname, email);
                                             UserEntity savedUser = userRepository.save(newUser);
-
-                                            // 제공자별 SocialMember 등록은 Registrar에 위임 (Story-4-3).
-                                            // 중복 socialId면 SOCIAL_MEMBER_ALREADY_LINKED throw → 단일 트랜잭션 롤백.
                                             socialMemberRegistrar.register(
                                                     savedUser,
                                                     new SocialUserInfo(socialId, nickname, email, socialType)
@@ -150,17 +148,7 @@ public class UserService {
                                             return savedUser;
                                         });
 
-        // AT는 Set-Cookie, RT는 응답 바디로 발급
         String refreshToken = tokenIssuer.issue(user, response);
         return new TokenResponse(refreshToken);
     }
-
-    // 자체/소셜 유저 정보 조회
-    @Transactional(readOnly = true)
-    public UserResponseDTO readUser(String username) {
-        UserEntity entity = userRepository.findByUsernameAndIsLock(username, false)
-                                          .orElseThrow(() -> UserDomainException.of(ErrorCode.USER_NOT_FOUND));
-        return new UserResponseDTO(username, entity.getIsSocial(), entity.getNickname(), entity.getEmail());
-    }
-
 }

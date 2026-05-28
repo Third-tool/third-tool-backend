@@ -7,6 +7,7 @@ import com.example.thirdtool.Common.Util.JWTUtil;
 import com.example.thirdtool.Common.Util.WhitelistPath;
 import com.example.thirdtool.Common.security.auth.JwtAuthenticationEntryPoint;
 import com.example.thirdtool.Common.security.auth.token.TokenType;
+import com.example.thirdtool.Common.security.auth.token.TokenValidationResult;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.repository.UserRepository;
 import jakarta.servlet.FilterChain;
@@ -66,16 +67,25 @@ public class JWTFilter extends OncePerRequestFilter {
 
         String accessToken = extractAccessTokenFromCookie(request);
         if (accessToken == null) {
-            // 쿠키가 없는 익명 요청은 통과시키고, 보호 자원이면 Spring Security가 401로 응답
+            // 쿠키가 없는 익명 요청은 통과시키고, 보호 자원이면 EntryPoint에서 AUTH_TOKEN_MISSING으로 응답
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            if (!jwtUtil.isValid(accessToken, TokenType.ACCESS)) {
-                // Story 3-2에서 EXPIRED / INVALID 세분화 예정 — 본 Story는 단일 ErrorCode
-                rejectWithErrorCode(request, response, ErrorCode.UNAUTHORIZED);
-                return;
+            TokenValidationResult validation = jwtUtil.classify(accessToken, TokenType.ACCESS);
+            switch (validation) {
+                case EXPIRED -> {
+                    rejectWithErrorCode(request, response, ErrorCode.AUTH_TOKEN_EXPIRED);
+                    return;
+                }
+                case INVALID, TYPE_MISMATCH -> {
+                    rejectWithErrorCode(request, response, ErrorCode.AUTH_TOKEN_INVALID);
+                    return;
+                }
+                case VALID -> {
+                    // continue below
+                }
             }
 
             String username = jwtUtil.getUsername(accessToken);
@@ -84,7 +94,7 @@ public class JWTFilter extends OncePerRequestFilter {
             UserEntity user = userRepository.findByUsername(username).orElse(null);
             if (user == null) {
                 log.warn("[JWTFilter] 토큰의 user를 DB에서 찾을 수 없음: {}", username);
-                rejectWithErrorCode(request, response, ErrorCode.USER_NOT_FOUND);
+                rejectWithErrorCode(request, response, ErrorCode.AUTH_USER_NOT_FOUND);
                 return;
             }
 

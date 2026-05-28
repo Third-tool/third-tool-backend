@@ -62,6 +62,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         if (ex != null && ex.getCause() instanceof BusinessException be) {
             return be.getErrorCode();
         }
-        return ErrorCode.UNAUTHORIZED;
+        // 쿠키 없이 보호 자원 접근 → AUTH_TOKEN_MISSING (Story 3-2)
+        return ErrorCode.AUTH_TOKEN_MISSING;
     }
 }

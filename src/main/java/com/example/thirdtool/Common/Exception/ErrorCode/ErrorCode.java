@@ -21,6 +21,12 @@ public enum ErrorCode {
     REFRESH_TOKEN_REUSED("AUTH103",    "이미 사용된 Refresh Token이 재사용 시도되었습니다.", HttpStatus.UNAUTHORIZED),
     REFRESH_TOKEN_MISSING("AUTH104",   "Refresh Token이 요청에 포함되지 않았습니다.",       HttpStatus.BAD_REQUEST),
 
+    // ─── Access Token / Auth (Story 3-2) ───────────────────
+    AUTH_TOKEN_MISSING("AUTH001",   "인증 토큰이 누락되었습니다.",                    HttpStatus.UNAUTHORIZED),
+    AUTH_TOKEN_EXPIRED("AUTH002",   "인증 토큰이 만료되었습니다.",                    HttpStatus.UNAUTHORIZED),
+    AUTH_TOKEN_INVALID("AUTH003",   "인증 토큰이 유효하지 않습니다 (위조/서명 불일치).", HttpStatus.UNAUTHORIZED),
+    AUTH_USER_NOT_FOUND("AUTH004",  "토큰의 사용자가 더 이상 존재하지 않습니다.",      HttpStatus.UNAUTHORIZED),
+
     // ─── Deck ─────────────────────────────────────────────
     DECK_NOT_FOUND("DECK001", "덱을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     DECK_ALREADY_DELETED("DECK002", "이미 삭제된 덱입니다.", HttpStatus.BAD_REQUEST),

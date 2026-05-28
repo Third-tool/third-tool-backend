@@ -51,19 +51,13 @@ public class JWTFilter extends OncePerRequestFilter {
             return;
         }
 
-        log.debug("[JWTFilter] 요청 URI: {}", requestUri);
-
-        // 악성 URL 차단 (Story 3-3에서 BlockListFilter로 분리 예정)
-        if (requestUri.endsWith(".php") || requestUri.endsWith(".aspx") ||
-                requestUri.contains("/wp-") || requestUri.contains("/cgi-bin/")) {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return;
-        }
-
+        // 악성 URL 차단은 Story 3-3 BlockListFilter가 SecurityFilterChain 앞단에서 담당
         if (isExcludedPath(requestUri)) {
             filterChain.doFilter(request, response);
             return;
         }
+
+        log.debug("[JWTFilter] 인증 검증 진입: {}", requestUri);
 
         String accessToken = extractAccessTokenFromCookie(request);
         if (accessToken == null) {

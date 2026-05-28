@@ -164,15 +164,6 @@ class JWTFilterTest {
             verify(chain, times(1)).doFilter(request, response);
         }
 
-        @Test
-        @DisplayName(".php 경로는 즉시 404 차단")
-        void phpPath_blocked404() throws Exception {
-            request.setRequestURI("/something.php");
-
-            filter.doFilter(request, response, chain);
-
-            assertThat(response.getStatus()).isEqualTo(404);
-            verify(chain, never()).doFilter(request, response);
-        }
+        // .php 차단은 Story 3-3에서 BlockListFilter로 분리됨. JWTFilterTest 책임 외 — BlockListFilterTest 참조.
     }
 }

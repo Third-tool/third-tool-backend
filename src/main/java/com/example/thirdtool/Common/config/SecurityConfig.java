@@ -3,6 +3,7 @@ package com.example.thirdtool.Common.config;
 
 import com.example.thirdtool.Common.Util.JWTUtil;
 import com.example.thirdtool.Common.security.auth.JwtAuthenticationEntryPoint;
+import com.example.thirdtool.Common.security.filter.BlockListFilter;
 import com.example.thirdtool.Common.security.filter.JWTFilter;
 import com.example.thirdtool.User.domain.model.CustomOAuth2User;
 import com.example.thirdtool.User.domain.model.UserRoleType;
@@ -182,7 +183,12 @@ public class SecurityConfig {
                                   );
 
         // ==============================
-        // 6️⃣ JWT 인증 필터 추가
+        // 6️⃣ 악성 URL 차단 필터 (Story 3-3) — JWTFilter 앞단에서 즉시 404
+        // ==============================
+        http.addFilterBefore(new BlockListFilter(), UsernamePasswordAuthenticationFilter.class);
+
+        // ==============================
+        // 7️⃣ JWT 인증 필터 추가
         // ==============================
         http.addFilterBefore(new JWTFilter(userRepository, jwtUtil, jwtAuthenticationEntryPoint),
                 UsernamePasswordAuthenticationFilter.class);

@@ -1,9 +1,9 @@
 package com.example.thirdtool.User.application;
 
-import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
 import com.example.thirdtool.Common.security.auth.token.TokenIssuer;
+import com.example.thirdtool.User.domain.exception.UserDomainException;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.model.UserRoleType;
@@ -17,7 +17,6 @@ import com.example.thirdtool.User.infrastructure.kakao.KakaoMember;
 import com.example.thirdtool.Common.security.auth.jwt.JwtService;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,7 +57,7 @@ public class UserService {
     public Long addUser(UserSignUpRequestDTO dto) {
 
         if (userRepository.existsByUsername(dto.getUsername())) {
-            throw new IllegalArgumentException("이미 유저가 존재합니다.");
+            throw UserDomainException.of(ErrorCode.USER_ALREADY_EXISTS);
         }
         UserEntity entity = UserEntity.ofLocal(
                 dto.getUsername(),
@@ -71,13 +70,23 @@ public class UserService {
     }
 
     // ✅ JWT 기반 자체 로그인 처리
+    // 보안: "사용자 없음"과 "비밀번호 불일치"는 외부에 동일 응답(PASSWORD_NOT_MATCHED, 401)으로 통일.
+    //       HTTP status code/code/message 모두 동일하게 노출해 enumeration attack 차단.
+    // 운영: IS_SOCIAL(소셜 계정 자체 로그인) / USER_LOCKED(잠긴 계정)은 별도 ErrorCode로 분기.
+    //       이 둘은 본인이 자기 계정 상태로 즉시 인지 가능한 정보라 누출 위험이 낮고 UX·운영에 필요.
     @Transactional
     public UserEntity loginLocal(String username, String password) {
-        UserEntity user = userRepository.findByUsernameAndIsLockAndIsSocial(username, false, false)
-                                        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        UserEntity user = userRepository.findByUsername(username)
+                                        .orElseThrow(() -> UserDomainException.of(ErrorCode.PASSWORD_NOT_MATCHED));
 
+        if (Boolean.TRUE.equals(user.getIsSocial())) {
+            throw UserDomainException.of(ErrorCode.USER_IS_SOCIAL);
+        }
+        if (Boolean.TRUE.equals(user.getIsLock())) {
+            throw UserDomainException.of(ErrorCode.USER_LOCKED);
+        }
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+            throw UserDomainException.of(ErrorCode.PASSWORD_NOT_MATCHED);
         }
         return user;
     }
@@ -86,7 +95,7 @@ public class UserService {
     @Transactional
     public Long updateUser(String username, UserUpdateRequestDTO dto) throws AccessDeniedException {
         UserEntity entity = userRepository.findByUsernameAndIsLockAndIsSocial(username, false, false)
-                                          .orElseThrow(() -> new UsernameNotFoundException("해당 유저를 찾을 수 없습니다: " + username));
+                                          .orElseThrow(() -> UserDomainException.of(ErrorCode.USER_NOT_FOUND));
 
         // 수정 권한 검증은 컨트롤러 또는 서비스 진입 전에 처리
         // if (!username.equals(entity.getUsername())) {
@@ -148,7 +157,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponseDTO readUser(String username) {
         UserEntity entity = userRepository.findByUsernameAndIsLock(username, false)
-                                          .orElseThrow(() -> new UsernameNotFoundException("해당 유저를 찾을 수 없습니다: " + username));
+                                          .orElseThrow(() -> UserDomainException.of(ErrorCode.USER_NOT_FOUND));
         return new UserResponseDTO(username, entity.getIsSocial(), entity.getNickname(), entity.getEmail());
     }
 

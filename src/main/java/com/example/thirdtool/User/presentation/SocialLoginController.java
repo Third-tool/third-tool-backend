@@ -1,5 +1,7 @@
 package com.example.thirdtool.User.presentation;
 
+import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.User.domain.exception.UserDomainException;
 import com.example.thirdtool.User.infrastructure.Naver.NaverOAuthClient;
 import com.example.thirdtool.User.infrastructure.Naver.dto.NaverTokenResponse;
 import com.example.thirdtool.User.infrastructure.Naver.dto.NaverUserInfo;
@@ -11,12 +13,14 @@ import com.example.thirdtool.User.domain.model.SocialProviderType;
 import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/social")
 @RequiredArgsConstructor
@@ -39,7 +43,14 @@ public class SocialLoginController {
 
         String code = payload.get("code");
         String state = payload.getOrDefault("state", null); // 네이버만 사용
-        SocialProviderType providerType = SocialProviderType.valueOf(provider.toUpperCase());
+        SocialProviderType providerType;
+        try {
+            providerType = SocialProviderType.valueOf(provider.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            // 사용자 입력값은 응답 메시지에 echo하지 않고 서버 로그에만 기록 (input reflection 방지).
+            log.warn("Unsupported social provider requested: {}", provider);
+            throw UserDomainException.of(ErrorCode.SOCIAL_PROVIDER_NOT_SUPPORTED);
+        }
 
         String accessToken;
         String socialId;
@@ -65,7 +76,7 @@ public class SocialLoginController {
                 nickname = userInfo.getNickname();
                 email = userInfo.getEmail();
             }
-            default -> throw new IllegalArgumentException("지원하지 않는 소셜 로그인입니다: " + provider);
+            default -> throw UserDomainException.of(ErrorCode.SOCIAL_PROVIDER_NOT_SUPPORTED);
         }
 
         // ✅ 회원가입 or 로그인 + AT Cookie + RT 바디 발급

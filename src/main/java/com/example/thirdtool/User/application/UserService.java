@@ -2,8 +2,7 @@ package com.example.thirdtool.User.application;
 
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
-import com.example.thirdtool.Common.Util.JWTUtil;
-import com.example.thirdtool.Common.security.auth.token.TokenType;
+import com.example.thirdtool.Common.security.auth.token.TokenIssuer;
 import com.example.thirdtool.User.domain.model.CustomOAuth2User;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
 import com.example.thirdtool.User.domain.model.UserEntity;
@@ -35,20 +34,20 @@ public class UserService extends DefaultOAuth2UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
     private final JwtService jwtService;
-    private final JWTUtil jwtUtil;
+    private final TokenIssuer tokenIssuer;
     private final KakaoMemberRepository kakaoMemberRepository;
     private final NaverMemberRepository naverMemberRepository;
 
     public UserService(PasswordEncoder passwordEncoder,
                        UserRepository userRepository,
                        JwtService jwtService,
-                       JWTUtil jwtUtil,
+                       TokenIssuer tokenIssuer,
                        KakaoMemberRepository kakaoMemberRepository,
                        NaverMemberRepository naverMemberRepository) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
-        this.jwtUtil = jwtUtil;
+        this.tokenIssuer = tokenIssuer;
         this.kakaoMemberRepository = kakaoMemberRepository;
         this.naverMemberRepository = naverMemberRepository;
     }
@@ -123,7 +122,11 @@ public class UserService extends DefaultOAuth2UserService {
 
     // ✅ JWT 기반 소셜 로그인 처리 및 토큰 발급
     @Transactional
-    public TokenResponse socialLogin(SocialProviderType socialType, String socialId, String nickname, String email) {
+    public TokenResponse socialLogin(SocialProviderType socialType,
+                                     String socialId,
+                                     String nickname,
+                                     String email,
+                                     jakarta.servlet.http.HttpServletResponse response) {
 
         String username = socialType.name().toUpperCase() + "_" + socialId;
 
@@ -142,15 +145,11 @@ public class UserService extends DefaultOAuth2UserService {
                                             return savedUser;
                                         });
 
-        // JWT(Access/Refresh) 발급
-        String role = "ROLE_" + user.getRoleType().name();
-        String accessToken = jwtUtil.createJWT(user.getUsername(), role, jwtUtil.accessTokenTtl(), TokenType.ACCESS);
-        String refreshToken = jwtUtil.createJWT(user.getUsername(), role, jwtUtil.refreshTokenTtl(), TokenType.REFRESH);
+        // AT는 Set-Cookie, RT는 응답 바디로 발급
+        String refreshToken = tokenIssuer.issue(user, response);
 
-        // Refresh 토큰 DB 저장
-        jwtService.addRefresh(user.getUsername(), refreshToken);
-
-        return new TokenResponse(accessToken, refreshToken);
+        // Story 1-5에서 TokenResponse.accessToken 필드 제거 예정. 임시로 null 전달.
+        return new TokenResponse(null, refreshToken);
     }
 
     // 자체/소셜 유저 정보 조회

@@ -9,6 +9,7 @@ import com.example.thirdtool.User.infrastructure.kakao.dto.KakaoUserInfo;
 import com.example.thirdtool.User.application.UserService;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
 import com.example.thirdtool.User.dto.TokenResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +34,8 @@ public class SocialLoginController {
     @PostMapping(value = "/login/{provider}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TokenResponse> socialLogin(
             @PathVariable("provider") String provider,
-            @RequestBody Map<String, String> payload) {
+            @RequestBody Map<String, String> payload,
+            HttpServletResponse response) {
 
         String code = payload.get("code");
         String state = payload.getOrDefault("state", null); // 네이버만 사용
@@ -66,12 +68,13 @@ public class SocialLoginController {
             default -> throw new IllegalArgumentException("지원하지 않는 소셜 로그인입니다: " + provider);
         }
 
-        // ✅ 회원가입 or 로그인 + JWT 발급
+        // ✅ 회원가입 or 로그인 + AT Cookie + RT 바디 발급
         TokenResponse tokens = userService.socialLogin(
                 providerType,
                 socialId,
                 nickname,
-                email
+                email,
+                response
                                                       );
 
         return ResponseEntity.ok(tokens);

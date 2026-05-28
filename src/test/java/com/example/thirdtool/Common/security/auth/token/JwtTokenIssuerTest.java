@@ -3,6 +3,7 @@ package com.example.thirdtool.Common.security.auth.token;
 import com.example.thirdtool.Common.Util.JWTUtil;
 import com.example.thirdtool.Common.security.auth.RefreshEntity;
 import com.example.thirdtool.Common.security.auth.RefreshRepository;
+import com.example.thirdtool.Common.security.auth.jwt.JwtCookieProperties;
 import com.example.thirdtool.Common.security.auth.jwt.JwtProperties;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,13 +36,24 @@ class JwtTokenIssuerTest {
     void setUp() {
         JwtProperties props = new JwtProperties(SECRET, Duration.ofMinutes(30), Duration.ofDays(7));
         jwtUtil = new JWTUtil(props);
+        // Test default: prod-like (secure=true) — 별도 케이스에서 override
+        JwtCookieProperties cookieProps = new JwtCookieProperties(
+                "access_token", "/", true, true, "Strict"
+        );
         refreshRepository = mock(RefreshRepository.class);
-        issuer = new JwtTokenIssuer(jwtUtil, refreshRepository);
+        issuer = new JwtTokenIssuer(jwtUtil, refreshRepository, cookieProps);
         response = new MockHttpServletResponse();
 
         when(refreshRepository.findEntityByUsername(any())).thenReturn(Optional.empty());
         when(refreshRepository.save(any(RefreshEntity.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    private JwtTokenIssuer issuerWithCookie(boolean secure, String sameSite) {
+        JwtCookieProperties props = new JwtCookieProperties(
+                "access_token", "/", true, secure, sameSite
+        );
+        return new JwtTokenIssuer(jwtUtil, refreshRepository, props);
     }
 
     @Nested
@@ -90,6 +102,52 @@ class JwtTokenIssuerTest {
             issuer.issue(user, response);
 
             verify(refreshRepository, times(1)).save(any(RefreshEntity.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("쿠키 보안 속성 프로파일 분기 (Story 1-3)")
+    class CookieAttributes {
+
+        @Test
+        @DisplayName("prod 프로파일(secure=true) 발급 시 Set-Cookie에 Secure 포함")
+        void issue_prodSecureTrue_setCookieHasSecure() {
+            JwtTokenIssuer prodIssuer = issuerWithCookie(true, "Strict");
+            UserEntity user = UserEntity.ofLocal("alice", "encoded", "alice-nick", "alice@example.com");
+
+            prodIssuer.issue(user, response);
+
+            String setCookie = response.getHeader("Set-Cookie");
+            assertThat(setCookie).contains("Secure");
+            assertThat(setCookie).contains("SameSite=Strict");
+            assertThat(setCookie).contains("HttpOnly");
+        }
+
+        @Test
+        @DisplayName("local/dev 프로파일(secure=false) 발급 시 Set-Cookie에 Secure 미포함")
+        void issue_devSecureFalse_setCookieNoSecure() {
+            JwtTokenIssuer devIssuer = issuerWithCookie(false, "Strict");
+            UserEntity user = UserEntity.ofLocal("alice", "encoded", "alice-nick", "alice@example.com");
+
+            devIssuer.issue(user, response);
+
+            String setCookie = response.getHeader("Set-Cookie");
+            assertThat(setCookie).doesNotContain("Secure;").doesNotContain(" Secure");
+            // SameSite=Strict / HttpOnly는 유지
+            assertThat(setCookie).contains("SameSite=Strict");
+            assertThat(setCookie).contains("HttpOnly");
+        }
+
+        @Test
+        @DisplayName("SameSite=Lax 설정도 Set-Cookie에 반영된다")
+        void issue_sameSiteLax_reflectedInSetCookie() {
+            JwtTokenIssuer laxIssuer = issuerWithCookie(true, "Lax");
+            UserEntity user = UserEntity.ofLocal("alice", "encoded", "alice-nick", "alice@example.com");
+
+            laxIssuer.issue(user, response);
+
+            String setCookie = response.getHeader("Set-Cookie");
+            assertThat(setCookie).contains("SameSite=Lax");
         }
     }
 

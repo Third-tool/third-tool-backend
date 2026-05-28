@@ -27,15 +27,17 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 
 /**
- * Story-5-1: UserService 예외 통일 검증.
+ * Story-5-1·4-4: UserCommandService 예외 통일 검증.
  *
  * loginLocal()의 실패 사유별 ErrorCode 분기와 addUser() 중복 가입 시
  * USER_ALREADY_EXISTS throw를 단위로 확인한다. 단위 테스트라 Repository와
  * PasswordEncoder만 Mock — 도메인 객체(UserEntity)는 실제 인스턴스 사용
  * (conventions.md §4.1 Classist + Mock 외부 의존만).
+ *
+ * Story-4-4: UserService → UserCommandService 분리에 따라 본 테스트도 rename.
  */
 @ExtendWith(MockitoExtension.class)
-class UserServiceLoginExceptionTest {
+class UserCommandServiceLoginExceptionTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -49,7 +51,7 @@ class UserServiceLoginExceptionTest {
     private SocialMemberRegistrar socialMemberRegistrar;
 
     @InjectMocks
-    private UserService userService;
+    private UserCommandService userCommandService;
 
     private UserEntity localUser;
     private UserEntity socialUser;
@@ -71,7 +73,7 @@ class UserServiceLoginExceptionTest {
         given(userRepository.findByUsername("alice")).willReturn(Optional.of(localUser));
         given(passwordEncoder.matches("plain", "ENCODED_PWD")).willReturn(true);
 
-        UserEntity result = userService.loginLocal("alice", "plain");
+        UserEntity result = userCommandService.loginLocal("alice", "plain");
 
         assertThat(result).isSameAs(localUser);
     }
@@ -82,7 +84,7 @@ class UserServiceLoginExceptionTest {
         // 둘 다 PASSWORD_NOT_MATCHED(401)로 묶어 enumeration attack 차단.
         given(userRepository.findByUsername(anyString())).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.loginLocal("ghost", "pwd"))
+        assertThatThrownBy(() -> userCommandService.loginLocal("ghost", "pwd"))
                 .isInstanceOf(UserDomainException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.PASSWORD_NOT_MATCHED);
@@ -92,7 +94,7 @@ class UserServiceLoginExceptionTest {
     void loginLocal_소셜유저_USER_IS_SOCIAL() {
         given(userRepository.findByUsername("KAKAO_12345")).willReturn(Optional.of(socialUser));
 
-        assertThatThrownBy(() -> userService.loginLocal("KAKAO_12345", "pwd"))
+        assertThatThrownBy(() -> userCommandService.loginLocal("KAKAO_12345", "pwd"))
                 .isInstanceOf(UserDomainException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.USER_IS_SOCIAL);
@@ -102,7 +104,7 @@ class UserServiceLoginExceptionTest {
     void loginLocal_잠긴계정_USER_LOCKED() {
         given(userRepository.findByUsername("bob")).willReturn(Optional.of(lockedUser));
 
-        assertThatThrownBy(() -> userService.loginLocal("bob", "pwd"))
+        assertThatThrownBy(() -> userCommandService.loginLocal("bob", "pwd"))
                 .isInstanceOf(UserDomainException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.USER_LOCKED);
@@ -113,7 +115,7 @@ class UserServiceLoginExceptionTest {
         given(userRepository.findByUsername("alice")).willReturn(Optional.of(localUser));
         given(passwordEncoder.matches(anyString(), anyString())).willReturn(false);
 
-        assertThatThrownBy(() -> userService.loginLocal("alice", "wrong"))
+        assertThatThrownBy(() -> userCommandService.loginLocal("alice", "wrong"))
                 .isInstanceOf(UserDomainException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.PASSWORD_NOT_MATCHED);
@@ -129,7 +131,7 @@ class UserServiceLoginExceptionTest {
         // 본 테스트는 existsByUsername 체크 단계까지만 도달하므로 username 한 필드만 채워도 OK.
         org.springframework.test.util.ReflectionTestUtils.setField(dto, "username", "alice");
 
-        assertThatThrownBy(() -> userService.addUser(dto))
+        assertThatThrownBy(() -> userCommandService.addUser(dto))
                 .isInstanceOf(UserDomainException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.USER_ALREADY_EXISTS);

@@ -12,7 +12,6 @@ import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
 import com.example.thirdtool.Review.presentation.dto.ReviewRequest;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
-import com.example.thirdtool.User.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +26,6 @@ public class ReviewCommandService {
     private final ReviewSessionRepository reviewSessionRepository;
     private final ReviewQueryService      reviewQueryService;
     private final DeckQueryService        deckQueryService;
-    private final UserRepository          userRepository;
 
     // Card BC 의존 — port interface를 통한 접근 (ADR-006)
     private final CardRepository cardRepository;
@@ -38,16 +36,14 @@ public class ReviewCommandService {
 
     // ─── 1. 리뷰 세션 시작 ───────────────────────────────
 
-    public ReviewResponse.StartSession startReview(ReviewRequest.StartSession request, Long userId) {
+    // Story-5-2: Long userId → UserEntity user 시그니처 통일. JWTFilter가 Principal에 UserEntity를
+    // 주입하므로 userRepository 재조회 제거 (불필요한 DB I/O 절감).
+    public ReviewResponse.StartSession startReview(ReviewRequest.StartSession request, UserEntity user) {
         Deck deck = deckQueryService.getActiveDeck(request.deckId());
 
-        if (!deck.getUser().getId().equals(userId)) {
+        if (!deck.getUser().getId().equals(user.getId())) {
             throw ReviewSessionException.of(ErrorCode.REVIEW_SESSION_FORBIDDEN);
         }
-
-        UserEntity user = userRepository.findById(userId)
-                                        .orElseThrow(() -> new IllegalStateException(
-                                                "인증된 사용자를 찾을 수 없습니다: " + userId));
 
         // 카드 목록을 Application Service에서 조회해 ReviewSession에 전달한다.
         // ReviewSession이 deck.getCards()를 직접 호출하지 않도록 해 N+1 제어권을 유지한다.
@@ -65,8 +61,8 @@ public class ReviewCommandService {
 
     // ─── 2. 현재 카드 COMPARING 전환 ─────────────────────
 
-    public ReviewResponse.CardReviewDto startComparing(Long sessionId, Long userId) {
-        ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, userId);
+    public ReviewResponse.CardReviewDto startComparing(Long sessionId, UserEntity user) {
+        ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, user);
         session.startComparingCurrentCard();
 
         // isLastView는 카드 진입 시 이미 결정된 viewCount 상태를 그대로 읽는다.
@@ -76,8 +72,8 @@ public class ReviewCommandService {
 
     // ─── 3. 다음 카드로 이동 ──────────────────────────────
 
-    public ReviewResponse.NextCard moveToNext(Long sessionId, Long userId) {
-        ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, userId);
+    public ReviewResponse.NextCard moveToNext(Long sessionId, UserEntity user) {
+        ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, user);
 
         // 종료 여부 + COMPARING 검증은 도메인 내부에서 처리
         session.moveToNext();

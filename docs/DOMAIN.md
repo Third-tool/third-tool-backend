@@ -288,7 +288,7 @@ NO_MATERIAL ─ TopicMaterial 연결 → PARTIALLY_COVERED ─ proficiencyLevel�
 **주의·결정 메모**:
 - 자체 로그인과 소셜 로그인이 동일 `username` 공유 불가.
 - SocialMember 직접 생성 금지 — KakaoMember / NaverMember 통해서만.
-- `CustomOAuth2User`는 도메인 모델 아님 (Spring Security 어댑터).
+- 소셜 로그인은 `SocialLoginController`가 `KakaoOAuthClient` / `NaverOAuthClient`를 직접 호출하는 흐름 (Story-4-1에서 Spring Security `oauth2Login` 미사용 확정. 이전 `CustomOAuth2User` 어댑터 클래스는 dead code로 제거됨).
 - `OAuthClient`는 Infrastructure 계층 (도메인 아님).
 
 ---

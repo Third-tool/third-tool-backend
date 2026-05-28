@@ -12,8 +12,16 @@ public enum ErrorCode {
     NOT_FOUND("C002",        "데이터를 찾을 수 없습니다.",   HttpStatus.NOT_FOUND),
 
     // ─── User ─────────────────────────────────────────────
-    USER_NOT_FOUND("USER001",  "사용자를 찾을 수 없습니다.",  HttpStatus.NOT_FOUND),
-    UNAUTHORIZED("USER002",    "인증이 필요합니다.",          HttpStatus.UNAUTHORIZED),
+    USER_NOT_FOUND("USER001",          "사용자를 찾을 수 없습니다.",       HttpStatus.NOT_FOUND),
+    UNAUTHORIZED("USER002",            "인증이 필요합니다.",               HttpStatus.UNAUTHORIZED),
+    USER_ALREADY_EXISTS("USER003",     "이미 가입된 사용자입니다.",         HttpStatus.CONFLICT),
+    USER_LOCKED("USER004",             "잠긴 계정입니다.",                  HttpStatus.FORBIDDEN),
+    // 로그인 실패는 USER_NOT_FOUND와 PASSWORD_NOT_MATCHED로 코드만 구분.
+    // 보안상 외부 응답 메시지는 USER_NOT_FOUND와 동일하게 유지한다.
+    PASSWORD_NOT_MATCHED("USER005",    "사용자를 찾을 수 없습니다.",       HttpStatus.UNAUTHORIZED),
+    USER_IS_SOCIAL("USER006",          "소셜 계정은 자체 로그인을 사용할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    SOCIAL_PROVIDER_NOT_SUPPORTED("USER007", "지원하지 않는 소셜 제공자입니다.", HttpStatus.BAD_REQUEST),
+    SOCIAL_MEMBER_ALREADY_LINKED("USER008",  "이미 연동된 소셜 계정입니다.",     HttpStatus.CONFLICT),
 
     // ─── Refresh Token (Story 2-1) ────────────────────────
     REFRESH_TOKEN_INVALID("AUTH101",   "유효하지 않은 Refresh Token입니다.",               HttpStatus.UNAUTHORIZED),

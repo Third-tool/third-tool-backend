@@ -5,7 +5,6 @@ import com.example.thirdtool.Common.Util.JWTUtil;
 import com.example.thirdtool.Common.security.auth.JwtAuthenticationEntryPoint;
 import com.example.thirdtool.Common.security.filter.BlockListFilter;
 import com.example.thirdtool.Common.security.filter.JWTFilter;
-import com.example.thirdtool.User.domain.model.CustomOAuth2User;
 import com.example.thirdtool.User.domain.model.UserRoleType;
 import com.example.thirdtool.Common.security.auth.jwt.JwtService;
 import com.example.thirdtool.User.domain.repository.UserRepository;

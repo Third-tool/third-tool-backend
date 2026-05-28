@@ -4,7 +4,6 @@ import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
 import com.example.thirdtool.Common.security.auth.token.TokenIssuer;
-import com.example.thirdtool.User.domain.model.CustomOAuth2User;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.model.UserRoleType;
@@ -20,17 +19,11 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
-
 @Service
-public class UserService extends DefaultOAuth2UserService {
+public class UserService {
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
@@ -157,53 +150,6 @@ public class UserService extends DefaultOAuth2UserService {
         UserEntity entity = userRepository.findByUsernameAndIsLock(username, false)
                                           .orElseThrow(() -> new UsernameNotFoundException("해당 유저를 찾을 수 없습니다: " + username));
         return new UserResponseDTO(username, entity.getIsSocial(), entity.getNickname(), entity.getEmail());
-    }
-
-    @Override
-    public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        OAuth2User oAuth2User = super.loadUser(userRequest);
-
-        String registrationId = userRequest.getClientRegistration().getRegistrationId(); // "kakao", "naver"
-        Map<String, Object> attributes = oAuth2User.getAttributes();
-
-        // 공통 파싱 구조
-        String socialId;
-        String nickname;
-        String email;
-
-        if ("kakao".equals(registrationId)) {
-            Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
-            Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
-
-            socialId = String.valueOf(attributes.get("id"));
-            nickname = (String) profile.get("nickname");
-            email = (String) kakaoAccount.get("email");
-        } else if ("naver".equals(registrationId)) {
-            Map<String, Object> response = (Map<String, Object>) attributes.get("response");
-            socialId = (String) response.get("id");
-            nickname = (String) response.get("nickname");
-            email = (String) response.get("email");
-        } else {
-            throw new OAuth2AuthenticationException("지원하지 않는 소셜 로그인입니다: " + registrationId);
-        }
-
-        // username 규칙: PROVIDER_SOCIALID (ex. KAKAO_12345)
-        String username = registrationId.toUpperCase() + "_" + socialId;
-
-        // DB 유저 조회 또는 생성
-        UserEntity user = userRepository.findByUsername(username)
-                                        .orElseGet(() -> {
-                                            UserEntity newUser = UserEntity.ofSocial(
-                                                    username,
-                                                    SocialProviderType.valueOf(registrationId.toUpperCase()),
-                                                    nickname,
-                                                    email
-                                                                                    );
-                                            return userRepository.save(newUser);
-                                        });
-
-        // 반환: UserEntity를 래핑한 CustomOAuth2User
-        return new CustomOAuth2User(user, attributes);
     }
 
 }

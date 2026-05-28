@@ -7,6 +7,7 @@ import com.example.thirdtool.Review.domain.model.ReviewSession;
 import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
 import com.example.thirdtool.Review.infrastructure.dto.ReviewSessionSearchCondition;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
+import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,9 +22,11 @@ public class ReviewQueryService {
     private final ReviewSessionRepository reviewSessionRepository;
     private final OnFieldBudget systemBudget;
 
+    // Story-5-2: Long userId → UserEntity user 시그니처 통일.
+
     // ─── 1. 세션 단건 조회 ────────────────────────────────
-    public ReviewResponse.SessionDetail findById(Long sessionId, Long userId) {
-        ReviewSession session = getSessionByOwner(sessionId, userId);
+    public ReviewResponse.SessionDetail findById(Long sessionId, UserEntity user) {
+        ReviewSession session = getSessionByOwner(sessionId, user);
         boolean isLastView = resolveIsLastView(session);
         return ReviewResponse.SessionDetail.of(session, isLastView);
     }
@@ -35,9 +38,9 @@ public class ReviewQueryService {
      * deckId 지정 시 해당 덱의 세션만 반환, 미지정 시 전체 반환.
      * startedAt 내림차순 정렬은 QueryDSL에서 처리한다.
      */
-    public List<ReviewResponse.SessionSummary> searchSessions(Long deckId, Long userId) {
+    public List<ReviewResponse.SessionSummary> searchSessions(Long deckId, UserEntity user) {
         ReviewSessionSearchCondition condition = ReviewSessionSearchCondition.builder()
-                                                                             .userId(userId)
+                                                                             .userId(user.getId())
                                                                              .deckId(deckId)
                                                                              .build();
 
@@ -48,13 +51,13 @@ public class ReviewQueryService {
     }
 
     // ─── 내부 공용 메서드 ─────────────────────────────────
-    public ReviewSession getSessionByOwner(Long sessionId, Long userId) {
+    public ReviewSession getSessionByOwner(Long sessionId, UserEntity user) {
         // 세션 존재 여부: 없으면 REVIEW001
         ReviewSession session = reviewSessionRepository.findById(sessionId)
                                                        .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_SESSION_NOT_FOUND));
 
         // 소유자 검증: 본인 세션이 아니면 REVIEW005
-        if (!session.isOwner(userId)) {
+        if (!session.isOwner(user.getId())) {
             throw new BusinessException(ErrorCode.REVIEW_SESSION_FORBIDDEN);
         }
 

@@ -70,21 +70,23 @@ public class UserController {
     }
 
     // ✅ 유저 수정 (자체 로그인 유저만) (Command)
+    // Story-5-2: @AuthenticationPrincipal을 UserEntity 단일 타입으로 통일.
+    // 인증 주체 주입은 Spring Security가 JWTFilter에서 설정한 Principal을 그대로 활용.
     @PutMapping(value = "/user", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> updateUserApi(
-            @AuthenticationPrincipal String username,
+            @AuthenticationPrincipal UserEntity currentUser,
             @Validated @RequestBody UserUpdateRequestDTO dto
                                              ) throws AccessDeniedException {
-        return ResponseEntity.status(200).body(userCommandService.updateUser(username, dto));
+        return ResponseEntity.status(200).body(userCommandService.updateUser(currentUser, dto));
     }
 
     // ✅ 유저 제거 (자체/소셜) (Command)
     @DeleteMapping(value = "/user")
     public ResponseEntity<Boolean> deleteUserApi(
-            @AuthenticationPrincipal String username,
+            @AuthenticationPrincipal UserEntity currentUser,
             @Validated @RequestBody UserDeleteRequestDTO dto
                                                 ) throws AccessDeniedException {
-        userCommandService.deleteUser(username, dto);
+        userCommandService.deleteUser(currentUser, dto);
         return ResponseEntity.status(200).body(true);
     }
 }

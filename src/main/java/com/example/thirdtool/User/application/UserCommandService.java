@@ -15,7 +15,6 @@ import com.example.thirdtool.User.dto.UserDeleteRequestDTO;
 import com.example.thirdtool.User.dto.UserSignUpRequestDTO;
 import com.example.thirdtool.User.dto.UserUpdateRequestDTO;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -100,26 +99,36 @@ public class UserCommandService {
     }
 
     @Transactional
-    public Long updateUser(String username, UserUpdateRequestDTO dto) throws AccessDeniedException {
-        UserEntity entity = userRepository.findByUsernameAndIsLockAndIsSocial(username, false, false)
+    public Long updateUser(UserEntity currentUser, UserUpdateRequestDTO dto) throws AccessDeniedException {
+        // Story-5-2 본인 검증: 요청 바디의 username이 currentUser와 다르면 타 계정 수정 시도로 차단.
+        // (UserUpdateRequestDTO.username 자체 제거는 Story-5-4 범위)
+        if (dto.getUsername() != null && !currentUser.getUsername().equals(dto.getUsername())) {
+            throw new AccessDeniedException("본인 계정만 수정할 수 있습니다.");
+        }
+
+        // currentUser 정보로 자체 로그인·non-lock 조건을 만족하는 사용자를 찾아 수정.
+        UserEntity entity = userRepository.findByUsernameAndIsLockAndIsSocial(currentUser.getUsername(), false, false)
                                           .orElseThrow(() -> UserDomainException.of(ErrorCode.USER_NOT_FOUND));
         entity.updateUser(dto);
         return userRepository.save(entity).getId();
     }
 
     @Transactional
-    public void deleteUser(String username, UserDeleteRequestDTO dto) throws AccessDeniedException {
-        // 권한 검증 로직은 컨트롤러나 별도의 서비스에서 처리하는 것이 좋으나 Story-5-3 범위.
-        // 본 Story 4-4는 Command/Query 분리만 — SecurityContextHolder 호출은 그대로 유지.
-        String sessionRole = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority();
-        boolean isAdmin = sessionRole.equals("ROLE_" + UserRoleType.ADMIN.name());
+    public void deleteUser(UserEntity currentUser, UserDeleteRequestDTO dto) throws AccessDeniedException {
+        // Story-5-2: SecurityContextHolder 직접 호출 제거 → currentUser.getRoleType() 활용.
+        // 권한 검증을 @PreAuthorize로 이관하는 것은 Story-5-3 범위 (현재는 Service에서 처리).
+        boolean isAdmin = currentUser.getRoleType() == UserRoleType.ADMIN;
+        boolean isSelfDelete = currentUser.getUsername().equals(dto.getUsername());
 
-        if (!username.equals(dto.getUsername()) && !isAdmin) {
+        if (!isSelfDelete && !isAdmin) {
             throw new AccessDeniedException("본인 혹은 관리자만 삭제할 수 있습니다.");
         }
 
-        userRepository.deleteByUsername(dto.getUsername());
-        jwtService.removeRefreshUser(dto.getUsername());
+        // 본인 삭제는 currentUser 기반, admin 삭제는 dto.username 기반 (admin이 다른 계정 삭제).
+        // 두 케이스 모두 결과 username은 dto.username과 동일 (isSelfDelete=true일 때 currentUser.username == dto.username).
+        String targetUsername = isSelfDelete ? currentUser.getUsername() : dto.getUsername();
+        userRepository.deleteByUsername(targetUsername);
+        jwtService.removeRefreshUser(targetUsername);
     }
 
     /**

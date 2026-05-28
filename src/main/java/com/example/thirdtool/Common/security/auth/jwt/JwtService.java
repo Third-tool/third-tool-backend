@@ -2,7 +2,7 @@ package com.example.thirdtool.Common.security.auth.jwt;
 
 import com.example.thirdtool.Common.security.auth.RefreshEntity;
 import com.example.thirdtool.Common.security.auth.RefreshRepository;
-import com.example.thirdtool.Common.security.auth.dto.JWTResponseDTO;
+import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
 import com.example.thirdtool.Common.security.auth.dto.RefreshRequestDTO;
 import com.example.thirdtool.Common.security.auth.token.TokenIssuer;
 import com.example.thirdtool.Common.security.auth.token.TokenType;
@@ -34,7 +34,7 @@ public class JwtService {
      */
     @Deprecated
     @Transactional
-    public JWTResponseDTO cookie2Header(
+    public TokenResponse cookie2Header(
             HttpServletRequest request,
             HttpServletResponse response
                                        ) {
@@ -77,12 +77,12 @@ public class JwtService {
         expiredCookie.setMaxAge(0);
         response.addCookie(expiredCookie);
 
-        return new JWTResponseDTO(null, newRefreshToken);
+        return new TokenResponse(newRefreshToken);
     }
 
     // Refresh 토큰으로 Access 토큰 재발급 로직 (Rotate 포함) — AT Cookie + RT 바디
     @Transactional
-    public JWTResponseDTO refreshRotate(RefreshRequestDTO dto, HttpServletResponse response) {
+    public TokenResponse refreshRotate(RefreshRequestDTO dto, HttpServletResponse response) {
         String refreshToken = dto.getRefreshToken();
         log.info("[REFRESH-ROTATE] refresh 요청 수신");
 
@@ -113,7 +113,7 @@ public class JwtService {
         String newRefreshToken = tokenIssuer.reissue(username, role, response);
 
         // 응답 바디 (accessToken 필드는 Story 1-5에서 제거 예정. 임시 null 전달)
-        return new JWTResponseDTO(null, newRefreshToken);
+        return new TokenResponse(newRefreshToken);
     }
 
     @Transactional

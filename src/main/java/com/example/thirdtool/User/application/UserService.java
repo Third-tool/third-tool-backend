@@ -2,6 +2,7 @@ package com.example.thirdtool.User.application;
 
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
 import com.example.thirdtool.Common.security.auth.token.TokenIssuer;
 import com.example.thirdtool.User.domain.model.CustomOAuth2User;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
@@ -147,9 +148,7 @@ public class UserService extends DefaultOAuth2UserService {
 
         // AT는 Set-Cookie, RT는 응답 바디로 발급
         String refreshToken = tokenIssuer.issue(user, response);
-
-        // Story 1-5에서 TokenResponse.accessToken 필드 제거 예정. 임시로 null 전달.
-        return new TokenResponse(null, refreshToken);
+        return new TokenResponse(refreshToken);
     }
 
     // 자체/소셜 유저 정보 조회

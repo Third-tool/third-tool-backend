@@ -4,15 +4,13 @@ import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Common.security.auth.dto.TokenResponse;
 import com.example.thirdtool.Common.security.auth.token.TokenIssuer;
 import com.example.thirdtool.User.domain.exception.UserDomainException;
+import com.example.thirdtool.User.domain.model.SocialMemberRegistrar;
 import com.example.thirdtool.User.domain.model.SocialProviderType;
+import com.example.thirdtool.User.domain.model.SocialUserInfo;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.model.UserRoleType;
 import com.example.thirdtool.User.dto.*;
-import com.example.thirdtool.User.infrastructure.Naver.NaverMember;
-import com.example.thirdtool.User.infrastructure.Naver.NaverMemberRepository;
-import com.example.thirdtool.User.infrastructure.kakao.KakaoMemberRepository;
 import com.example.thirdtool.User.domain.repository.UserRepository;
-import com.example.thirdtool.User.infrastructure.kakao.KakaoMember;
 
 import com.example.thirdtool.Common.security.auth.jwt.JwtService;
 import org.springframework.security.access.AccessDeniedException;
@@ -28,21 +26,18 @@ public class UserService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final TokenIssuer tokenIssuer;
-    private final KakaoMemberRepository kakaoMemberRepository;
-    private final NaverMemberRepository naverMemberRepository;
+    private final SocialMemberRegistrar socialMemberRegistrar;
 
     public UserService(PasswordEncoder passwordEncoder,
                        UserRepository userRepository,
                        JwtService jwtService,
                        TokenIssuer tokenIssuer,
-                       KakaoMemberRepository kakaoMemberRepository,
-                       NaverMemberRepository naverMemberRepository) {
+                       SocialMemberRegistrar socialMemberRegistrar) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.tokenIssuer = tokenIssuer;
-        this.kakaoMemberRepository = kakaoMemberRepository;
-        this.naverMemberRepository = naverMemberRepository;
+        this.socialMemberRegistrar = socialMemberRegistrar;
     }
 
 
@@ -124,6 +119,13 @@ public class UserService {
 
 
     // ✅ JWT 기반 소셜 로그인 처리 및 토큰 발급
+    // Story-4-3: KakaoMemberRepository / NaverMemberRepository 직접 의존 제거.
+    // 제공자별 SocialMember 저장은 SocialMemberRegistrar 도메인 서비스에 위임.
+    //
+    // 트랜잭션 보존 (AC3): @Transactional이 본 메서드를 감싼다. orElseGet 내부에서
+    // userRepository.save → socialMemberRegistrar.register 순으로 진행하는데, Registrar가
+    // SOCIAL_MEMBER_ALREADY_LINKED 또는 DB 예외(DataIntegrityViolationException 등) RuntimeException을
+    // 던지면 Spring이 본 트랜잭션 전체를 자동 롤백 → UserEntity 저장도 함께 무효화된다.
     @Transactional
     public TokenResponse socialLogin(SocialProviderType socialType,
                                      String socialId,
@@ -139,12 +141,12 @@ public class UserService {
                                             UserEntity newUser = UserEntity.ofSocial(username, socialType, nickname, email);
                                             UserEntity savedUser = userRepository.save(newUser);
 
-                                            // 소셜 멤버 정보 저장
-                                            if (socialType == SocialProviderType.KAKAO) {
-                                                kakaoMemberRepository.save(KakaoMember.builder().user(savedUser).kakaoId(socialId).build());
-                                            } else if (socialType == SocialProviderType.NAVER) {
-                                                naverMemberRepository.save(NaverMember.builder().user(savedUser).naverId(socialId).build());
-                                            }
+                                            // 제공자별 SocialMember 등록은 Registrar에 위임 (Story-4-3).
+                                            // 중복 socialId면 SOCIAL_MEMBER_ALREADY_LINKED throw → 단일 트랜잭션 롤백.
+                                            socialMemberRegistrar.register(
+                                                    savedUser,
+                                                    new SocialUserInfo(socialId, nickname, email, socialType)
+                                            );
                                             return savedUser;
                                         });
 

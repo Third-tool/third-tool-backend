@@ -34,6 +34,7 @@ public enum ErrorCode {
     AUTH_TOKEN_EXPIRED("AUTH002",   "인증 토큰이 만료되었습니다.",                    HttpStatus.UNAUTHORIZED),
     AUTH_TOKEN_INVALID("AUTH003",   "인증 토큰이 유효하지 않습니다 (위조/서명 불일치).", HttpStatus.UNAUTHORIZED),
     AUTH_USER_NOT_FOUND("AUTH004",  "토큰의 사용자가 더 이상 존재하지 않습니다.",      HttpStatus.UNAUTHORIZED),
+    AUTH_FORBIDDEN("AUTH005",       "접근 권한이 없습니다.",                           HttpStatus.FORBIDDEN),
 
     // ─── Deck ─────────────────────────────────────────────
     DECK_NOT_FOUND("DECK001", "덱을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
@@ -115,8 +116,8 @@ public enum ErrorCode {
     FILE_DELETE_FAIL("FILE004",             "파일 삭제에 실패했습니다.",           HttpStatus.SERVICE_UNAVAILABLE),
 
     // ─── Library ──────────────────────────────────────────
-    ALREADY_EXISTS("LIBRARY001",  "이미 존재하는 리소스입니다.",  HttpStatus.CONFLICT),
-    ACCESS_DENIED("LIBRARY002",   "접근 권한이 없습니다.",        HttpStatus.FORBIDDEN);
+    // Story-5-3: ACCESS_DENIED("LIBRARY002") 제거 — 사용처 0건 + AUTH_FORBIDDEN(AUTH005)과 의미 중복.
+    ALREADY_EXISTS("LIBRARY001",  "이미 존재하는 리소스입니다.",  HttpStatus.CONFLICT);
 
     // ─── 필드 ─────────────────────────────────────────────
     private final String     code;

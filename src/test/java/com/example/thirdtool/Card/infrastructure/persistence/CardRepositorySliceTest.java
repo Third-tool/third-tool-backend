@@ -16,11 +16,12 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /**
  * CardRepository slice 테스트 (@DataJpaTest + H2).
@@ -103,8 +104,7 @@ class CardRepositorySliceTest {
     void archive_persistsStatus_preservesEnteredFieldAt() {
         // given
         Card card = persistCard();
-        // DATETIME(6)는 microsecond 정밀도 — Java LocalDateTime(nanosecond)와 비교 시 마이크로초 단위 절단.
-        LocalDateTime originalEnteredFieldAt = card.getEnteredFieldAt().truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime originalEnteredFieldAt = card.getEnteredFieldAt();
 
         // when
         card.archive();
@@ -113,10 +113,10 @@ class CardRepositorySliceTest {
 
         Card found = cardJpaRepository.findById(card.getId()).orElseThrow();
 
-        // then
+        // then — DATETIME(6) microsecond 정밀도 + DB 측 반올림 가능성으로 1μs 허용 오차.
         assertThat(found.getStatus()).isEqualTo(CardStatus.ARCHIVE);
-        assertThat(found.getEnteredFieldAt().truncatedTo(ChronoUnit.MICROS))
-                .isEqualTo(originalEnteredFieldAt);
+        assertThat(found.getEnteredFieldAt())
+                .isCloseTo(originalEnteredFieldAt, within(Duration.ofNanos(1_000)));
     }
 
     @Test

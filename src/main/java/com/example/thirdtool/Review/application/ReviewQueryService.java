@@ -8,6 +8,7 @@ import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
 import com.example.thirdtool.Review.infrastructure.dto.ReviewSessionSearchCondition;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
+import com.example.thirdtool.UserSchedule.application.service.UserScheduleQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,14 +21,15 @@ import java.util.List;
 public class ReviewQueryService {
 
     private final ReviewSessionRepository reviewSessionRepository;
-    private final OnFieldBudget systemBudget;
+    private final UserScheduleQueryService userScheduleQueryService;
 
     // Story-5-2: Long userId → UserEntity user 시그니처 통일.
 
     // ─── 1. 세션 단건 조회 ────────────────────────────────
     public ReviewResponse.SessionDetail findById(Long sessionId, UserEntity user) {
         ReviewSession session = getSessionByOwner(sessionId, user);
-        boolean isLastView = resolveIsLastView(session);
+        OnFieldBudget budget = userScheduleQueryService.resolveOnFieldBudget(user.getId());
+        boolean isLastView = resolveIsLastView(session, budget);
         return ReviewResponse.SessionDetail.of(session, isLastView);
     }
 
@@ -64,8 +66,8 @@ public class ReviewQueryService {
         return session;
     }
 
-    private boolean resolveIsLastView(ReviewSession session) {
+    private boolean resolveIsLastView(ReviewSession session, OnFieldBudget budget) {
         if (session.isFinished()) return false;
-        return session.currentCardReview().getCard().isLastView(systemBudget.getMaxView());
+        return session.currentCardReview().getCard().isLastView(budget.getMaxView());
     }
 }

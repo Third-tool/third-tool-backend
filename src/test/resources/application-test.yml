@@ -16,3 +16,8 @@ spring:
 
   flyway:
     enabled: false
+
+# 테스트 컨텍스트에서 Card 야간 만료 배치(@Scheduled) 비활성화 — `-` 값은 disabled 트리거.
+card:
+  expiry:
+    cron: "-"

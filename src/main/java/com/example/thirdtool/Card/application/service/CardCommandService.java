@@ -1,7 +1,10 @@
 package com.example.thirdtool.Card.application.service;
 
 import com.example.thirdtool.Card.domain.exception.CardDomainException;
+import com.example.thirdtool.Card.domain.model.ArchiveReason;
 import com.example.thirdtool.Card.domain.model.Card;
+import com.example.thirdtool.Card.domain.model.CardStatus;
+import com.example.thirdtool.Card.domain.model.CardStatusHistoryAppender;
 import com.example.thirdtool.Card.domain.model.MainNote;
 import com.example.thirdtool.Card.domain.model.Summary;
 import com.example.thirdtool.Card.domain.model.Tag;
@@ -28,6 +31,7 @@ public class CardCommandService {
     private final CardRepository cardRepository;
     private final TagRepository tagRepository;
     private final DeckRepository deckRepository;
+    private final CardStatusHistoryAppender cardStatusHistoryAppender;
 
     // ─── 카드 생성 ─────────────────────────────────────
 
@@ -118,6 +122,44 @@ public class CardCommandService {
         List<Tag>  newTags = resolveTags(request.tags());
         card.replaceTags(newTags);
         return CardResponse.Tags.of(card);
+    }
+
+    // ─── 카드 ARCHIVE 전환 ────────────────────────────────
+    // product-card.md Epic 1 Story 1-1 — 사용자가 카드를 "보관"하는 운영 위치 전환.
+    // 멱등: 이미 ARCHIVE면 도메인 no-op + 이력 미생성 + Deck 재계산 미호출.
+
+    public CardResponse.Detail archive(Long cardId, ArchiveReason reason) {
+        if (reason == null) {
+            throw CardDomainException.of(
+                    ErrorCode.INVALID_INPUT, "archive: reason은 null일 수 없습니다.");
+        }
+        Card       card       = findActiveCard(cardId);
+        CardStatus fromStatus = card.getStatus();
+
+        card.archive();
+
+        if (fromStatus != card.getStatus()) {
+            cardStatusHistoryAppender.append(card, fromStatus, card.getStatus(), reason);
+            card.getDeck().recalculateProgressStatus();
+        }
+        return CardResponse.Detail.of(card);
+    }
+
+    // ─── 카드 ON_FIELD 복귀 ───────────────────────────────
+    // product-card.md Epic 7 — 새 사이클 시작. enteredFieldAt/viewCount/lastViewedAt은 도메인에서 재초기화.
+    // 멱등: 이미 ON_FIELD면 도메인 no-op + 이력 미생성 + Deck 재계산 미호출.
+
+    public CardResponse.Detail returnToField(Long cardId) {
+        Card       card       = findActiveCard(cardId);
+        CardStatus fromStatus = card.getStatus();
+
+        card.returnToField();
+
+        if (fromStatus != card.getStatus()) {
+            cardStatusHistoryAppender.append(card, fromStatus, card.getStatus(), null);
+            card.getDeck().recalculateProgressStatus();
+        }
+        return CardResponse.Detail.of(card);
     }
 
     // ─── 13. 카드 삭제 (Soft Delete) ──────────────────────

@@ -12,6 +12,7 @@ import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
 import com.example.thirdtool.Review.presentation.dto.ReviewRequest;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
+import com.example.thirdtool.UserSchedule.application.service.UserScheduleQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,8 +32,8 @@ public class ReviewCommandService {
     private final CardRepository cardRepository;
     private final CardStatusHistoryAppender historyAppender;
 
-    // 시스템 수준 ON_FIELD 체류 예산 (SystemBudgetConfig에서 주입)
-    private final OnFieldBudget systemBudget;
+    // UserSchedule BC 의존 — 사용자별 OnFieldBudget 파생 (Story 2-1/2-3 + Epic 4 합류)
+    private final UserScheduleQueryService userScheduleQueryService;
 
     // ─── 1. 리뷰 세션 시작 ───────────────────────────────
 
@@ -54,7 +55,8 @@ public class ReviewCommandService {
         reviewSessionRepository.save(session);
 
         // 첫 번째 카드 진입 처리 (viewCount 증가 + maxView 도달 시 즉시 ARCHIVE)
-        boolean isLastView = incrementViewAndHandleMaxView(session.currentCardReview().getCard());
+        OnFieldBudget budget = userScheduleQueryService.resolveOnFieldBudget(user.getId());
+        boolean isLastView = incrementViewAndHandleMaxView(session.currentCardReview().getCard(), budget);
 
         return ReviewResponse.StartSession.of(session, isLastView);
     }
@@ -66,7 +68,8 @@ public class ReviewCommandService {
         session.startComparingCurrentCard();
 
         // isLastView는 카드 진입 시 이미 결정된 viewCount 상태를 그대로 읽는다.
-        boolean isLastView = resolveIsLastView(session);
+        OnFieldBudget budget = userScheduleQueryService.resolveOnFieldBudget(user.getId());
+        boolean isLastView = resolveIsLastView(session, budget);
         return ReviewResponse.CardReviewDto.of(session.currentCardReview(), isLastView);
     }
 
@@ -80,17 +83,18 @@ public class ReviewCommandService {
 
         boolean isLastView = false;
         if (!session.isFinished()) {
-            isLastView = incrementViewAndHandleMaxView(session.currentCardReview().getCard());
+            OnFieldBudget budget = userScheduleQueryService.resolveOnFieldBudget(user.getId());
+            isLastView = incrementViewAndHandleMaxView(session.currentCardReview().getCard(), budget);
         }
 
         return ReviewResponse.NextCard.of(session, isLastView);
     }
 
     // ─── 내부 처리 ────────────────────────────────────────
-    private boolean incrementViewAndHandleMaxView(Card card) {
+    private boolean incrementViewAndHandleMaxView(Card card, OnFieldBudget budget) {
         card.recordView();
 
-        boolean isLastView = card.isLastView(systemBudget.getMaxView());
+        boolean isLastView = card.isLastView(budget.getMaxView());
         if (isLastView) {
             // viewCount가 maxView에 도달 → 즉시 ARCHIVE 전환
             CardStatus before = card.getStatus();  // 항상 ON_FIELD (incrementViewCount는 ARCHIVE 무시)
@@ -106,8 +110,8 @@ public class ReviewCommandService {
         return isLastView;
     }
 
-    private boolean resolveIsLastView(ReviewSession session) {
+    private boolean resolveIsLastView(ReviewSession session, OnFieldBudget budget) {
         if (session.isFinished()) return false;
-        return session.currentCardReview().getCard().isLastView(systemBudget.getMaxView());
+        return session.currentCardReview().getCard().isLastView(budget.getMaxView());
     }
 }

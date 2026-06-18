@@ -1,5 +1,6 @@
 package com.example.thirdtool.UserSchedule.application.service;
 
+import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.UserSchedule.domain.exception.UserScheduleDomainException;
 import com.example.thirdtool.UserSchedule.domain.model.LearningModeMappingPolicy;
@@ -30,6 +31,22 @@ public class UserScheduleQueryService {
         UserScheduleConfig config = configRepository.findByUserId(userId)
                                                     .orElseGet(() -> initDefault(userId));
         return UserScheduleResponse.Get.of(config);
+    }
+
+    /**
+     * Cross-BC inbound — Card BC {@link OnFieldBudget}을 사용자별 설정에서 파생해 반환한다.
+     *
+     * <p>Review BC가 매 노출(`recordView`)·세션 진입 시점에 호출한다. 설정 미보유 유저는
+     * 첫 호출 시 기본 모드(MODE_10D)로 자동 초기화 — Story 4-2 "최초 설정 미완료 유저는
+     * 기본값(10일 모드) 자동 초기화".
+     *
+     * <p>{@code UserScheduleConfig} 엔티티 자체는 BC 경계 밖으로 노출하지 않는다.
+     * 호출자가 필요한 것은 {@link OnFieldBudget} VO뿐이다.
+     */
+    public OnFieldBudget resolveOnFieldBudget(Long userId) {
+        UserScheduleConfig config = configRepository.findByUserId(userId)
+                                                    .orElseGet(() -> initDefault(userId));
+        return config.resolveOnFieldBudget();
     }
 
     @Transactional(readOnly = true)

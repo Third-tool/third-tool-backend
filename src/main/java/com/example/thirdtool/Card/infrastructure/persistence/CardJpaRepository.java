@@ -37,4 +37,22 @@ public interface CardJpaRepository extends JpaRepository<Card, Long>, CardReposi
             @Param("tagIds") List<Long> tagIds,
             @Param("excludeCardId") Long excludeCardId
                                  );
+
+    /**
+     * Story 5-2 — Tag 클릭 탐색 진입점.
+     * <p>특정 tagId가 부착된 사용자 소유 활성 카드를 createdDate 내림차순으로 반환한다.
+     * ON_FIELD / ARCHIVE 모두 포함 (FE에서 status 필드로 섹션 분리).
+     */
+    @Query("""
+            SELECT DISTINCT c FROM Card c
+            JOIN c.cardTags ct
+            WHERE ct.tag.id = :tagId
+              AND c.deck.user.id = :userId
+              AND c.deleted = false
+            ORDER BY c.createdDate DESC
+            """)
+    List<Card> findByTagIdAndUserIdAndDeletedFalse(
+            @Param("tagId") Long tagId,
+            @Param("userId") Long userId
+                                                  );
 }

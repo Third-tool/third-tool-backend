@@ -5,10 +5,12 @@ import com.example.thirdtool.Card.application.service.CardCommandService;
 import com.example.thirdtool.Card.application.service.CardQueryService;
 import com.example.thirdtool.Card.presentation.dto.CardRequest;
 import com.example.thirdtool.Card.presentation.dto.CardResponse;
+import com.example.thirdtool.User.domain.model.UserEntity;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -158,5 +160,16 @@ public class CardController {
             @PathVariable Long cardId
                                                             ) {
         return ResponseEntity.ok(cardCommandService.returnToField(cardId));
+    }
+
+    // ─── 16. Tag 클릭 탐색 (Story 5-2) ────────────────────
+    // 특정 Tag가 부착된 본인 카드를 ON_FIELD/ARCHIVE 모두 포함해 반환.
+    // FE가 응답 DTO의 status 필드로 ON_FIELD / ARCHIVE 섹션 분리.
+    @GetMapping("/api/v1/tags/{tagId}/cards")
+    public ResponseEntity<List<CardResponse.Summary>> findCardsByTag(
+            @AuthenticationPrincipal UserEntity user,
+            @PathVariable Long tagId
+                                                                    ) {
+        return ResponseEntity.ok(cardQueryService.findByTag(tagId, user.getId()));
     }
 }

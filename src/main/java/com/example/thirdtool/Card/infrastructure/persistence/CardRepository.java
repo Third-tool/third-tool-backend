@@ -25,6 +25,12 @@ public interface CardRepository {
     List<Card> findBySharedTagIds(List<Long> tagIds, Long excludeCardId);
 
     /**
+     * Story 5-2 — Tag별 사용자 소유 카드 조회 (ON_FIELD/ARCHIVE 모두, 본인 카드만).
+     * createdDate 내림차순. status 필드는 응답 DTO에 노출되어 FE가 섹션 분리.
+     */
+    List<Card> findByTagIdAndUserIdAndDeletedFalse(Long tagId, Long userId);
+
+    /**
      * ON_FIELD 만료 배치용 카드 조회.
      * 주어진 CardStatus를 가진 활성 카드 목록을 반환한다.
      */

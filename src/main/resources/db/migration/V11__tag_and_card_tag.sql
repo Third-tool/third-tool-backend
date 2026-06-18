@@ -15,11 +15,11 @@
 
 CREATE TABLE tag
 (
-    tag_id BIGINT      NOT NULL AUTO_INCREMENT,
-    value  VARCHAR(50) NOT NULL,
+    tag_id    BIGINT      NOT NULL AUTO_INCREMENT,
+    tag_value VARCHAR(50) NOT NULL,
 
     PRIMARY KEY (tag_id),
-    CONSTRAINT uk_tag_value UNIQUE (value)
+    CONSTRAINT uk_tag_value UNIQUE (tag_value)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;

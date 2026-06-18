@@ -1,6 +1,7 @@
 package com.example.thirdtool.Card.application.service;
 
 import com.example.thirdtool.Card.domain.model.Card;
+import com.example.thirdtool.Card.domain.model.CardStatusHistoryAppender;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Card.infrastructure.persistence.TagRepository;
 import com.example.thirdtool.Card.presentation.dto.CardRequest;
@@ -32,6 +33,7 @@ class CardCommandServiceDeckProgressTriggerTest {
     private CardRepository cardRepository;
     private TagRepository tagRepository;
     private DeckRepository deckRepository;
+    private CardStatusHistoryAppender cardStatusHistoryAppender;
     private CardCommandService service;
 
     private UserEntity user;
@@ -42,7 +44,8 @@ class CardCommandServiceDeckProgressTriggerTest {
         cardRepository = mock(CardRepository.class);
         tagRepository = mock(TagRepository.class);
         deckRepository = mock(DeckRepository.class);
-        service = new CardCommandService(cardRepository, tagRepository, deckRepository);
+        cardStatusHistoryAppender = mock(CardStatusHistoryAppender.class);
+        service = new CardCommandService(cardRepository, tagRepository, deckRepository, cardStatusHistoryAppender);
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);

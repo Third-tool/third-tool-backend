@@ -140,4 +140,23 @@ public class CardController {
         cardCommandService.softDelete(cardId);
         return ResponseEntity.noContent().build();
     }
+
+    // ─── 14. 카드 ARCHIVE 전환 ────────────────────────────
+    // product-card.md Epic 1 Story 1-1 — 사용자 명시 보관. 멱등.
+    @PostMapping("/api/v1/cards/{cardId}/archive")
+    public ResponseEntity<CardResponse.Detail> archive(
+            @PathVariable Long cardId,
+            @Valid @RequestBody CardRequest.Archive request
+                                                      ) {
+        return ResponseEntity.ok(cardCommandService.archive(cardId, request.reason()));
+    }
+
+    // ─── 15. 카드 ON_FIELD 복귀 ───────────────────────────
+    // product-card.md Epic 7 — 새 사이클 시작. 멱등.
+    @PostMapping("/api/v1/cards/{cardId}/return-to-field")
+    public ResponseEntity<CardResponse.Detail> returnToField(
+            @PathVariable Long cardId
+                                                            ) {
+        return ResponseEntity.ok(cardCommandService.returnToField(cardId));
+    }
 }

@@ -1,7 +1,9 @@
 package com.example.thirdtool.Card.presentation.dto;
 
+import com.example.thirdtool.Card.domain.model.ArchiveReason;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
@@ -56,6 +58,14 @@ public class CardRequest {
     public record ReplaceTags(
             @NotEmpty
             List<String> tags
+    ) {}
+
+    // ─── 카드 ARCHIVE 전환 요청 ───────────────────────────
+    // 사용자 명시 액션의 reason은 MANUAL로 고정 (Service에서 강제) — 본 DTO는 향후
+    // 관리자/시스템 호출(MAX_VIEW·MAX_DURATION)을 위한 확장 여지를 위해 enum을 받는다.
+    public record Archive(
+            @NotNull
+            ArchiveReason reason
     ) {}
 
     // ─── 중첩 DTO ─────────────────────────────────────────

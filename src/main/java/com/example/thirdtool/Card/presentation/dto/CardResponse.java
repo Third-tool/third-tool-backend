@@ -15,6 +15,10 @@ public class CardResponse {
             List<KeywordDto> keywords,
             String summary,
             List<TagDto> tags,
+            CardStatus status,
+            LocalDateTime enteredFieldAt,
+            int viewCount,
+            LocalDateTime lastViewedAt,
             LocalDateTime createdDate
     ) {
         public static Create of(Card card) {
@@ -25,6 +29,10 @@ public class CardResponse {
                     KeywordDto.listOf(card),
                     card.getSummary().getValue(),
                     TagDto.listOf(card),
+                    card.getStatus(),
+                    card.getEnteredFieldAt(),
+                    card.getViewCount(),
+                    card.getLastViewedAt(),
                     card.getCreatedDate()
             );
         }
@@ -38,6 +46,10 @@ public class CardResponse {
             List<KeywordDto> keywords,
             String summary,
             List<TagDto> tags,
+            CardStatus status,
+            LocalDateTime enteredFieldAt,
+            int viewCount,
+            LocalDateTime lastViewedAt,
             LocalDateTime createdDate,
             LocalDateTime updatedDate
     ) {
@@ -49,6 +61,10 @@ public class CardResponse {
                     KeywordDto.listOf(card),
                     card.getSummary().getValue(),
                     TagDto.listOf(card),
+                    card.getStatus(),
+                    card.getEnteredFieldAt(),
+                    card.getViewCount(),
+                    card.getLastViewedAt(),
                     card.getCreatedDate(),
                     card.getUpdatedDate()
             );
@@ -63,6 +79,10 @@ public class CardResponse {
             String summary,
             List<TagDto> tags,
             MainContentType contentType,
+            CardStatus status,
+            LocalDateTime enteredFieldAt,
+            int viewCount,
+            LocalDateTime lastViewedAt,
             LocalDateTime createdDate
     ) {
         public static Summary of(Card card) {
@@ -72,6 +92,10 @@ public class CardResponse {
                     card.getSummary().getValue(),
                     TagDto.listOf(card),
                     card.getMainNote().getContentType(),
+                    card.getStatus(),
+                    card.getEnteredFieldAt(),
+                    card.getViewCount(),
+                    card.getLastViewedAt(),
                     card.getCreatedDate()
             );
         }

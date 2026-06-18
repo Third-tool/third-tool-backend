@@ -13,7 +13,7 @@ import java.util.List;
 @Entity
 @Table(
         name = "tag",
-        uniqueConstraints = @UniqueConstraint(name = "uk_tag_value", columnNames = "value")
+        uniqueConstraints = @UniqueConstraint(name = "uk_tag_value", columnNames = "tag_value")
 )
 public class Tag {
 
@@ -22,7 +22,9 @@ public class Tag {
     @Column(name = "tag_id")
     private Long id;
 
-    @Column(name = "value", nullable = false, length = 50)
+    // 컬럼명은 `tag_value` — `value`는 H2 MySQL 모드의 예약어로 슬라이스 테스트에서 syntax 오류 유발.
+    // 도메인 필드명은 그대로 두고 매핑만 분리한다.
+    @Column(name = "tag_value", nullable = false, length = 50)
     private String value;
 
     // ─── 역방향 참조 ─────────────────────────────────────────

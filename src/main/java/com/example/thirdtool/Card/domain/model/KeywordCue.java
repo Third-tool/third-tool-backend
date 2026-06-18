@@ -13,7 +13,9 @@ public class KeywordCue {
     @Column(name = "keyword_cue_id")
     private Long id;
 
-    @Column(name = "value", nullable = false, length = 200)
+    // value 컬럼명은 backtick 인용해 H2/MySQL 모두에서 VALUE 예약어 충돌을 회피한다.
+    // Hibernate가 dialect별 quoting을 적용한다.
+    @Column(name = "`value`", nullable = false, length = 200)
     private String value;
 
     @ManyToOne(fetch = FetchType.LAZY)

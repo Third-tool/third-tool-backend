@@ -70,6 +70,30 @@ public class CardQueryService {
                          .toList();
     }
 
+    // ─── ON_FIELD 학습 중 ARCHIVE 연결 후보 (Story 5-3) ───
+    // 현재 카드의 Tag를 가진 본인의 ARCHIVE 카드만 필터링.
+    // 공통 Tag 수 내림차순은 CardRelationFinder가 in-memory로 처리.
+
+    public List<CardResponse.RelatedCard> findArchiveRelated(Long cardId, Long userId) {
+        Card currentCard = findActiveCard(cardId);
+
+        List<Long> tagIds = currentCard.getCardTags().stream()
+                                       .map(ct -> ct.getTag().getId())
+                                       .toList();
+
+        // Tag가 없으면 섹션 미표시 — 빈 리스트 즉시 반환 (Spec 엣지 케이스)
+        if (tagIds.isEmpty()) return List.of();
+
+        List<Card> archivedCandidates =
+                cardRepository.findArchivedBySharedTagIdsAndUserId(tagIds, cardId, userId);
+        List<RelatedCardCandidate> candidates =
+                cardRelationFinder.findCandidates(currentCard, archivedCandidates);
+
+        return candidates.stream()
+                         .map(CardResponse.RelatedCard::of)
+                         .toList();
+    }
+
     // ─── 내부 유틸 ────────────────────────────────────────
 
     private Card findActiveCard(Long cardId) {

@@ -62,4 +62,9 @@ public class CardRepositoryAdapter implements CardRepository {
         return cardJpaRepository.findAllByStatusAndDeletedFalse(status);
     }
 
+    @Override
+    public List<Card> findByTagIdAndUserIdAndDeletedFalse(Long tagId, Long userId) {
+        return cardJpaRepository.findByTagIdAndUserIdAndDeletedFalse(tagId, userId);
+    }
+
 }

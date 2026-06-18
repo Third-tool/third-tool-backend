@@ -39,6 +39,17 @@ public class CardQueryService {
                              .toList();
     }
 
+    // ─── Tag 클릭 탐색 (Story 5-2) ────────────────────
+    // 특정 tagId가 부착된 본인 카드를 ON_FIELD/ARCHIVE 모두 포함해 반환.
+    // FE가 응답 DTO의 status 필드로 섹션 분리한다.
+
+    public List<CardResponse.Summary> findByTag(Long tagId, Long userId) {
+        return cardRepository.findByTagIdAndUserIdAndDeletedFalse(tagId, userId)
+                             .stream()
+                             .map(CardResponse.Summary::of)
+                             .toList();
+    }
+
     // ─── 관련 카드 후보 조회 ──────────────────────────
 
     public List<CardResponse.RelatedCard> findRelated(Long cardId) {

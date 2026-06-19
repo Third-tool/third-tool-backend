@@ -92,6 +92,8 @@ public class LearningFacadeResponse {
             int displayOrder,
             String coverageStatus,
             boolean isUncovered,
+            boolean isFocused,                 // Story 2-3
+            boolean isRefinementSuggested,     // Story 3-3
             MaterialBreakdown materialBreakdown
     ) {
         public static TopicItem of(AxisTopic topic) {
@@ -106,6 +108,8 @@ public class LearningFacadeResponse {
                     topic.getDisplayOrder(),
                     topic.getCoverageStatus().name(),
                     topic.isUncovered(),
+                    topic.isFocused(LearningAxis.FOCUS_TOP_N),
+                    topic.isRefinementSuggested(),
                     materialBreakdown
             );
         }
@@ -345,6 +349,8 @@ public class LearningFacadeResponse {
             int displayOrder,
             String coverageStatus,
             boolean needsMaterialPrompt,
+            boolean isFocused,                 // Story 2-3 — 신규 추가된 주제가 상위 N에 들어가는지
+            boolean isRefinementSuggested,     // Story 3-3 — 새 주제는 항상 false (revisionCount=0)
             List<LinkableMaterialItem> linkableMaterials
     ) {
         public static AddTopic of(AxisTopic topic) {
@@ -360,6 +366,8 @@ public class LearningFacadeResponse {
                     topic.getDisplayOrder(),
                     topic.getCoverageStatus().name(),
                     topic.isUncovered(),
+                    topic.isFocused(LearningAxis.FOCUS_TOP_N),
+                    topic.isRefinementSuggested(),
                     linkableMaterials == null ? List.of() : linkableMaterials
             );
         }
@@ -378,6 +386,7 @@ public class LearningFacadeResponse {
             String coverageStatus,
             int revisionCount,
             boolean isRefinementSuggested,
+            boolean isFocused,                 // Story 2-3 — 수정 후에도 priority 표시 일관성
             LocalDateTime updatedAt
     ) {
         public static UpdateTopic of(AxisTopic topic) {
@@ -390,6 +399,7 @@ public class LearningFacadeResponse {
                     topic.getCoverageStatus().name(),
                     topic.getRevisionCount(),
                     topic.isRefinementSuggested(),
+                    topic.isFocused(LearningAxis.FOCUS_TOP_N),
                     topic.getUpdatedAt()
             );
         }

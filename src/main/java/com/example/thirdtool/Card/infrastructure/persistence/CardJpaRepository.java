@@ -3,6 +3,7 @@ package com.example.thirdtool.Card.infrastructure.persistence;
 import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.CardStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -77,4 +78,21 @@ public interface CardJpaRepository extends JpaRepository<Card, Long>, CardReposi
             @Param("excludeCardId") Long excludeCardId,
             @Param("userId") Long userId
                                                   );
+
+    /**
+     * Story 5-1 — Tag 관리 화면의 "Tag 삭제" 액션.
+     * 본인의 모든 활성 카드에서 해당 Tag 부착(CardTag row)을 일괄 해제한다.
+     * Tag row 자체는 보존(시스템 전역 UNIQUE 자원, Open Question 5 v1 결정).
+     *
+     * <p>Aggregate 우회 — 본 메서드는 도메인 행위(`Card.removeTag`)를 N회 호출하는 대신
+     * 영속 계층에서 직접 매핑 row만 제거한다. 카드 자체 상태 변경이 없으므로 안전.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            DELETE FROM CardTag ct
+            WHERE ct.tag.id = :tagId
+              AND ct.card.deck.user.id = :userId
+              AND ct.card.deleted = false
+            """)
+    int detachTagFromUserCards(@Param("userId") Long userId, @Param("tagId") Long tagId);
 }

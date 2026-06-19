@@ -1,9 +1,11 @@
 package com.example.thirdtool.Card.infrastructure.persistence;
 
 import com.example.thirdtool.Card.domain.model.Tag;
+import com.example.thirdtool.Card.infrastructure.dto.TagSummaryRow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -20,6 +22,11 @@ public class TagRepositoryAdapter implements TagRepository {
     @Override
     public Tag save(Tag tag) {
         return tagJpaRepository.save(tag);
+    }
+
+    @Override
+    public List<TagSummaryRow> findTagSummariesByUserId(Long userId) {
+        return tagJpaRepository.findTagSummariesByUserId(userId);
     }
 }
 

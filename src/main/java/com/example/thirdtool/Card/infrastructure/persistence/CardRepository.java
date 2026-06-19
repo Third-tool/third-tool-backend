@@ -38,6 +38,12 @@ public interface CardRepository {
     List<Card> findArchivedBySharedTagIdsAndUserId(List<Long> tagIds, Long excludeCardId, Long userId);
 
     /**
+     * Story 5-1 — Tag 관리 "삭제" 액션. 본인 활성 카드에서 해당 Tag 부착을 일괄 해제한다.
+     * Tag row는 보존(시스템 전역 UNIQUE 자원). 반환값은 제거된 매핑 row 수.
+     */
+    int detachTagFromUserCards(Long userId, Long tagId);
+
+    /**
      * ON_FIELD 만료 배치용 카드 조회.
      * 주어진 CardStatus를 가진 활성 카드 목록을 반환한다.
      */

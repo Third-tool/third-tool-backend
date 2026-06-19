@@ -1,6 +1,7 @@
 package com.example.thirdtool.UserSchedule.application.service;
 
 import com.example.thirdtool.Card.domain.model.OnFieldBudget;
+import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.UserSchedule.domain.exception.UserScheduleDomainException;
 import com.example.thirdtool.UserSchedule.domain.model.LearningModeMappingPolicy;
@@ -47,6 +48,18 @@ public class UserScheduleQueryService {
         UserScheduleConfig config = configRepository.findByUserId(userId)
                                                     .orElseGet(() -> initDefault(userId));
         return config.resolveOnFieldBudget();
+    }
+
+    /**
+     * Cross-BC inbound — Card BC {@link SoftScheduleTemplate}을 사용자별 설정에서 파생해 반환한다.
+     *
+     * <p>Review BC가 오늘 학습 후보 수집 시 사용자별 간격 단계(1·3·7일 / 1·3·7·14일 / 1·3·7·14·21일)
+     * 를 가져오기 위해 호출한다. 설정 미보유 유저는 첫 호출 시 기본 모드(MODE_10D)로 자동 초기화.
+     */
+    public SoftScheduleTemplate resolveSoftScheduleTemplate(Long userId) {
+        UserScheduleConfig config = configRepository.findByUserId(userId)
+                                                    .orElseGet(() -> initDefault(userId));
+        return config.resolveSoftScheduleTemplate();
     }
 
     @Transactional(readOnly = true)

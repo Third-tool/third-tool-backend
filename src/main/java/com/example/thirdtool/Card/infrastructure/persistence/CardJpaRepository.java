@@ -95,4 +95,26 @@ public interface CardJpaRepository extends JpaRepository<Card, Long>, CardReposi
               AND ct.card.deleted = false
             """)
     int detachTagFromUserCards(@Param("userId") Long userId, @Param("tagId") Long tagId);
+
+    /**
+     * Story 6-1 — 사용자의 오늘 학습 후보 카드.
+     * <p>본인 ON_FIELD 활성 카드 중 한 번도 노출되지 않았거나(lastViewedAt IS NULL)
+     * 최소 간격을 통과한(lastViewedAt &le; :threshold) 카드 풀.
+     * state별 분류는 도메인 {@link com.example.thirdtool.Card.domain.model.SoftScheduleTemplate}이 in-memory로 수행.
+     * <p>fetch join으로 keywordCues·cardTags를 함께 로딩해 응답 매핑 시 N+1을 방지한다.
+     */
+    @Query("""
+            SELECT DISTINCT c FROM Card c
+            LEFT JOIN FETCH c.keywordCues
+            LEFT JOIN FETCH c.cardTags ct
+            LEFT JOIN FETCH ct.tag
+            WHERE c.deck.user.id = :userId
+              AND c.status = com.example.thirdtool.Card.domain.model.CardStatus.ON_FIELD
+              AND c.deleted = false
+              AND (c.lastViewedAt IS NULL OR c.lastViewedAt <= :threshold)
+            """)
+    List<Card> findOnFieldEligibleByUserId(
+            @Param("userId") Long userId,
+            @Param("threshold") java.time.LocalDateTime threshold
+                                          );
 }

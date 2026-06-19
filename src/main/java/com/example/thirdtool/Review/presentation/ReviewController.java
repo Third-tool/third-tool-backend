@@ -67,4 +67,13 @@ public class ReviewController {
                                                                              ) {
         return ResponseEntity.ok(reviewQueryService.searchSessions(deckId, currentUser));
     }
+
+    // ─── 6. 오늘의 학습 후보 (Story 6-1) ────────────────────
+    // 사용자의 ON_FIELD + soft schedule 통과 카드를 state별 분류해 반환.
+    @GetMapping("/api/v1/review-session/today")
+    public ResponseEntity<ReviewResponse.TodayCandidates> getTodayCandidates(
+            @AuthenticationPrincipal UserEntity currentUser
+                                                                            ) {
+        return ResponseEntity.ok(reviewQueryService.getTodayCandidates(currentUser));
+    }
 }

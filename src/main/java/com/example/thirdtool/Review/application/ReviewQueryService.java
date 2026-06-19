@@ -1,6 +1,10 @@
 package com.example.thirdtool.Review.application;
 
+import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.OnFieldBudget;
+import com.example.thirdtool.Card.domain.model.SoftScheduleState;
+import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
+import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
@@ -13,7 +17,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +31,7 @@ public class ReviewQueryService {
 
     private final ReviewSessionRepository reviewSessionRepository;
     private final UserScheduleQueryService userScheduleQueryService;
+    private final CardRepository cardRepository;
 
     // Story-5-2: Long userId → UserEntity user 시그니처 통일.
 
@@ -69,5 +79,37 @@ public class ReviewQueryService {
     private boolean resolveIsLastView(ReviewSession session, OnFieldBudget budget) {
         if (session.isFinished()) return false;
         return session.currentCardReview().getCard().isLastView(budget.getMaxView());
+    }
+
+    // ─── 3. 오늘의 학습 후보 (Story 6-1) ─────────────────
+    // 사용자의 ON_FIELD + soft schedule 통과 카드를 SoftScheduleState별 분류해 반환한다.
+    // Layer 1(LearningFacade) 기준 필터링은 후속 PR에서 도입 — 본 PR은 사용자 전체 카드 기준
+    // (Spec 6-1 엣지 케이스 "Layer 1 미설정 유저" 경로 그대로).
+
+    public ReviewResponse.TodayCandidates getTodayCandidates(UserEntity user) {
+        Long userId = user.getId();
+        SoftScheduleTemplate template = userScheduleQueryService.resolveSoftScheduleTemplate(userId);
+
+        Duration minInterval = template.getIntervalSteps().get(0).minDuration();
+        LocalDateTime threshold = LocalDateTime.now().minus(minInterval);
+
+        List<Card> candidates = cardRepository.findOnFieldEligibleByUserId(userId, threshold);
+
+        Map<SoftScheduleState, List<ReviewResponse.TodayCandidates.CandidateItem>> byState =
+                candidates.stream()
+                          .map(card -> Map.entry(template.resolveState(card), card))
+                          // NOT_YET은 threshold 통과 카드 중에서도 도메인 재판정으로 걸러진 경우 제외.
+                          .filter(entry -> entry.getKey() != SoftScheduleState.NOT_YET)
+                          .collect(Collectors.groupingBy(
+                                  Map.Entry::getKey,
+                                  () -> new EnumMap<>(SoftScheduleState.class),
+                                  Collectors.mapping(
+                                          entry -> ReviewResponse.TodayCandidates.CandidateItem.of(entry.getValue()),
+                                          Collectors.toList()
+                                  )
+                          ));
+
+        int total = byState.values().stream().mapToInt(List::size).sum();
+        return new ReviewResponse.TodayCandidates(total, byState);
     }
 }

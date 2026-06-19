@@ -4,6 +4,7 @@ import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.MainNote;
 import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Card.domain.model.Summary;
+import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
@@ -38,6 +39,7 @@ class ReviewQueryServiceTest {
 
     private ReviewSessionRepository sessionRepository;
     private UserScheduleQueryService userScheduleQueryService;
+    private CardRepository cardRepository;
     private ReviewQueryService service;
 
     private UserEntity owner;
@@ -48,7 +50,8 @@ class ReviewQueryServiceTest {
     void setUp() {
         sessionRepository        = mock(ReviewSessionRepository.class);
         userScheduleQueryService = mock(UserScheduleQueryService.class);
-        service = new ReviewQueryService(sessionRepository, userScheduleQueryService);
+        cardRepository           = mock(CardRepository.class);
+        service = new ReviewQueryService(sessionRepository, userScheduleQueryService, cardRepository);
 
         owner = UserEntity.ofLocal("owner", "pw", "n", "o@e.com");
         ReflectionTestUtils.setField(owner, "id", 1L);

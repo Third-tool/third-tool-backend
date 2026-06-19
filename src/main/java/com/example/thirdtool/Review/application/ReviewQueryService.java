@@ -89,6 +89,19 @@ public class ReviewQueryService {
     // (Spec 6-1 엣지 케이스 "Layer 1 미설정 유저" 경로 그대로).
 
     public ReviewResponse.TodayCandidates getTodayCandidates(UserEntity user) {
+        return collectToday(user, userScheduleQueryService.resolveDailyTarget(user.getId()));
+    }
+
+    /**
+     * Story 6-3 — "+N장 추가 학습". 동일 풀에 대해 target만 다르게 적용해 분배를 재계산한다.
+     * 호출자(FE)는 이미 표시된 카드 수 + 확장 N장을 합해 target으로 전달한다 (stateless).
+     * 응답 {@code recommendedTotal}이 target보다 작으면 풀 소진 — "오늘 학습 완료" 안내 가능.
+     */
+    public ReviewResponse.TodayCandidates getTodayCandidatesWithTarget(UserEntity user, int target) {
+        return collectToday(user, target);
+    }
+
+    private ReviewResponse.TodayCandidates collectToday(UserEntity user, int effectiveTarget) {
         Long userId = user.getId();
         SoftScheduleTemplate template = userScheduleQueryService.resolveSoftScheduleTemplate(userId);
 
@@ -113,12 +126,13 @@ public class ReviewQueryService {
 
         int total = byState.values().stream().mapToInt(List::size).sum();
 
-        // Story 6-2 — 동적 비율 추천. dailyTarget × state 풀 비례 (largest remainder).
+        // 응답의 dailyTarget은 사용자 설정 값(원래값) — 추천이 그 값을 따랐는지는 recommendedTotal로 판단.
         int dailyTarget = userScheduleQueryService.resolveDailyTarget(userId);
+
         Map<SoftScheduleState, Integer> poolSizes = new EnumMap<>(SoftScheduleState.class);
         byState.forEach((state, list) -> poolSizes.put(state, list.size()));
         Map<SoftScheduleState, Integer> recommendedByState =
-                stateRecommendationDistributor.distribute(poolSizes, dailyTarget);
+                stateRecommendationDistributor.distribute(poolSizes, effectiveTarget);
         int recommendedTotal = recommendedByState.values().stream().mapToInt(Integer::intValue).sum();
 
         return new ReviewResponse.TodayCandidates(

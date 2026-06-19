@@ -174,6 +174,48 @@ class ReviewQueryServiceTodayCandidatesTest {
     }
 
     @Test
+    @DisplayName("Story 6-3 — target override (+10장) — 분배가 override 값을 따른다")
+    void getTodayCandidatesWithTarget_overridesDailyTarget() {
+        when(userScheduleQueryService.resolveSoftScheduleTemplate(eq(1L)))
+                .thenReturn(SoftScheduleTemplate.DEFAULT);
+        // dailyTarget=20이 stub되어 있지만 명시 target은 그를 무시한다
+        when(userScheduleQueryService.resolveDailyTarget(eq(1L))).thenReturn(20);
+
+        // 풀 5장 — target=30이면 풀 cap으로 5장만 분배되고, target=3이면 3장만 분배되어야 함
+        Card c1 = cardWith(1001L, null);
+        Card c2 = cardWith(1002L, null);
+        Card c3 = cardWith(1003L, LocalDateTime.now().minusDays(2));
+        Card c4 = cardWith(1004L, LocalDateTime.now().minusDays(2));
+        Card c5 = cardWith(1005L, LocalDateTime.now().minusDays(10));
+        when(cardRepository.findOnFieldEligibleByUserId(eq(1L), any()))
+                .thenReturn(List.of(c1, c2, c3, c4, c5));
+
+        ReviewResponse.TodayCandidates result = service.getTodayCandidatesWithTarget(user, 3);
+
+        assertThat(result.total()).isEqualTo(5);
+        assertThat(result.dailyTarget()).isEqualTo(20);   // 사용자 설정 그대로 노출
+        assertThat(result.recommendedTotal()).isEqualTo(3); // target=3 적용
+    }
+
+    @Test
+    @DisplayName("Story 6-3 — target이 풀보다 크면 풀 전체만 분배 + recommendedTotal < target")
+    void getTodayCandidatesWithTarget_poolSmallerThanTarget() {
+        when(userScheduleQueryService.resolveSoftScheduleTemplate(eq(1L)))
+                .thenReturn(SoftScheduleTemplate.DEFAULT);
+        when(userScheduleQueryService.resolveDailyTarget(eq(1L))).thenReturn(20);
+
+        Card c1 = cardWith(1001L, null);
+        Card c2 = cardWith(1002L, null);
+        when(cardRepository.findOnFieldEligibleByUserId(eq(1L), any()))
+                .thenReturn(List.of(c1, c2));
+
+        ReviewResponse.TodayCandidates result = service.getTodayCandidatesWithTarget(user, 30);
+
+        assertThat(result.total()).isEqualTo(2);
+        assertThat(result.recommendedTotal()).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("Story 6-2 — 후보 0건이면 dailyTarget 노출 + recommended 빈 분배")
     void getTodayCandidates_noCandidates_exposesDailyTarget() {
         when(userScheduleQueryService.resolveSoftScheduleTemplate(eq(1L)))

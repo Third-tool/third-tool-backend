@@ -113,11 +113,18 @@ public class ReviewResponse {
         }
     }
 
-    // ─── 6. 오늘의 학습 후보 응답 (Story 6-1) ───────────────────────────────
-    // 사용자의 ON_FIELD 카드 중 soft schedule 통과 카드를 state별로 분류해 노출.
-    // NOT_YET은 응답에서 제외. byState 키는 SoftScheduleState enum (FRESH, INTERVAL_*).
+    // ─── 6. 오늘의 학습 후보 응답 (Story 6-1·6-2) ───────────────────────────
+    // - byState: 적격 풀 전체 (FE가 각 state별 카드를 모두 표시)
+    // - recommendedByState: dailyTarget × 풀 비례 분배 결과 (FE가 추천 카드 N장 take)
+    // - recommendedTotal: 실제 추천된 카드 수 (≤ dailyTarget, ≤ total)
+    // - dailyTarget: 사용자 설정 학습 목표
+    // - total: 적격 카드 전체 수
+    // NOT_YET은 응답에서 제외.
     public record TodayCandidates(
             int total,
+            int dailyTarget,
+            int recommendedTotal,
+            Map<SoftScheduleState, Integer> recommendedByState,
             Map<SoftScheduleState, List<CandidateItem>> byState
     ) {
         public record CandidateItem(

@@ -8,6 +8,7 @@ import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
+import com.example.thirdtool.Review.domain.model.StateRecommendationDistributor;
 import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
 import com.example.thirdtool.Review.infrastructure.dto.ReviewSessionSearchCondition;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
@@ -32,6 +33,7 @@ public class ReviewQueryService {
     private final ReviewSessionRepository reviewSessionRepository;
     private final UserScheduleQueryService userScheduleQueryService;
     private final CardRepository cardRepository;
+    private final StateRecommendationDistributor stateRecommendationDistributor;
 
     // Story-5-2: Long userId → UserEntity user 시그니처 통일.
 
@@ -110,6 +112,17 @@ public class ReviewQueryService {
                           ));
 
         int total = byState.values().stream().mapToInt(List::size).sum();
-        return new ReviewResponse.TodayCandidates(total, byState);
+
+        // Story 6-2 — 동적 비율 추천. dailyTarget × state 풀 비례 (largest remainder).
+        int dailyTarget = userScheduleQueryService.resolveDailyTarget(userId);
+        Map<SoftScheduleState, Integer> poolSizes = new EnumMap<>(SoftScheduleState.class);
+        byState.forEach((state, list) -> poolSizes.put(state, list.size()));
+        Map<SoftScheduleState, Integer> recommendedByState =
+                stateRecommendationDistributor.distribute(poolSizes, dailyTarget);
+        int recommendedTotal = recommendedByState.values().stream().mapToInt(Integer::intValue).sum();
+
+        return new ReviewResponse.TodayCandidates(
+                total, dailyTarget, recommendedTotal, recommendedByState, byState
+        );
     }
 }

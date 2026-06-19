@@ -7,6 +7,7 @@ import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
 import com.example.thirdtool.Card.domain.model.Summary;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Deck.domain.model.Deck;
+import com.example.thirdtool.Review.domain.model.StateRecommendationDistributor;
 import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
@@ -47,12 +48,18 @@ class ReviewQueryServiceTodayCandidatesTest {
         sessionRepository        = mock(ReviewSessionRepository.class);
         userScheduleQueryService = mock(UserScheduleQueryService.class);
         cardRepository           = mock(CardRepository.class);
-        service = new ReviewQueryService(sessionRepository, userScheduleQueryService, cardRepository);
+        service = new ReviewQueryService(
+                sessionRepository, userScheduleQueryService, cardRepository,
+                new StateRecommendationDistributor()
+        );
 
         user = UserEntity.ofLocal("u", "pw", "n", "u@e.com");
         ReflectionTestUtils.setField(user, "id", 1L);
         deck = Deck.createFromLearningMaterial(user, 10L, 200L, "DDD");
         ReflectionTestUtils.setField(deck, "id", 500L);
+
+        // 기본 dailyTarget stub — 각 테스트가 override 가능
+        when(userScheduleQueryService.resolveDailyTarget(eq(1L))).thenReturn(20);
     }
 
     private Card cardWith(Long id, LocalDateTime lastViewedAt) {
@@ -121,5 +128,65 @@ class ReviewQueryServiceTodayCandidatesTest {
         assertThat(item.deckId()).isEqualTo(500L);
         assertThat(item.deckName()).isEqualTo("DDD");
         assertThat(item.summary()).isEqualTo("한 문장.");
+    }
+
+    @Test
+    @DisplayName("Story 6-2 — dailyTarget=3 + 풀 FRESH:1·1D:1·7D:1 → 각 state 1장씩 권장")
+    void getTodayCandidates_recommendation_evenSmallPool() {
+        when(userScheduleQueryService.resolveSoftScheduleTemplate(eq(1L)))
+                .thenReturn(SoftScheduleTemplate.DEFAULT);
+        when(userScheduleQueryService.resolveDailyTarget(eq(1L))).thenReturn(3);
+
+        Card fresh  = cardWith(1000L, null);
+        Card oneD   = cardWith(1001L, LocalDateTime.now().minusDays(2));
+        Card sevenD = cardWith(1002L, LocalDateTime.now().minusDays(10));
+        when(cardRepository.findOnFieldEligibleByUserId(eq(1L), any()))
+                .thenReturn(List.of(fresh, oneD, sevenD));
+
+        ReviewResponse.TodayCandidates result = service.getTodayCandidates(user);
+
+        assertThat(result.total()).isEqualTo(3);
+        assertThat(result.dailyTarget()).isEqualTo(3);
+        assertThat(result.recommendedTotal()).isEqualTo(3);
+        assertThat(result.recommendedByState()).containsOnly(
+                org.assertj.core.api.Assertions.entry(SoftScheduleState.FRESH, 1),
+                org.assertj.core.api.Assertions.entry(SoftScheduleState.INTERVAL_1D, 1),
+                org.assertj.core.api.Assertions.entry(SoftScheduleState.INTERVAL_7D, 1)
+        );
+    }
+
+    @Test
+    @DisplayName("Story 6-2 — dailyTarget > total 이면 풀 전체 권장")
+    void getTodayCandidates_recommendation_dailyTargetExceedsPool() {
+        when(userScheduleQueryService.resolveSoftScheduleTemplate(eq(1L)))
+                .thenReturn(SoftScheduleTemplate.DEFAULT);
+        when(userScheduleQueryService.resolveDailyTarget(eq(1L))).thenReturn(50);
+
+        Card fresh = cardWith(1000L, null);
+        Card oneD  = cardWith(1001L, LocalDateTime.now().minusDays(2));
+        when(cardRepository.findOnFieldEligibleByUserId(eq(1L), any()))
+                .thenReturn(List.of(fresh, oneD));
+
+        ReviewResponse.TodayCandidates result = service.getTodayCandidates(user);
+
+        assertThat(result.total()).isEqualTo(2);
+        assertThat(result.recommendedTotal()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Story 6-2 — 후보 0건이면 dailyTarget 노출 + recommended 빈 분배")
+    void getTodayCandidates_noCandidates_exposesDailyTarget() {
+        when(userScheduleQueryService.resolveSoftScheduleTemplate(eq(1L)))
+                .thenReturn(SoftScheduleTemplate.DEFAULT);
+        when(userScheduleQueryService.resolveDailyTarget(eq(1L))).thenReturn(15);
+        when(cardRepository.findOnFieldEligibleByUserId(eq(1L), any()))
+                .thenReturn(List.of());
+
+        ReviewResponse.TodayCandidates result = service.getTodayCandidates(user);
+
+        assertThat(result.total()).isZero();
+        assertThat(result.dailyTarget()).isEqualTo(15);
+        assertThat(result.recommendedTotal()).isZero();
+        assertThat(result.recommendedByState()).isEmpty();
     }
 }

@@ -24,6 +24,7 @@ public class UserScheduleConfig {
 
     // ─── 기본값 상수 ──────────────────────────────────────────────
     private static final int DEFAULT_INPUT_DAYS = 10;
+    private static final int DEFAULT_DAILY_TARGET = 20;
 
     // ─── 식별자 ──────────────────────────────────────────────────
     @Id
@@ -43,6 +44,10 @@ public class UserScheduleConfig {
     @Column(name = "mapped_mode", nullable = false, length = 20)
     private LearningMode mappedMode;
 
+    // Story 6-2 — 하루 학습 목표 카드 수. 동적 비율 추천의 분모.
+    @Column(name = "daily_target", nullable = false)
+    private int dailyTarget = DEFAULT_DAILY_TARGET;
+
     // ─── 타임스탬프 ───────────────────────────────────────────────
 
     @CreationTimestamp
@@ -57,9 +62,10 @@ public class UserScheduleConfig {
     protected UserScheduleConfig() {}
 
     private UserScheduleConfig(Long userId, int rawInputDays, LearningMode mappedMode) {
-        this.userId      = userId;
+        this.userId       = userId;
         this.rawInputDays = rawInputDays;
-        this.mappedMode  = mappedMode;
+        this.mappedMode   = mappedMode;
+        this.dailyTarget  = DEFAULT_DAILY_TARGET;
     }
 
     // ─── 생성 ────────────────────────────────────────────────────
@@ -87,6 +93,18 @@ public class UserScheduleConfig {
         LearningMode newMode = policy.resolve(newInputDays);
         this.rawInputDays = newInputDays;
         this.mappedMode   = newMode;
+    }
+
+    /**
+     * Story 6-2 — 하루 학습 목표 카드 수를 갱신한다. 1 이상 강제.
+     */
+    public void updateDailyTarget(int newDailyTarget) {
+        if (newDailyTarget < 1) {
+            throw UserScheduleDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "dailyTarget은 1 이상이어야 합니다. 입력값=" + newDailyTarget);
+        }
+        this.dailyTarget = newDailyTarget;
     }
 
     // ─── 파생값 제공 ─────────────────────────────────────────────

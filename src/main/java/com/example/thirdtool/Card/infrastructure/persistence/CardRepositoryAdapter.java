@@ -67,4 +67,10 @@ public class CardRepositoryAdapter implements CardRepository {
         return cardJpaRepository.findByTagIdAndUserIdAndDeletedFalse(tagId, userId);
     }
 
+    @Override
+    public List<Card> findArchivedBySharedTagIdsAndUserId(List<Long> tagIds, Long excludeCardId, Long userId) {
+        if (tagIds == null || tagIds.isEmpty()) return List.of();
+        return cardJpaRepository.findArchivedBySharedTagIdsAndUserId(tagIds, excludeCardId, userId);
+    }
+
 }

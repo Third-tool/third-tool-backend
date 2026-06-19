@@ -31,6 +31,13 @@ public interface CardRepository {
     List<Card> findByTagIdAndUserIdAndDeletedFalse(Long tagId, Long userId);
 
     /**
+     * Story 5-3 — ON_FIELD 학습 중 Tag 기반 ARCHIVE 연결 후보 풀.
+     * 전달받은 tagIds 중 하나 이상을 가진 ARCHIVE 상태 사용자 카드 (자기 자신 제외, deleted=false).
+     * 공통 Tag 수 정렬은 CardRelationFinder가 in-memory로 수행한다.
+     */
+    List<Card> findArchivedBySharedTagIdsAndUserId(List<Long> tagIds, Long excludeCardId, Long userId);
+
+    /**
      * ON_FIELD 만료 배치용 카드 조회.
      * 주어진 CardStatus를 가진 활성 카드 목록을 반환한다.
      */

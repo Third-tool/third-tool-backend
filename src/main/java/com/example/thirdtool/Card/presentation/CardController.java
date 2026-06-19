@@ -172,4 +172,15 @@ public class CardController {
                                                                     ) {
         return ResponseEntity.ok(cardQueryService.findByTag(tagId, user.getId()));
     }
+
+    // ─── 17. ON_FIELD 학습 중 ARCHIVE 연결 후보 (Story 5-3) ─
+    // 현재 카드의 Tag와 공유하는 본인 ARCHIVE 카드 후보. 공통 Tag 수 내림차순.
+    // 현재 카드에 Tag가 없으면 빈 리스트(섹션 미표시).
+    @GetMapping("/api/v1/cards/{cardId}/related-archive")
+    public ResponseEntity<List<CardResponse.RelatedCard>> findArchiveRelated(
+            @AuthenticationPrincipal UserEntity user,
+            @PathVariable Long cardId
+                                                                            ) {
+        return ResponseEntity.ok(cardQueryService.findArchiveRelated(cardId, user.getId()));
+    }
 }

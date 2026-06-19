@@ -55,4 +55,26 @@ public interface CardJpaRepository extends JpaRepository<Card, Long>, CardReposi
             @Param("tagId") Long tagId,
             @Param("userId") Long userId
                                                   );
+
+    /**
+     * Story 5-3 — ON_FIELD 학습 중 Tag 기반 ARCHIVE 연결 후보.
+     * <p>전달받은 tagIds 중 하나 이상을 보유한 ARCHIVE 상태 사용자 카드를 자기 자신 제외하고 반환한다.
+     * 공통 Tag 수 정렬은 도메인 서비스(CardRelationFinder)가 in-memory로 수행하므로
+     * Repository는 후보 풀만 책임진다.
+     */
+    @Query("""
+            SELECT DISTINCT c FROM Card c
+            LEFT JOIN FETCH c.cardTags ct
+            LEFT JOIN FETCH ct.tag
+            WHERE ct.tag.id IN :tagIds
+              AND c.id != :excludeCardId
+              AND c.deck.user.id = :userId
+              AND c.status = com.example.thirdtool.Card.domain.model.CardStatus.ARCHIVE
+              AND c.deleted = false
+            """)
+    List<Card> findArchivedBySharedTagIdsAndUserId(
+            @Param("tagIds") List<Long> tagIds,
+            @Param("excludeCardId") Long excludeCardId,
+            @Param("userId") Long userId
+                                                  );
 }

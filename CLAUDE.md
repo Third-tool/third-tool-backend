@@ -16,6 +16,7 @@
 | **Story Reviewer 세션** (5관점 병렬 검토) | [`.claude/rules/review.md`](.claude/rules/review.md) |
 | **브랜치·커밋·push·PR 규칙** | [`.claude/rules/pr-commit.md`](.claude/rules/pr-commit.md) |
 | **ADR 작성 트리거** | [`.claude/rules/adr.md`](.claude/rules/adr.md) |
+| **UI 문구 정책 (WIP 언어 · enum→문구 매핑)** | [`docs/ux/wip-language.md`](docs/ux/wip-language.md) |
 | **현재 진행 중인 Epic / Story** | `workflow/epics/Epic.md` · `workflow/stories/Story.md` |
 
 본 CLAUDE.md의 다른 섹션은 위 룰·문서와 모순될 경우 **룰·문서가 우선**한다 — CLAUDE.md는 빠른 개요이지 단일 진실 소스가 아니다.
@@ -129,31 +130,43 @@ Swagger UI: 실행 후 `http://localhost:8080/swagger-ui.html`.
 
 ### 본문 템플릿
 ```
-## What
-<무엇을 했는가>
+## PR 작성 규칙
 
-## Why
-<왜 했는가 - 이슈/ADR 링크>
+PR 본문은 아래 템플릿을 따른다.
+- 해당 없는 섹션은 삭제하지 말고 `N/A`로 남긴다.
+- 체크박스가 아닌 항목은 선언이 아니라 **사실**(실행 명령·결과·수치·링크)로 채운다.
 
-## How
-<주요 설계 결정 요약>
+---
 
-## Tradeoff
-<작업 중 있었던 트레이드오프>
+## 개요
+<무엇을 / 어떤 어댑터·기능을 구현했는가 2~3줄>
 
-## Reviewer 종합 (review.md §4 결과)
-<Critical/Major 건수 + 사용자 의사결정 결과 1줄>
+## 왜 / 설계 결정
+<왜 이 방식인가 — 핵심 설계 결정 1~3줄. 이슈/ADR 링크>
+<기각한 대안과 그 이유(트레이드오프)가 있으면 1줄>
 
-## Test
-- [ ] 단위 테스트 추가/통과
-- [ ] 통합 테스트 결과
-- [ ] 성능 영향 (해당 시)
+## 작업 내용
+- feat(<scope>): <변경> — <핵심 제약·애너테이션 등>
+- test(<scope>): <테스트 종류 / 케이스 수>
 
-## Checklist
-- [ ] DOMAIN.md / PACKAGE.md / ADR 업데이트 반영
+## 변경 유형
+- [ ] feat  - [ ] fix  - [ ] refactor  - [ ] docs  - [ ] test  - [ ] chore
+
+## 테스트
+- `./gradlew test --tests "<패턴>"` → <BUILD SUCCESSFUL (n/n)>
+- 통합 / 성능 (해당 시): <결과 · before→after 수치 · Grafana 링크>
+
+## 체크리스트
+- [ ] 빌드 / 테스트 통과
+- [ ] 모든 응답 `ApiResponse<T>` 래퍼 + `ApiResponses` 헬퍼 사용
+- [ ] DOMAIN.md / PACKAGE.md / ADR 업데이트 반영 (해당 시)
 - [ ] OSIV=false, READ_COMMITTED 등 프로젝트 원칙 준수
 - [ ] BC 간 의존 방향 위반 없음
-- [ ] Reviewer 세션 통과 (또는 의식적 스킵 사유 명시)
+- [ ] (stacked) 대상 브랜치 = `<base branch>` 확인
+
+## 관련 이슈
+- Product: `<workflows/products/productNN.md>`
+- Epic / Story: <epic> / <story-x-y>
 
 Closes #<이슈번호>
 ```

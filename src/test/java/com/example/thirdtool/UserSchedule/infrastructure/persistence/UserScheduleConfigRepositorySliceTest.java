@@ -110,6 +110,30 @@ class UserScheduleConfigRepositorySliceTest {
     }
 
     @Test
+    @DisplayName("Story 6-2 — dailyTarget 기본값 20 round-trip + updateDailyTarget 영속")
+    void dailyTarget_default20_updatePersists() {
+        // given — 기본 생성
+        repository.save(UserScheduleConfig.create(user.getId(), 10, policy));
+        em.flush();
+        em.clear();
+
+        UserScheduleConfig loaded = repository.findByUserId(user.getId()).orElseThrow();
+        assertThat(loaded.getDailyTarget()).isEqualTo(20);
+
+        // when — 50으로 수정
+        loaded.updateDailyTarget(50);
+        em.flush();
+        em.clear();
+
+        // then
+        UserScheduleConfig reloaded = repository.findByUserId(user.getId()).orElseThrow();
+        assertThat(reloaded.getDailyTarget()).isEqualTo(50);
+        // 다른 필드는 영향 없음
+        assertThat(reloaded.getRawInputDays()).isEqualTo(10);
+        assertThat(reloaded.getMappedMode()).isEqualTo(LearningMode.MODE_10D);
+    }
+
+    @Test
     @DisplayName("updateMode — raw_input_days와 mapped_mode가 함께 갱신·영속된다")
     void updateMode_persistsBothFields() {
         // given — 10D 모드로 시작

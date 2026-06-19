@@ -6,16 +6,19 @@ import com.example.thirdtool.Review.presentation.dto.ReviewRequest;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@Validated
 public class ReviewController {
 
     private final ReviewCommandService reviewCommandService;
@@ -68,12 +71,17 @@ public class ReviewController {
         return ResponseEntity.ok(reviewQueryService.searchSessions(deckId, currentUser));
     }
 
-    // ─── 6. 오늘의 학습 후보 (Story 6-1) ────────────────────
+    // ─── 6. 오늘의 학습 후보 (Story 6-1·6-2·6-3) ──────────
     // 사용자의 ON_FIELD + soft schedule 통과 카드를 state별 분류해 반환.
+    // target 미입력 시 사용자 dailyTarget 사용. target 입력 시 그 값으로 분배(Story 6-3 "+N장").
     @GetMapping("/api/v1/review-session/today")
     public ResponseEntity<ReviewResponse.TodayCandidates> getTodayCandidates(
-            @AuthenticationPrincipal UserEntity currentUser
+            @AuthenticationPrincipal UserEntity currentUser,
+            @RequestParam(required = false) @Min(1) Integer target
                                                                             ) {
-        return ResponseEntity.ok(reviewQueryService.getTodayCandidates(currentUser));
+        ReviewResponse.TodayCandidates response = (target == null)
+                ? reviewQueryService.getTodayCandidates(currentUser)
+                : reviewQueryService.getTodayCandidatesWithTarget(currentUser, target);
+        return ResponseEntity.ok(response);
     }
 }

@@ -21,3 +21,41 @@ spring:
 card:
   expiry:
     cron: "-"
+
+# @SpringBootTest로 컨텍스트 전체 로드 시 S3Config 같은 외부 인프라 빈이 placeholder를 요구한다.
+# 슬라이스 테스트는 영향 없지만 통합 테스트에서 dummy 값을 둔다.
+cloud:
+  aws:
+    credentials:
+      access-key: test-access-key
+      secret-key: test-secret-key
+    s3:
+      bucket: test-bucket
+    region:
+      static: ap-northeast-2
+
+# JWT 시크릿 더미 (TokenProvider Bean 초기화용)
+jwt:
+  secret-key: test-test-test-test-test-test-test
+  access-token-ttl: 30m
+  refresh-token-ttl: 7d
+  cookie:
+    name: access_token
+    path: /
+    http-only: true
+    same-site: Strict
+    secure: false
+
+# 소셜 로그인 dummy (통합 테스트 컨텍스트 로딩용)
+kakao:
+  client-id: test-kakao
+  client-secret: test-kakao-secret
+  redirect-uri: http://localhost/oauth/kakao
+naver:
+  client-id: test-naver
+  client-secret: test-naver-secret
+  redirect-uri: http://localhost/oauth/naver
+
+seed:
+  s3-base-url: "http://localhost"
+  image-count: 0

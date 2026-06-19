@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,6 +77,11 @@ public class CardRepositoryAdapter implements CardRepository {
     @Override
     public int detachTagFromUserCards(Long userId, Long tagId) {
         return cardJpaRepository.detachTagFromUserCards(userId, tagId);
+    }
+
+    @Override
+    public List<Card> findOnFieldEligibleByUserId(Long userId, LocalDateTime threshold) {
+        return cardJpaRepository.findOnFieldEligibleByUserId(userId, threshold);
     }
 
 }

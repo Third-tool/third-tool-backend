@@ -1,7 +1,9 @@
 package com.example.thirdtool.Review.presentation.dto;
 
+import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.KeywordCue;
 import com.example.thirdtool.Card.domain.model.MainContentType;
+import com.example.thirdtool.Card.domain.model.SoftScheduleState;
 import com.example.thirdtool.Review.domain.model.CardReview;
 import com.example.thirdtool.Review.domain.model.CardVisibleContent;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
@@ -10,6 +12,7 @@ import com.example.thirdtool.Review.infrastructure.dto.ReviewSessionSummaryRow;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public class ReviewResponse {
 
@@ -107,6 +110,30 @@ public class ReviewResponse {
                     row.getTotalCardCount(),
                     row.getStartedAt()
             );
+        }
+    }
+
+    // ─── 6. 오늘의 학습 후보 응답 (Story 6-1) ───────────────────────────────
+    // 사용자의 ON_FIELD 카드 중 soft schedule 통과 카드를 state별로 분류해 노출.
+    // NOT_YET은 응답에서 제외. byState 키는 SoftScheduleState enum (FRESH, INTERVAL_*).
+    public record TodayCandidates(
+            int total,
+            Map<SoftScheduleState, List<CandidateItem>> byState
+    ) {
+        public record CandidateItem(
+                Long cardId,
+                Long deckId,
+                String deckName,
+                String summary
+        ) {
+            public static CandidateItem of(Card card) {
+                return new CandidateItem(
+                        card.getId(),
+                        card.getDeck().getId(),
+                        card.getDeck().getName(),
+                        card.getSummary().getValue()
+                );
+            }
         }
     }
 

@@ -7,6 +7,7 @@ import com.example.thirdtool.Card.infrastructure.dto.CardSummaryRow;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,6 +43,13 @@ public interface CardRepository {
      * Tag row는 보존(시스템 전역 UNIQUE 자원). 반환값은 제거된 매핑 row 수.
      */
     int detachTagFromUserCards(Long userId, Long tagId);
+
+    /**
+     * Story 6-1 — 사용자의 오늘 학습 후보 카드 풀.
+     * <p>본인 ON_FIELD 활성 카드 중 한 번도 노출되지 않았거나 threshold 이전에 노출된 카드를 반환한다.
+     * 도메인 SoftScheduleTemplate가 in-memory에서 state별 분류·NOT_YET 제외를 책임진다.
+     */
+    List<Card> findOnFieldEligibleByUserId(Long userId, LocalDateTime threshold);
 
     /**
      * ON_FIELD 만료 배치용 카드 조회.

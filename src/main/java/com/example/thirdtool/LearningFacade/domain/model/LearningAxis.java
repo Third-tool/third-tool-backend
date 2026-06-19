@@ -31,6 +31,13 @@ public class LearningAxis {
 
     private static final int RECOMMENDED_TOPIC_LIMIT = 10;
 
+    /**
+     * Story 2-3 — 상위 N개 주제에 "지금 집중 중" 뱃지를 표시할 때 사용하는 임계값.
+     * {@link AxisTopic#isFocused(int)}가 displayOrder ≤ 이 값일 때 true를 반환한다.
+     * 주제 3개 미만이면 모든 주제가 자동으로 focused (displayOrder 1, 2, 3 모두 임계값 이하).
+     */
+    public static final int FOCUS_TOP_N = 3;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "learning_axis_id")

@@ -78,6 +78,7 @@ public class UserScheduleResponse {
             String modeDisplayName,
             int maxView,
             int maxDuration,
+            int dailyTarget,
             List<Integer> softScheduleIntervals
     ) {
         public static ScheduleDto of(UserScheduleConfig config) {
@@ -95,6 +96,7 @@ public class UserScheduleResponse {
                     mode.getDisplayName(),
                     mode.getMaxView(),
                     mode.getDurationDays(),
+                    config.getDailyTarget(),
                     intervals
             );
         }

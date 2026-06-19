@@ -116,4 +116,23 @@ public interface CardJpaRepository extends JpaRepository<Card, Long>, CardReposi
             @Param("userId") Long userId,
             @Param("threshold") java.time.LocalDateTime threshold
                                           );
+
+    /**
+     * Story 6-1 Layer 1 한정 — 사용자의 LearningFacade(Layer 1)에 속한 axes에 연결된 Deck의
+     * ON_FIELD 활성 카드만 반환. axisIds 빈 입력은 Port/Adapter에서 단락(빈 리스트 반환).
+     */
+    @Query("""
+            SELECT c FROM Card c
+            JOIN FETCH c.deck d
+            WHERE d.user.id = :userId
+              AND d.axisId IN :axisIds
+              AND c.status = com.example.thirdtool.Card.domain.model.CardStatus.ON_FIELD
+              AND c.deleted = false
+              AND (c.lastViewedAt IS NULL OR c.lastViewedAt <= :threshold)
+            """)
+    List<Card> findOnFieldEligibleByUserIdAndAxisIds(
+            @Param("userId") Long userId,
+            @Param("threshold") java.time.LocalDateTime threshold,
+            @Param("axisIds") List<Long> axisIds
+                                                    );
 }

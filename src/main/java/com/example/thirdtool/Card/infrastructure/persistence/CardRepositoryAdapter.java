@@ -84,4 +84,11 @@ public class CardRepositoryAdapter implements CardRepository {
         return cardJpaRepository.findOnFieldEligibleByUserId(userId, threshold);
     }
 
+    @Override
+    public List<Card> findOnFieldEligibleByUserIdAndAxisIds(
+            Long userId, LocalDateTime threshold, List<Long> axisIds) {
+        if (axisIds == null || axisIds.isEmpty()) return List.of();
+        return cardJpaRepository.findOnFieldEligibleByUserIdAndAxisIds(userId, threshold, axisIds);
+    }
+
 }

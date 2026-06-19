@@ -192,6 +192,7 @@ public LearningFacadeResponse.UpdateAxisName updateAxisName(
 | `Deck → User` (`UserEntity` 참조) | ✅ | Deck이 소유 유저 보유 |
 | `Review → Card, Deck` | ✅ | ReviewSession이 카드를 순회 (ID 참조 권장, Aggregate 직접 포함 지양) |
 | `Review → UserSchedule` (Application 경유 read) | ✅ | `ReviewCommandService` / `ReviewQueryService`가 `UserScheduleQueryService.resolveOnFieldBudget(userId)`를 호출해 사용자별 maxView/maxDuration을 매 호출 주입(Story 2-1/2-3, Epic 4 합류). UserSchedule 엔티티는 BC 경계 밖으로 노출하지 않고 `OnFieldBudget`(Card 도메인 VO)만 반환 |
+| `Review → LearningFacade` (Application 경유 read) | ✅ | `ReviewQueryService.getTodayCandidates`가 `LearningFacadeQueryService.findAxisIdsByUserId(userId)`를 호출해 사용자 Layer 1(직업 컨셉) 안의 axes 범위로 카드 후보를 한정한다(Story 6-1). LearningFacade 엔티티는 BC 경계 밖으로 노출하지 않고 axis ID 리스트만 반환. 미보유 사용자는 빈 리스트 → 전체 카드 fallback |
 | `Deck → LearningFacade` (이벤트 import) | ✅ | `LearningMaterialCreatedEvent` / `LearningMaterialDeletedEvent` 수신 — 동기 도메인 이벤트 협력 ([ADR007](adr/ADR007.md)) |
 | `LearningFacade → Deck` (Application 경유 read) | ✅ | `LearningFacadeQueryService`가 `DeckQueryService.findByAxisIds(...)` 호출 — facade 응답의 축별 linkedDecks 매핑(Story-005-2). **Repository 직접 호출 금지** — Application Service 경유만. presentation DTO(`AxisItem.linkedDecks`, `DeckItem`)는 Deck 도메인 객체 import 허용 |
 | `Card → Deck` 도메인 행위 호출 | ✅ | `CardCommandService` / `ReviewCommandService`가 카드 추가/archive 후 `deck.markInProgress()` / `recalculateProgressStatus()` 호출 (Story-005-2). Card 도메인 자체는 Deck 상태를 직접 변경하지 않음 |

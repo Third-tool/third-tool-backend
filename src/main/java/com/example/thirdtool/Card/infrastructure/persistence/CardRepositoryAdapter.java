@@ -73,4 +73,9 @@ public class CardRepositoryAdapter implements CardRepository {
         return cardJpaRepository.findArchivedBySharedTagIdsAndUserId(tagIds, excludeCardId, userId);
     }
 
+    @Override
+    public int detachTagFromUserCards(Long userId, Long tagId) {
+        return cardJpaRepository.detachTagFromUserCards(userId, tagId);
+    }
+
 }

@@ -25,7 +25,27 @@ public class UserScheduleCommandService {
                                .orElseGet(() -> create(userId, inputDays));
     }
 
+    /**
+     * Story 6-3 후속 — 사용자 dailyTarget 갱신. 미보유 유저는 기본 모드(MODE_10D)로 자동 생성한 뒤
+     * dailyTarget만 갱신한다. dailyTarget 변경 자체는 v1에서 mode 이력에 기록하지 않는다
+     * (mode/inputDays 변경 이력만 추적 — Spec Story 4-2 §3).
+     */
+    public UserScheduleResponse.Save updateDailyTarget(Long userId, int newDailyTarget) {
+        UserScheduleConfig config = configRepository.findByUserId(userId)
+                                                    .orElseGet(() -> createDefault(userId));
+        config.updateDailyTarget(newDailyTarget);
+        configRepository.save(config);
+        return UserScheduleResponse.Save.of(config);
+    }
+
     // ─── 내부 처리 ───────────────────────────────────────────────
+
+    private UserScheduleConfig createDefault(Long userId) {
+        UserScheduleConfig config = UserScheduleConfig.createDefault(userId, mappingPolicy);
+        configRepository.save(config);
+        historyAppender.append(config, null, config.getMappedMode(), config.getRawInputDays());
+        return config;
+    }
     private UserScheduleResponse.Save update(UserScheduleConfig config, int newInputDays) {
         LearningMode before = config.getMappedMode();
 

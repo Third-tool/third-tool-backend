@@ -49,6 +49,17 @@ public class UserScheduleController {
         return ResponseEntity.ok(queryService.getHistory(userId, limit));
     }
 
+    // ─── 4. 하루 학습 목표 수정 (Story 6-2/6-3) ──────────────────
+    @PatchMapping("/daily-target")
+    public ResponseEntity<UserScheduleResponse.Save> updateDailyTarget(
+            @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody UserScheduleRequest.UpdateDailyTarget request
+                                                                      ) {
+        return ResponseEntity.ok(
+                commandService.updateDailyTarget(userId, request.dailyTarget())
+        );
+    }
+
     // ─── 내부 유틸 ───────────────────────────────────────────────
 
     private void validateInputDays(int inputDays) {

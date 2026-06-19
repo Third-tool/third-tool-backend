@@ -7,6 +7,7 @@ import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
 import com.example.thirdtool.Card.domain.model.Summary;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Deck.domain.model.Deck;
+import com.example.thirdtool.LearningFacade.application.service.LearningFacadeQueryService;
 import com.example.thirdtool.Review.domain.model.StateRecommendationDistributor;
 import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
@@ -38,6 +39,7 @@ class ReviewQueryServiceTodayCandidatesTest {
     private ReviewSessionRepository sessionRepository;
     private UserScheduleQueryService userScheduleQueryService;
     private CardRepository cardRepository;
+    private LearningFacadeQueryService learningFacadeQueryService;
     private ReviewQueryService service;
 
     private UserEntity user;
@@ -45,12 +47,14 @@ class ReviewQueryServiceTodayCandidatesTest {
 
     @BeforeEach
     void setUp() {
-        sessionRepository        = mock(ReviewSessionRepository.class);
-        userScheduleQueryService = mock(UserScheduleQueryService.class);
-        cardRepository           = mock(CardRepository.class);
+        sessionRepository           = mock(ReviewSessionRepository.class);
+        userScheduleQueryService    = mock(UserScheduleQueryService.class);
+        cardRepository              = mock(CardRepository.class);
+        learningFacadeQueryService  = mock(LearningFacadeQueryService.class);
         service = new ReviewQueryService(
                 sessionRepository, userScheduleQueryService, cardRepository,
-                new StateRecommendationDistributor()
+                new StateRecommendationDistributor(),
+                learningFacadeQueryService
         );
 
         user = UserEntity.ofLocal("u", "pw", "n", "u@e.com");
@@ -60,6 +64,8 @@ class ReviewQueryServiceTodayCandidatesTest {
 
         // 기본 dailyTarget stub — 각 테스트가 override 가능
         when(userScheduleQueryService.resolveDailyTarget(eq(1L))).thenReturn(20);
+        // 기본 — LearningFacade 미보유로 fallback 경로 (기존 테스트 호환)
+        when(learningFacadeQueryService.findAxisIdsByUserId(eq(1L))).thenReturn(List.of());
     }
 
     private Card cardWith(Long id, LocalDateTime lastViewedAt) {
@@ -213,6 +219,46 @@ class ReviewQueryServiceTodayCandidatesTest {
 
         assertThat(result.total()).isEqualTo(2);
         assertThat(result.recommendedTotal()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Story 6-1 Layer 1 한정 — facade axes 보유 시 axisIds 적용 메서드 호출")
+    void getTodayCandidates_withFacade_usesAxisFilteredQuery() {
+        when(userScheduleQueryService.resolveSoftScheduleTemplate(eq(1L)))
+                .thenReturn(SoftScheduleTemplate.DEFAULT);
+        // facade에 axis 2개 보유 — Layer 1 한정 경로
+        when(learningFacadeQueryService.findAxisIdsByUserId(eq(1L)))
+                .thenReturn(List.of(10L, 20L));
+
+        Card card = cardWith(1000L, null);
+        when(cardRepository.findOnFieldEligibleByUserIdAndAxisIds(eq(1L), any(), eq(List.of(10L, 20L))))
+                .thenReturn(List.of(card));
+
+        ReviewResponse.TodayCandidates result = service.getTodayCandidates(user);
+
+        assertThat(result.total()).isEqualTo(1);
+        // fallback 메서드는 호출되지 않아야 함
+        org.mockito.Mockito.verify(cardRepository, org.mockito.Mockito.never())
+                .findOnFieldEligibleByUserId(any(), any());
+    }
+
+    @Test
+    @DisplayName("Story 6-1 Layer 1 미보유 — fallback으로 전체 카드 메서드 호출")
+    void getTodayCandidates_withoutFacade_fallbackQuery() {
+        when(userScheduleQueryService.resolveSoftScheduleTemplate(eq(1L)))
+                .thenReturn(SoftScheduleTemplate.DEFAULT);
+        // facade 미보유 (기본 setUp 동작)
+
+        Card card = cardWith(1000L, null);
+        when(cardRepository.findOnFieldEligibleByUserId(eq(1L), any()))
+                .thenReturn(List.of(card));
+
+        ReviewResponse.TodayCandidates result = service.getTodayCandidates(user);
+
+        assertThat(result.total()).isEqualTo(1);
+        // axisIds 적용 메서드는 호출되지 않아야 함
+        org.mockito.Mockito.verify(cardRepository, org.mockito.Mockito.never())
+                .findOnFieldEligibleByUserIdAndAxisIds(any(), any(), any());
     }
 
     @Test

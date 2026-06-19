@@ -52,6 +52,12 @@ public interface CardRepository {
     List<Card> findOnFieldEligibleByUserId(Long userId, LocalDateTime threshold);
 
     /**
+     * Story 6-1 Layer 1 한정 — 사용자의 LearningFacade에 속한 axes에 연결된 Deck 한정 후보.
+     * axisIds null/빈 입력은 Adapter에서 빈 리스트로 단락.
+     */
+    List<Card> findOnFieldEligibleByUserIdAndAxisIds(Long userId, LocalDateTime threshold, List<Long> axisIds);
+
+    /**
      * ON_FIELD 만료 배치용 카드 조회.
      * 주어진 CardStatus를 가진 활성 카드 목록을 반환한다.
      */

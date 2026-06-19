@@ -7,6 +7,7 @@ import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.LearningFacade.application.service.LearningFacadeQueryService;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
 import com.example.thirdtool.Review.domain.model.StateRecommendationDistributor;
 import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
@@ -34,6 +35,7 @@ public class ReviewQueryService {
     private final UserScheduleQueryService userScheduleQueryService;
     private final CardRepository cardRepository;
     private final StateRecommendationDistributor stateRecommendationDistributor;
+    private final LearningFacadeQueryService learningFacadeQueryService;
 
     // Story-5-2: Long userId → UserEntity user 시그니처 통일.
 
@@ -108,7 +110,12 @@ public class ReviewQueryService {
         Duration minInterval = template.getIntervalSteps().get(0).minDuration();
         LocalDateTime threshold = LocalDateTime.now().minus(minInterval);
 
-        List<Card> candidates = cardRepository.findOnFieldEligibleByUserId(userId, threshold);
+        // Story 6-1 Layer 1 한정: 사용자의 LearningFacade(직업 컨셉) 안의 axes 범위로만 수집.
+        // LearningFacade 미보유 사용자는 axisIds 빈 리스트 → 전체 카드 fallback (Spec 6-1 엣지 케이스).
+        List<Long> axisIds = learningFacadeQueryService.findAxisIdsByUserId(userId);
+        List<Card> candidates = axisIds.isEmpty()
+                ? cardRepository.findOnFieldEligibleByUserId(userId, threshold)
+                : cardRepository.findOnFieldEligibleByUserIdAndAxisIds(userId, threshold, axisIds);
 
         Map<SoftScheduleState, List<ReviewResponse.TodayCandidates.CandidateItem>> byState =
                 candidates.stream()

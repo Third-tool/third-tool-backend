@@ -5,6 +5,7 @@ import com.example.thirdtool.Card.domain.model.MainNote;
 import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Card.domain.model.Summary;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
+import com.example.thirdtool.LearningFacade.application.service.LearningFacadeQueryService;
 import com.example.thirdtool.Review.domain.model.StateRecommendationDistributor;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
@@ -54,7 +55,8 @@ class ReviewQueryServiceTest {
         cardRepository           = mock(CardRepository.class);
         service = new ReviewQueryService(
                 sessionRepository, userScheduleQueryService, cardRepository,
-                new StateRecommendationDistributor()
+                new StateRecommendationDistributor(),
+                mock(LearningFacadeQueryService.class)
         );
 
         owner = UserEntity.ofLocal("owner", "pw", "n", "o@e.com");

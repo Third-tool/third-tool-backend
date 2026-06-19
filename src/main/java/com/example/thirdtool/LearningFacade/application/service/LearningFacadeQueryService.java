@@ -31,6 +31,24 @@ public class LearningFacadeQueryService {
     private final TopicMaterialRepository topicMaterialRepository;
     private final DeckQueryService deckQueryService;
 
+    /**
+     * Cross-BC inbound (Story 6-1 Layer 1 한정) — 사용자 LearningFacade가 보유한 모든 axis ID를 반환.
+     *
+     * <p>Review BC가 오늘 학습 후보 수집 시 Layer 1(사용자 직업 컨셉) 범위로 카드를 좁히기 위해 호출한다.
+     * 사용자에게 LearningFacade가 아예 없으면 빈 리스트 — 호출 측은 fallback으로 사용자 전체 카드를 본다
+     * (Spec 6-1 엣지 케이스).
+     *
+     * <p>도메인 행위 메서드(LearningFacade)를 노출하지 않고 ID 리스트만 반환해 BC 경계 유지.
+     */
+    @Transactional(readOnly = true)
+    public List<Long> findAxisIdsByUserId(Long userId) {
+        return facadeRepository.findByUserId(userId)
+                .map(facade -> facade.getAxes().stream()
+                        .map(LearningAxis::getId)
+                        .toList())
+                .orElseGet(List::of);
+    }
+
     @Transactional(readOnly = true)
     public FacadeDetail getFacade(LearningFacadeQuery.GetFacade query) {
         LearningFacade facade = facadeRepository.findByUserId(query.userId())

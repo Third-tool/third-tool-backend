@@ -62,6 +62,16 @@ public class UserScheduleQueryService {
         return config.resolveSoftScheduleTemplate();
     }
 
+    /**
+     * Story 6-2 — 하루 학습 목표 카드 수를 반환한다.
+     * Review BC가 동적 비율 추천 시 사용. 설정 미보유 유저는 기본값(20)으로 자동 초기화.
+     */
+    public int resolveDailyTarget(Long userId) {
+        UserScheduleConfig config = configRepository.findByUserId(userId)
+                                                    .orElseGet(() -> initDefault(userId));
+        return config.getDailyTarget();
+    }
+
     @Transactional(readOnly = true)
     public List<UserScheduleResponse.HistoryItem> getHistory(Long userId, Integer limit) {
         int resolvedLimit = resolveLimit(limit);

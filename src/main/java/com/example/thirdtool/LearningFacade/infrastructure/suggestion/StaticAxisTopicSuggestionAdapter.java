@@ -3,6 +3,9 @@ package com.example.thirdtool.LearningFacade.infrastructure.suggestion;
 import com.example.thirdtool.LearningFacade.application.port.out.suggestion.AxisTopicSuggestion;
 import com.example.thirdtool.LearningFacade.application.port.out.suggestion.AxisTopicSuggestionPort;
 import com.example.thirdtool.LearningFacade.application.port.out.suggestion.SuggestionConceptContext;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -29,6 +32,10 @@ import java.util.Set;
 )
 public class StaticAxisTopicSuggestionAdapter implements AxisTopicSuggestionPort {
 
+    private static final Logger log = LoggerFactory.getLogger(StaticAxisTopicSuggestionAdapter.class);
+
+    // 사이즈 = 10. LearningAxis.RECOMMENDED_TOPIC_LIMIT(=10)와 의도적으로 정합.
+    // 도메인 권장 한도 변경 시 본 목록도 함께 조정.
     static final List<String> FIXED_TOPIC_NAMES = List.of(
             "기초 이해",
             "구조 설계",
@@ -41,6 +48,12 @@ public class StaticAxisTopicSuggestionAdapter implements AxisTopicSuggestionPort
             "패턴 인식",
             "비교 검토"
     );
+
+    @PostConstruct
+    void announceActivation() {
+        log.info("StaticAxisTopicSuggestionAdapter activated — LLM-free fallback. "
+                + "운영 환경이면 thirdtool.suggestion.provider=llm 설정 여부 확인 필요.");
+    }
 
     @Override
     public List<AxisTopicSuggestion> suggest(SuggestionConceptContext conceptContext,

@@ -183,7 +183,7 @@ class AxisTopicTest {
     }
 
     @Nested
-    @DisplayName("isFocused")
+    @DisplayName("isFocused (Story 2-3)")
     class IsFocused {
 
         @Test
@@ -203,6 +203,12 @@ class AxisTopicTest {
             for (int i = 1; i <= 4; i++) axis.addTopic("주제 " + i, null);
             AxisTopic last = axis.getTopics().get(3);
             assertThat(last.isFocused(3)).isFalse();
+        }
+
+        @Test
+        @DisplayName("LearningAxis.FOCUS_TOP_N 상수가 도메인에 노출된다 (DTO mapper 참조용)")
+        void focusTopNConstantExposed() {
+            assertThat(LearningAxis.FOCUS_TOP_N).isEqualTo(3);
         }
     }
 
@@ -318,4 +324,5 @@ class AxisTopicTest {
             assertThat(topic.isUncovered()).isFalse();
         }
     }
+
 }

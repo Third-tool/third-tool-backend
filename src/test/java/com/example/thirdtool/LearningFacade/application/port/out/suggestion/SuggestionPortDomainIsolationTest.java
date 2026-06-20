@@ -31,7 +31,7 @@ class SuggestionPortDomainIsolationTest {
     );
 
     private static final Pattern FORBIDDEN = Pattern.compile(
-            "AxisSuggestionPort|AxisTopicSuggestionPort|SuggestionConceptContext|AxisSuggestion|AxisTopicSuggestion"
+            "\\b(AxisSuggestionPort|AxisTopicSuggestionPort|SuggestionConceptContext|AxisSuggestion|AxisTopicSuggestion)\\b"
     );
 
     @Test

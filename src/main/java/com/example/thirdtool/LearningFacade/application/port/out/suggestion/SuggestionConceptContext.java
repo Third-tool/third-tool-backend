@@ -20,7 +20,7 @@ public record SuggestionConceptContext(
         if (conceptSet == null || conceptSet.isEmpty()) {
             throw new IllegalArgumentException("conceptSet은 최소 1개 이상이어야 합니다.");
         }
-        List<String> normalized = conceptSet.stream()
+        conceptSet = conceptSet.stream()
                 .map(value -> {
                     if (value == null || value.isBlank()) {
                         throw new IllegalArgumentException("conceptSet의 각 원소는 blank일 수 없습니다.");
@@ -28,7 +28,6 @@ public record SuggestionConceptContext(
                     return value.trim();
                 })
                 .toList();
-        conceptSet = List.copyOf(normalized);
 
         if (compositionReason == null || compositionReason.isBlank()) {
             throw new IllegalArgumentException("compositionReason은 blank일 수 없습니다.");

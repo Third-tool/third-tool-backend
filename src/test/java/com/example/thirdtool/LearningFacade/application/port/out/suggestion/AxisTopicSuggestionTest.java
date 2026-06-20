@@ -52,6 +52,22 @@ class AxisTopicSuggestionTest {
 
             assertThat(suggestion.rationale()).isEqualTo("근거");
         }
+
+        @Test
+        @DisplayName("rationale이 빈 문자열이면 null로 정규화된다")
+        void rationale_empty_string_null로_정규화() {
+            AxisTopicSuggestion suggestion = new AxisTopicSuggestion("도메인 모델링", "");
+
+            assertThat(suggestion.rationale()).isNull();
+        }
+
+        @Test
+        @DisplayName("rationale이 공백만으로 구성되면 null로 정규화된다")
+        void rationale_blank_null로_정규화() {
+            AxisTopicSuggestion suggestion = new AxisTopicSuggestion("도메인 모델링", "   \t\n  ");
+
+            assertThat(suggestion.rationale()).isNull();
+        }
     }
 
     @Nested

@@ -14,7 +14,8 @@ public record AxisSuggestion(String description, String rationale) {
         }
         description = description.trim();
         if (rationale != null) {
-            rationale = rationale.trim();
+            String trimmed = rationale.trim();
+            rationale = trimmed.isEmpty() ? null : trimmed;
         }
     }
 }

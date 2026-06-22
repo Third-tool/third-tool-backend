@@ -11,3 +11,4 @@
 | [ADR007](ADR007.md) | BC 간 협력에 동기 도메인 이벤트를 도입한다 | Accepted | 2026-05-14 |
 | [ADR008](ADR008.md) | 로깅 인프라 — profile별 Appender 분기 + LogstashEncoder + MDC 화이트리스트 | Accepted | 2026-05-17 |
 | [ADR009](ADR009.md) | Access Token은 HttpOnly Cookie, Refresh Token은 React 메모리에 저장한다 | Accepted | 2026-05-27 |
+| [ADR010](ADR010.md) | AI 제안 호출 실패는 5xx 미노출 — 빈 목록 + suggestionsAvailable 플래그로 변환 | Accepted | 2026-06-22 |

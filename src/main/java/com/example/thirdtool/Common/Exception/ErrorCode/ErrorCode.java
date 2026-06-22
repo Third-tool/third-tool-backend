@@ -102,6 +102,17 @@ public enum ErrorCode {
     // ─── TopicRevision (Epic-003) ─────────────────────────
     REVISION_REASON_NOT_FOUND("TR001",              "선택한 수정 이유를 찾을 수 없거나 비활성 상태입니다.", HttpStatus.NOT_FOUND),
 
+    // ─── LearningFacade Suggestion (AI) ───────────────────
+    // Story 1-3: AI 호출 실패는 사용자에게 5xx로 노출되지 않고
+    // 상위 Service가 catch → 빈 목록 + suggestionsAvailable=false로 변환한다(ADR010).
+    // HttpStatus 값은 fallback이 적용되지 않을 때(예: 운영 디버깅 우회 호출)의 기본 매핑.
+    LEARNING_FACADE_SUGGESTION_TIMEOUT("LF_SUGGEST_001",
+            "AI 제안 요청이 시간 내 완료되지 않았습니다.",                HttpStatus.SERVICE_UNAVAILABLE),
+    LEARNING_FACADE_SUGGESTION_INVALID_RESPONSE("LF_SUGGEST_002",
+            "AI 응답 형식이 유효하지 않습니다.",                          HttpStatus.BAD_GATEWAY),
+    LEARNING_FACADE_SUGGESTION_AUTH_FAILED("LF_SUGGEST_003",
+            "AI 인증 정보가 유효하지 않습니다.",                          HttpStatus.SERVICE_UNAVAILABLE),
+
     // ─── Deck (확장) ──────────────────────────────────────
     DECK_HIERARCHY_CYCLE("DECK006", "덱 계층 구조에 순환 참조가 발생했습니다.", HttpStatus.BAD_REQUEST),
 

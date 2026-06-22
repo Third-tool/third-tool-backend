@@ -16,6 +16,12 @@ import org.slf4j.MDC;
  *
  * <p>대상 ErrorCode 3종(타임아웃 / 응답 형식 오류 / 인증 실패)에 대해서만 fallback을 적용한다.
  * 그 외 ErrorCode는 호출자가 처리하도록 원본 예외를 그대로 전파한다 — fail-fast.</p>
+ *
+ * <p><b>GlobalExceptionHandler 단일 진입점 원칙(conventions.md §2.3)에 대한 의도된 예외</b>:
+ * 일반적으로 BusinessException 변환은 GlobalExceptionHandler가 단독 책임이지만, AI 호출 실패는
+ * "사용자에게 5xx 미노출 + 부가 정보 영역만 비움"이라는 정책(ADR010)을 따르므로 Application Service
+ * 계층에서 선제 catch한다. 본 유틸이 그 단일 변환점이며, 후속 Service들이 동일 정책을 분산 구현하지
+ * 않도록 설계되었다. GlobalExceptionHandler는 Suggestion 외 모든 예외의 진입점으로 유지된다.</p>
  */
 public final class SuggestionFallbacks {
 

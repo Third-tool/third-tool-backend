@@ -15,6 +15,32 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class SuggestionFallbacksTest {
 
     @Nested
+    @DisplayName("ErrorCode 계약 회귀 안전망")
+    class ErrorCodeContract {
+
+        @Test
+        @DisplayName("LEARNING_FACADE_SUGGESTION_TIMEOUT의 code는 LF_SUGGEST_001")
+        void LEARNING_FACADE_SUGGESTION_TIMEOUT_code_LF_SUGGEST_001() {
+            assertThat(ErrorCode.LEARNING_FACADE_SUGGESTION_TIMEOUT.getCode())
+                    .isEqualTo("LF_SUGGEST_001");
+        }
+
+        @Test
+        @DisplayName("LEARNING_FACADE_SUGGESTION_INVALID_RESPONSE의 code는 LF_SUGGEST_002")
+        void LEARNING_FACADE_SUGGESTION_INVALID_RESPONSE_code_LF_SUGGEST_002() {
+            assertThat(ErrorCode.LEARNING_FACADE_SUGGESTION_INVALID_RESPONSE.getCode())
+                    .isEqualTo("LF_SUGGEST_002");
+        }
+
+        @Test
+        @DisplayName("LEARNING_FACADE_SUGGESTION_AUTH_FAILED의 code는 LF_SUGGEST_003")
+        void LEARNING_FACADE_SUGGESTION_AUTH_FAILED_code_LF_SUGGEST_003() {
+            assertThat(ErrorCode.LEARNING_FACADE_SUGGESTION_AUTH_FAILED.getCode())
+                    .isEqualTo("LF_SUGGEST_003");
+        }
+    }
+
+    @Nested
     @DisplayName("해피")
     class Happy {
 

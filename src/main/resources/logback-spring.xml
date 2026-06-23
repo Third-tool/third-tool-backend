@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    ThirdTool 로깅 인프라 (ADR008 · errorCode 키 추가 ADR009)
+    ThirdTool 로깅 인프라 (ADR008 · errorCode 키 추가 ADR011)
     - local        : 평문 콘솔 (개발자 가독성)
     - dev / prod   : JSON 한 줄 (LogstashEncoder, 수집기 호환)
     - MDC 화이트리스트: traceId, requestId, userId, method, path, errorCode

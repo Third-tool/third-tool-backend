@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 전역 예외 핸들러 — 예외 유형별 로그 레벨을 명시 분리한다 (Story 3-1, ADR009 참조).
+ * 전역 예외 핸들러 — 예외 유형별 로그 레벨을 명시 분리한다 (Story 3-1, ADR011 참조).
  *
  * <p>매핑 표:
  * <ul>

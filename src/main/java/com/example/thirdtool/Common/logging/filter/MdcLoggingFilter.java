@@ -9,6 +9,7 @@ import org.slf4j.MDC;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -16,15 +17,21 @@ import java.util.UUID;
  *
  * <p>SecurityFilterChain 가장 앞단에서 동작하며 다음을 보장한다.
  * <ul>
- *   <li>X-Request-Id 헤더가 정상이면 그대로 사용, 없거나 blank/{@value #MAX_LEN}자 초과면 서버가 UUID 생성</li>
+ *   <li>X-Request-Id 헤더가 정상이면 그대로 사용, 없거나 trim 후 blank/{@value #MAX_LEN}자 초과면 서버가 UUID 생성</li>
  *   <li>MDC 키 4종(requestId, traceId(=requestId), method, path)을 logback-spring.xml 화이트리스트와 정합하게 주입</li>
  *   <li>응답 헤더 X-Request-Id echo back — 클라이언트가 동일 ID로 문의·추적 가능</li>
  *   <li>request.start / request.end 로그 INFO + status + durationMs</li>
  *   <li>예외 경로 포함 finally 블록에서 {@link MDC#clear()} — 스레드 풀 재사용 시 누수 차단</li>
+ *   <li>{@code /actuator/health} · {@code /health} 경로는 노이즈 차단을 위해 필터 자체 스킵</li>
+ *   <li>ERROR dispatch 재진입 차단({@link #shouldNotFilterErrorDispatch()}) — 요청당 단일 로그·헤더 보장</li>
  * </ul>
  *
- * <p>userId 주입은 Story 2-2 별도 처리. traceId == requestId는 v1 단순화 — 분산 트레이싱
- * 도입 시 분리. 자세한 결정 배경은 ADR008.
+ * <p>{@code clientIp}는 {@code X-Forwarded-For} 우선·{@code RemoteAddr} fallback. <b>신뢰 경계는
+ * ALB/CloudFront/Nginx 등 신뢰 LB 뒤 배포를 가정</b> — LB 없는 직접 노출 환경에서는 spoofing 위험으로
+ * 로그 신뢰도가 떨어진다. Product 5/6 인프라 배포 후 활용도 상승.
+ *
+ * <p>userId 주입은 Story 2-2 별도 처리(logback 화이트리스트엔 등록되어 있으나 본 Story 단계엔 주입자 없음).
+ * traceId == requestId는 v1 단순화 — 분산 트레이싱 도입 시 분리. 자세한 결정 배경은 ADR008.
  */
 @Slf4j
 public class MdcLoggingFilter extends OncePerRequestFilter {
@@ -35,6 +42,23 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
     static final String MDC_METHOD = "method";
     static final String MDC_PATH = "path";
     static final int MAX_LEN = 64;
+
+    private static final Set<String> SKIP_PATHS = Set.of("/actuator/health", "/health");
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return SKIP_PATHS.contains(request.getRequestURI());
+    }
+
+    /**
+     * ERROR dispatch(예: {@code sendError(403)} 결과의 컨테이너 재dispatch) 시 필터 재진입을 차단한다.
+     * 재진입을 허용하면 요청당 request.start/end 로그가 2배로 출력되고, 응답 헤더 X-Request-Id가
+     * 새 UUID로 덮어씌워질 위험이 있다.
+     */
+    @Override
+    protected boolean shouldNotFilterErrorDispatch() {
+        return true;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -60,10 +84,14 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
     }
 
     private String resolveRequestId(String incoming) {
-        if (incoming == null || incoming.isBlank() || incoming.length() > MAX_LEN) {
+        if (incoming == null) {
             return UUID.randomUUID().toString();
         }
-        return incoming;
+        String trimmed = incoming.trim();
+        if (trimmed.isEmpty() || trimmed.length() > MAX_LEN) {
+            return UUID.randomUUID().toString();
+        }
+        return trimmed;
     }
 
     private String clientIp(HttpServletRequest request) {

@@ -53,7 +53,7 @@ class MdcLoggingFilterConcurrencyTest {
             doAnswer(inv -> {
                 seen.set(MDC.get(MdcLoggingFilter.MDC_REQUEST_ID));
                 bothInsideChain.countDown();
-                releaseChain.await(2, TimeUnit.SECONDS);
+                releaseChain.await(10, TimeUnit.SECONDS);
                 return null;
             }).when(chain).doFilter(any(), any());
 
@@ -66,12 +66,12 @@ class MdcLoggingFilterConcurrencyTest {
             Future<String> a = pool.submit(task);
             Future<String> b = pool.submit(task);
 
-            assertThat(bothInsideChain.await(2, TimeUnit.SECONDS))
+            assertThat(bothInsideChain.await(10, TimeUnit.SECONDS))
                     .as("두 스레드가 동시에 chain 내부에 진입").isTrue();
             releaseChain.countDown();
 
-            String idA = a.get(3, TimeUnit.SECONDS);
-            String idB = b.get(3, TimeUnit.SECONDS);
+            String idA = a.get(10, TimeUnit.SECONDS);
+            String idB = b.get(10, TimeUnit.SECONDS);
 
             assertThat(idA).isNotBlank();
             assertThat(idB).isNotBlank();

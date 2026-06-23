@@ -179,6 +179,17 @@ class MdcLoggingFilterTest {
     }
 
     @Test
+    @DisplayName("X-Forwarded-For 헤더에 단일 IP만 있으면 콤마 없이 그대로 사용한다")
+    void X_Forwarded_For_헤더에_단일_IP만_있으면_콤마_없이_그대로_사용한다() throws Exception {
+        request.addHeader("X-Forwarded-For", "203.0.113.5");
+
+        filter.doFilter(request, response, chain);
+
+        ILoggingEvent startEvent = findEventStartingWith("request.start");
+        assertThat(startEvent.getFormattedMessage()).contains("clientIp=203.0.113.5");
+    }
+
+    @Test
     @DisplayName("X-Forwarded-For 헤더가 없으면 clientIp는 remoteAddr를 사용한다")
     void X_Forwarded_For_헤더가_없으면_clientIp는_remoteAddr를_사용한다() throws Exception {
         request.setRemoteAddr("10.0.0.42");
@@ -187,6 +198,51 @@ class MdcLoggingFilterTest {
 
         ILoggingEvent startEvent = findEventStartingWith("request.start");
         assertThat(startEvent.getFormattedMessage()).contains("clientIp=10.0.0.42");
+    }
+
+    @Test
+    @DisplayName("유입된 X-Request-Id가 앞뒤 공백을 포함하면 trim 후 사용한다")
+    void 유입된_X_Request_Id가_앞뒤_공백을_포함하면_trim_후_사용한다() throws Exception {
+        request.addHeader(MdcLoggingFilter.HEADER, "  client-id-42  ");
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getHeader(MdcLoggingFilter.HEADER)).isEqualTo("client-id-42");
+    }
+
+    @Test
+    @DisplayName("유입된 X-Request-Id가 탭·개행 등 공백만이면 서버 UUID로 대체한다")
+    void 유입된_X_Request_Id가_탭_개행_등_공백만이면_서버_UUID로_대체한다() throws Exception {
+        request.addHeader(MdcLoggingFilter.HEADER, "\t\n  \t");
+
+        filter.doFilter(request, response, chain);
+
+        String echoed = response.getHeader(MdcLoggingFilter.HEADER);
+        assertThat(echoed).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    }
+
+    @Test
+    @DisplayName("/actuator/health 경로는 필터가 스킵되어 MDC도 응답 헤더도 주입되지 않는다")
+    void actuator_health_경로는_필터가_스킵되어_MDC도_응답_헤더도_주입되지_않는다() throws Exception {
+        request.setRequestURI("/actuator/health");
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getHeader(MdcLoggingFilter.HEADER)).isNull();
+        Map<String, String> remaining = MDC.getCopyOfContextMap();
+        assertThat(remaining == null || remaining.isEmpty()).isTrue();
+        assertThat(logAppender.list).isEmpty();
+    }
+
+    @Test
+    @DisplayName("/health 경로도 필터가 스킵된다")
+    void health_경로도_필터가_스킵된다() throws Exception {
+        request.setRequestURI("/health");
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getHeader(MdcLoggingFilter.HEADER)).isNull();
+        assertThat(logAppender.list).isEmpty();
     }
 
     @Test

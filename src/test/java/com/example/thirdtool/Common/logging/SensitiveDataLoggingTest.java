@@ -37,15 +37,23 @@ class SensitiveDataLoggingTest {
     }
 
     @Test
-    @DisplayName("UserEntity.toString은 password 해시를 노출하지 않는다 (@ToString 미사용 + @ToString.Exclude 안전망)")
-    void UserEntity_toString은_password_해시를_노출하지_않는다() {
-        UserEntity user = UserEntity.ofLocal("user@example.com", RAW_HASHED, "nickname", "user@example.com");
+    @DisplayName("UserEntity.toString은 password 해시·email·nickname을 노출하지 않고 id·username만 노출한다")
+    void UserEntity_toString은_민감_필드를_노출하지_않고_id_username만_노출한다() {
+        UserEntity user = UserEntity.ofLocal("user@example.com", RAW_HASHED, "nickname-secret", "private@example.com");
 
         String dumped = user.toString();
 
         assertThat(dumped)
-                .as("password BCrypt 해시가 toString 결과 어디에도 등장하지 않아야 한다")
+                .as("Lombok @ToString(onlyExplicitlyIncluded=true)가 동작해 'UserEntity('로 시작해야 한다 (회귀 차단)")
+                .startsWith("UserEntity(");
+        assertThat(dumped).contains("username=user@example.com");
+        assertThat(dumped)
+                .as("password BCrypt 해시가 어디에도 등장하지 않아야 한다")
                 .doesNotContain(RAW_HASHED);
+        assertThat(dumped)
+                .as("nickname·email은 명시 노출 대상 외라 등장하지 않아야 한다")
+                .doesNotContain("nickname-secret")
+                .doesNotContain("private@example.com");
     }
 
     @Test

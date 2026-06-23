@@ -125,10 +125,14 @@ public enum ErrorCode {
     FILE_UNSUPPORTED_EXTENSION("FILE002",   "지원하지 않는 확장자입니다.",        HttpStatus.BAD_REQUEST),
     FILE_UPLOAD_FAIL("FILE003",             "파일 업로드에 실패했습니다.",         HttpStatus.SERVICE_UNAVAILABLE),
     FILE_DELETE_FAIL("FILE004",             "파일 삭제에 실패했습니다.",           HttpStatus.SERVICE_UNAVAILABLE),
+    PAYLOAD_TOO_LARGE("FILE005",            "허용된 최대 업로드 크기를 초과했습니다.", HttpStatus.PAYLOAD_TOO_LARGE),
 
     // ─── Library ──────────────────────────────────────────
     // Story-5-3: ACCESS_DENIED("LIBRARY002") 제거 — 사용처 0건 + AUTH_FORBIDDEN(AUTH005)과 의미 중복.
-    ALREADY_EXISTS("LIBRARY001",  "이미 존재하는 리소스입니다.",  HttpStatus.CONFLICT);
+    ALREADY_EXISTS("LIBRARY001",  "이미 존재하는 리소스입니다.",  HttpStatus.CONFLICT),
+
+    // ─── 공통 fallback (Story 3-1) ────────────────────────
+    INTERNAL_ERROR("C500",        "서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
 
     // ─── 필드 ─────────────────────────────────────────────
     private final String     code;

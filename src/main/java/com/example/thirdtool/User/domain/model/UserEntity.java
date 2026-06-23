@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -32,6 +33,11 @@ public class UserEntity extends BaseEntity {
     @Column(name = "username", unique = true, nullable = false, updatable = false)
     private String username;
 
+    /**
+     * Story 3-1: BCrypt 해시이지만 원문 또는 해시 자체도 로그에 노출되지 않도록 방어.
+     * 향후 누군가 UserEntity에 {@code @ToString}을 추가해도 password 필드는 자동 제외된다.
+     */
+    @ToString.Exclude
     @Column(name = "password", nullable = false)
     private String password;
 

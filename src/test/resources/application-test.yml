@@ -59,3 +59,20 @@ naver:
 seed:
   s3-base-url: "http://localhost"
   image-count: 0
+
+# Actuator / Micrometer Prometheus (Story 4-1) — 통합 테스트에서 endpoint 노출 검증
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info
+        exclude: env, beans, heapdump, threaddump, configprops, mappings
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: when-authorized
+  prometheus:
+    metrics:
+      export:
+        enabled: true

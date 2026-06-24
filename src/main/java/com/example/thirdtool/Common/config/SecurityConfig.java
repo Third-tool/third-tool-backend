@@ -53,7 +53,9 @@ public class SecurityConfig {
             "/api/auth/refresh",
             "/social/login/**",
             "/oauth2/**",
-            "/actuator/health"// ✅ 카카오/네이버 로그인 엔드포인트도 화이트리스트에 추가
+            "/actuator/health",
+            "/actuator/info",
+            "/actuator/prometheus"// ✅ 카카오/네이버 로그인 엔드포인트도 화이트리스트에 추가 + 모니터링 스크랩(Story 4-1)
     };
 
     private final UserRepository userRepository;
@@ -158,6 +160,9 @@ public class SecurityConfig {
                                         "/swagger-config",          // ✅ swagger-ui가 자동으로 호출하는 경로
                                         "/swagger-ui/swagger-config"
                                                 ).permitAll()
+
+                                // ✅ 모니터링 — 익명 허용 외 actuator 경로는 명시 차단 (defense in depth, Story 4-1)
+                                .requestMatchers("/actuator/**").denyAll()
 
                                 // ✅ 회원가입/중복확인 API
                                 .requestMatchers(HttpMethod.POST, "/user", "/user/exist").permitAll()

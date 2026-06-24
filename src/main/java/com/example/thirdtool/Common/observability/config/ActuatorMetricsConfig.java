@@ -29,14 +29,33 @@ public class ActuatorMetricsConfig {
     static final String APPLICATION_TAG_KEY = "application";
     static final String APPLICATION_TAG_VALUE = "thirdtool";
     static final String HTTP_SERVER_REQUESTS = "http.server.requests";
+    static final String URI_TAG = "uri";
+    static final String ACTUATOR_URI_PREFIX = "/actuator";
 
     /**
-     * 모든 Meter에 {@code application=thirdtool} 태그를 공통 부착한다.
-     * 향후 멀티 인스턴스/멀티 서비스 배포 시 수집기에서 서비스 식별의 1차 키.
+     * 모든 Meter에 {@code application=thirdtool} 공통 태그 + {@code /actuator/**} URI의
+     * {@code http.server.requests} 메트릭 deny를 등록한다.
+     *
+     * <p>actuator deny 사유: 10초 간격 Prometheus scrape가 자체 시계열을 누적하면 카디널리티
+     * 노이즈만 증가하고 관측 가치는 없다. {@code MdcLoggingFilter} SKIP은 로그만 차단하므로
+     * 메트릭 측 차단은 본 MeterFilter가 책임.
+     *
+     * <p>{@link MeterFilter} 빈 자동 감지 패턴 대신 {@link MeterRegistryCustomizer} 안에서
+     * 명시 등록하는 이유: Spring Boot 3.5 + Prometheus registry 조합에서 MeterFilter 빈이
+     * PrometheusMeterRegistry까지 일관 적용되지 않는 케이스가 발견됨 (통합 테스트에서 catch).
      */
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> applicationCommonTag() {
-        return registry -> registry.config().commonTags(APPLICATION_TAG_KEY, APPLICATION_TAG_VALUE);
+        return registry -> {
+            registry.config().commonTags(APPLICATION_TAG_KEY, APPLICATION_TAG_VALUE);
+            registry.config().meterFilter(MeterFilter.deny(id -> {
+                if (!id.getName().startsWith(HTTP_SERVER_REQUESTS)) {
+                    return false;
+                }
+                String uri = id.getTag(URI_TAG);
+                return uri != null && uri.startsWith(ACTUATOR_URI_PREFIX);
+            }));
+        };
     }
 
     /**
@@ -63,4 +82,5 @@ public class ActuatorMetricsConfig {
             }
         };
     }
+
 }

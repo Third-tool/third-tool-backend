@@ -64,6 +64,23 @@ curl -i localhost:8080/actuator/heapdump
 
 회귀 안전망은 `src/test/java/com/example/thirdtool/Common/observability/ActuatorMetricsIntegrationTest`가 동등 케이스 6건으로 보장.
 
+## 운영 책임 — LB·CloudFront 경로 차단
+
+`/actuator/prometheus`는 SecurityConfig가 익명 호출을 허용한다 (Prometheus scraper가 인증 없이 10초 간격 호출하는 운영 패턴). 따라서 **인프라 단(ALB/CloudFront/Nginx)에서 `/actuator/**` 경로를 내부 VPC·관리자 네트워크에만 허용**해야 외부 노출이 차단된다.
+
+- 메트릭 본문은 application URI 구조·JVM 정보·DB connection pool 통계 등 공격 표면에 도움이 되는 정보를 포함한다.
+- 본 PR의 `SecurityConfig` `denyAll`은 `/actuator/env`·`heapdump` 같은 민감 endpoint만 차단하고, `prometheus`·`health`·`info`는 통과시킨다. LB가 별도 차단하지 않으면 외부에서 메트릭이 직접 보인다.
+- 후속 ADR/Story 후보: Bearer token 기반 `/actuator/prometheus` 인증(scraper Bearer 발급 + Prometheus scrape config), 또는 별도 management port 분리 (`management.server.port: 8081`).
+
+## 메트릭 카디널리티 — actuator 자기 누적 차단
+
+`ActuatorMetricsConfig.denyActuatorHttpServerRequests` MeterFilter가 `http.server.requests{uri=~"/actuator/.*"}` 시리즈를 거부한다. 이유:
+
+- 10초 간격 scrape가 자체 시계열로 누적되면 그라파나 패널이 actuator scrape 트래픽으로 가득 차고 진짜 사용자 요청 시그널이 묻힌다.
+- `MdcLoggingFilter`의 SKIP은 로그만 차단 — 메트릭은 Micrometer가 자체 수집하므로 별도 MeterFilter가 필요.
+
+회귀 검증: `ActuatorMetricsIntegrationTest.actuator_경로의_http_server_requests_메트릭은_시리즈에_포함되지_않는다`.
+
 ## 관련
 
 - Story 4-1 (Product 0-b 메트릭 Epic 1) — Prometheus scrape endpoint 첫 노출

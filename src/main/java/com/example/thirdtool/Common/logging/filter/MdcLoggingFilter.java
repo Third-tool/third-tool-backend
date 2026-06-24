@@ -43,8 +43,8 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
     static final String MDC_PATH = "path";
     static final int MAX_LEN = 64;
 
-    private static final String ACTUATOR_PREFIX = "/actuator";
-    private static final Set<String> SKIP_EXACT_PATHS = Set.of("/health");
+    private static final String ACTUATOR_PREFIX = "/actuator/";
+    private static final Set<String> SKIP_EXACT_PATHS = Set.of("/health", "/actuator");
 
     /**
      * 노이즈 차단을 위해 actuator 경로 전체와 비-actuator health probe를 스킵.

@@ -114,4 +114,25 @@ class ActuatorMetricsIntegrationTest {
         assertThat(response.getStatusCode())
                 .isIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND);
     }
+
+    @Test
+    @DisplayName("/actuator/** 경로의 http_server_requests 시리즈는 메트릭에 누적되지 않는다 (카디널리티 차단)")
+    void actuator_경로의_http_server_requests_메트릭은_시리즈에_포함되지_않는다() {
+        // 10초 scrape 모사 — 여러 번 호출해 자체 누적 발생 가능 상황을 만든다
+        for (int i = 0; i < 3; i++) {
+            scrapePrometheus();
+            restTemplate.getForEntity("/actuator/health", String.class);
+        }
+        restTemplate.getForEntity("/health", String.class);
+
+        ResponseEntity<String> response = scrapePrometheus();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String body = response.getBody();
+        // http_server_requests* (서버 inbound) 시리즈 한 줄 안에 uri="/actuator/..." 라벨이 동시 존재하지 않아야 한다.
+        // (http_client_requests는 TestRestTemplate outbound 시리즈로 별개. 본 PR의 deny 대상 아님)
+        assertThat(body)
+                .as("http_server_requests*{uri=\"/actuator/...\"} 시리즈가 deny되어 출력되지 않아야 한다")
+                .doesNotContainPattern("http_server_requests[a-z_]*\\{[^}]*uri=\"/actuator/[^\"]+\"");
+    }
 }

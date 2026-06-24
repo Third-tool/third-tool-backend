@@ -49,3 +49,10 @@ application-dev.yml
 /update-docs/
 .claude
 portfolio
+.hermes
+hermes
+meta/meta-velog
+
+# AI agent 개인 환경 메타 (.claude와 동일 톤)
+.agents/
+.codex/

@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -24,14 +25,24 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true)
 public class UserEntity extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ToString.Include
     private Long id;
 
+    /**
+     * Story 3-1: username만 명시 노출. password·email·nickname·소셜 연관은 PII/민감으로 비노출.
+     */
+    @ToString.Include
     @Column(name = "username", unique = true, nullable = false, updatable = false)
     private String username;
 
+    /**
+     * Story 3-1: BCrypt 해시이지만 원문도 로그에 노출되지 않도록 방어.
+     * 클래스 레벨 {@code @ToString(onlyExplicitlyIncluded=true)}로 자동 제외되며 별도 어노테이션 불요.
+     */
     @Column(name = "password", nullable = false)
     private String password;
 

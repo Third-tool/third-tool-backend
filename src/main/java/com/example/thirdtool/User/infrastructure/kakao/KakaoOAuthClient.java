@@ -1,5 +1,6 @@
 package com.example.thirdtool.User.infrastructure.kakao;
 
+import com.example.thirdtool.Common.logging.util.SensitiveLogMasker;
 import com.example.thirdtool.User.infrastructure.kakao.dto.KakaoTokenResponse;
 import com.example.thirdtool.User.infrastructure.kakao.dto.KakaoUserInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +42,7 @@ public class KakaoOAuthClient {
         formData.add("code", authorizationCode);
 
         log.info("[KakaoOAuthClient] 🔍 Token 요청 파라미터: grant_type={}, client_id={}, redirect_uri={}, code={}",
-                "authorization_code", clientId, redirectUri, authorizationCode);
+                "authorization_code", clientId, redirectUri, SensitiveLogMasker.maskToken(authorizationCode));
 
         return webClient.post()
                         .uri("/oauth/token")
@@ -52,7 +53,8 @@ public class KakaoOAuthClient {
                             log.error("[KakaoOAuthClient] ❌ 4xx 오류 발생: {}", response.statusCode());
                             return response.bodyToMono(String.class)
                                            .flatMap(body -> {
-                                               log.error("[KakaoOAuthClient] ❌ 응답 본문: {}", body);
+                                               // 본문에 access_token이 포함될 수 있으므로 길이만 노출
+                                               log.error("[KakaoOAuthClient] ❌ 응답 본문 length={}", body == null ? 0 : body.length());
                                                return Mono.error(new RuntimeException("카카오 토큰 요청 실패"));
                                            });
                         })

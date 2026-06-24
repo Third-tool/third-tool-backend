@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "jwt_refresh_entity")
@@ -20,6 +21,11 @@ public class RefreshEntity extends BaseEntity {
     @Column(name = "username", nullable = false, unique = true)
     private String username;
 
+    /**
+     * Story 3-1: RT 원문이 로그·디버거 출력에 노출되지 않도록 방어. JwtService 회전 경로에서
+     * RT 원문이 출력되어야 한다면 {@code SensitiveLogMasker.maskToken(...)}를 거친다.
+     */
+    @ToString.Exclude
     @Column(name = "refresh", nullable = false, length = 512)
     private String refresh;
 

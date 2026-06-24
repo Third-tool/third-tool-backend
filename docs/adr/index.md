@@ -12,3 +12,4 @@
 | [ADR008](ADR008.md) | 로깅 인프라 — profile별 Appender 분기 + LogstashEncoder + MDC 화이트리스트 | Accepted | 2026-05-17 |
 | [ADR009](ADR009.md) | Access Token은 HttpOnly Cookie, Refresh Token은 React 메모리에 저장한다 | Accepted | 2026-05-27 |
 | [ADR010](ADR010.md) | AI 제안 호출 실패는 5xx 미노출 — 빈 목록 + suggestionsAvailable 플래그로 변환 | Accepted | 2026-06-22 |
+| [ADR011](ADR011.md) | MDC 화이트리스트에 errorCode 키를 추가한다 (Story 3-1) | Accepted | 2026-06-23 |

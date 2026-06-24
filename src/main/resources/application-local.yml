@@ -1,36 +1,23 @@
 # ===========================================
-# local 프로필 — 로컬 개발자 환경 (평문 로그, H2 인메모리)
-# - secret-free: 소셜/AWS 등 자격이 필요한 항목은 application.yml(gitignore)에서 관리
-# - 활성화: spring.profiles.active=local (CLI --args 또는 application.yml의 active)
+# local 프로필 — 로컬 개발자 override (다른 profile과 조합 사용)
+# - 단독 사용 X — 항상 dev 또는 prod와 조합: SPRING_PROFILES_ACTIVE=local,dev
+# - dev/prod의 datasource·secret은 그쪽 yml이 책임. local은 개발 편의 override만.
 # - 로그 포맷은 logback-spring.xml의 <springProfile name="local">에서 평문으로 분기 (ADR008)
 # ===========================================
 spring:
-  datasource:
-    url: jdbc:h2:mem:thirdtool;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password: sa
-    driver-class-name: org.h2.Driver
-
   h2:
     console:
-      enabled: true
+      enabled: true          # http://localhost:8080/h2-console 에서 DB 확인 가능
       path: /h2-console
 
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: true
+    show-sql: true           # 로컬에선 SQL 콘솔 출력
     properties:
       hibernate:
-        format_sql: true
-        default_batch_fetch_size: 100
-
-  flyway:
-    enabled: false
+        format_sql: true     # 보기 좋게 포맷
 
 # Card 야간 만료 배치(Story 2-2)는 로컬에서 비활성화 — Spring `@Scheduled`는 cron="-"을 disabled로 해석.
-# 운영 환경(application.yml, gitignored)에서 cron 활성화한다.
+# 운영 환경(prod profile)에서 cron 활성화한다.
 card:
   expiry:
     cron: "-"

@@ -189,8 +189,10 @@ public class SecurityConfig {
 
         // ==============================
         // 6️⃣ MDC 로깅 필터 (Story 2-1) — 최선단에서 requestId 부여 + 응답 헤더 echo + MDC clear
+        //    anchor는 Spring Security 등록 표준 필터(UsernamePasswordAuthenticationFilter)로 통일.
+        //    같은 anchor의 addFilterBefore는 등록 순서대로 정렬되므로 본 줄이 가장 먼저 실행됨.
         // ==============================
-        http.addFilterBefore(new MdcLoggingFilter(), BlockListFilter.class);
+        http.addFilterBefore(new MdcLoggingFilter(), UsernamePasswordAuthenticationFilter.class);
 
         // ==============================
         // 7️⃣ 악성 URL 차단 필터 (Story 3-3) — JWTFilter 앞단에서 즉시 404

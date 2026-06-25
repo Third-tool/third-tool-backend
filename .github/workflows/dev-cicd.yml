@@ -58,21 +58,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ JDK 21 세팅
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
-      # 3️⃣ Gradle 빌드
-      - name: Build with Gradle
-        run: ./gradlew clean build -x test
-
-      # 4️⃣ AWS 자격 증명
+      # 2️⃣ AWS 자격 증명
+      # (Story 1-1: host gradle build 단계 삭제 — Docker builder stage가 동일 작업
+      #  수행하고 .dockerignore가 build/를 차단해 host 산출물은 image에 미반영)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -80,20 +68,20 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      # 5️⃣ ECR 로그인
+      # 3️⃣ ECR 로그인
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 6️⃣ Spring Image Build (Story 1-1: 단일 루트 Dockerfile 통합)
+      # 4️⃣ Spring Image Build (Story 1-1: 단일 루트 Dockerfile 통합 + builder stage가 gradle bootJar 수행)
       - name: Build Docker image
         run: docker build -t third-tool-server -f ./Dockerfile .
 
-      # 7️⃣ 태그 지정
+      # 5️⃣ 태그 지정
       - name: Tag Docker image
         run: docker tag third-tool-server:latest ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
-      # 8️⃣ Push Image to ECR
+      # 6️⃣ Push Image to ECR
       - name: Push to Amazon ECR
         run: docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 

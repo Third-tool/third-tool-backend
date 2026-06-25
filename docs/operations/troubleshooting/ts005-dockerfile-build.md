@@ -98,10 +98,31 @@ DOCKER_BUILDKIT=1 docker build -t thirdtool:local -f Dockerfile . 2>&1 | grep "C
 
 ## CI 영향
 
-`.github/workflows/dev-cicd.yml` 라인 90이 `-f ./Dockerfile-dev` → `-f ./Dockerfile`로 갱신됨. 다른 CI 단계는 그대로:
-- AWS ECR 로그인 → docker build → tag → push → EC2 SSH 배포
+`.github/workflows/dev-cicd.yml`이 다음으로 갱신됨:
+- 라인 90: `-f ./Dockerfile-dev` → `-f ./Dockerfile`
+- host gradle build step(`Set up JDK 21` + `./gradlew clean build -x test`) 삭제 — Docker builder stage가 동일 작업 수행하고 `.dockerignore`가 `build/`를 차단해 host 산출물이 image에 미반영됨. 중복 제거로 CI 시간 절감.
+
+다른 CI 단계는 그대로: AWS ECR 로그인 → docker build → tag → push → EC2 SSH 배포.
 
 머지 후 첫 push에서 CI가 통합 Dockerfile로 빌드·배포 진행. ECR repository 이름·EC2 배포 절차는 변경 없음.
+
+## application.yml 외부 mount 패턴 (EC2 운영)
+
+`.dockerignore`가 `src/main/resources/application.yml`을 빌드 컨텍스트에서 차단 + builder stage가 추가 `rm -f`로 image 안에 미포함. 운영 환경에서는 **EC2 host의 application.yml을 컨테이너에 mount**하는 패턴:
+
+```
+# dev-cicd.yml EC2 SSH 배포 단계
+docker run -d --name third-tool-server -p 8080:8080 \
+  -v /home/ubuntu/third-tool/application.yml:/app/config/application.yml \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  <ECR_URI>/third-tool-server:latest
+```
+
+Spring Boot의 config location 우선순위: `./config/application.yml` (외부) → jar 안 application.yml. 따라서 host mount된 application.yml이 우선 적용.
+
+**로컬 docker run 시** application.yml mount를 하지 않으면 환경변수 placeholder가 해석 안 됨 → `IllegalArgumentException: Could not resolve placeholder 'JWT_SECRET_KEY'` 부팅 실패. ts005-3 트러블슈팅 참조.
+
+대안 패턴(향후 SecretManager 도입 시): application.yml을 jar 안에 default placeholder 유지 + 환경변수만 외부 주입 + AWS Secrets Manager fetch. Story 7-1·7-2 위임.
 
 ## 트러블슈팅
 

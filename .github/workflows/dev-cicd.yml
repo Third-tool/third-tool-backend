@@ -85,9 +85,9 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 6️⃣ Spring Image Build
+      # 6️⃣ Spring Image Build (Story 1-1: 단일 루트 Dockerfile 통합)
       - name: Build Docker image
-        run: docker build -t third-tool-server -f ./Dockerfile-dev .
+        run: docker build -t third-tool-server -f ./Dockerfile .
 
       # 7️⃣ 태그 지정
       - name: Tag Docker image

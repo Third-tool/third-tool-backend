@@ -6,7 +6,12 @@ import com.example.thirdtool.User.application.UserCommandService;
 import com.example.thirdtool.User.application.UserQueryService;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.User.domain.model.UserRoleType;
-import com.example.thirdtool.User.dto.*;
+import com.example.thirdtool.User.dto.LoginRequestDTO;
+import com.example.thirdtool.User.dto.UserDeleteRequestDTO;
+import com.example.thirdtool.User.dto.UserExistRequestDTO;
+import com.example.thirdtool.User.dto.UserResponseDTO;
+import com.example.thirdtool.User.dto.UserSignUpRequestDTO;
+import com.example.thirdtool.User.dto.UserUpdateRequestDTO;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
@@ -71,25 +76,24 @@ public class UserController {
     // ✅ 유저 수정 (자체 로그인 유저만) (Command)
     // Story-5-2: @AuthenticationPrincipal을 UserEntity 단일 타입으로 통일.
     // Story-5-3: 본인 검증을 Controller에서 수행. Service는 순수 비즈니스 로직만.
+    // Story-5-4: 수정 대상자는 currentUser로만 결정 — DTO에 username/password 없음.
+    //            바디 기반 타 계정 수정 시도 표면 원천 차단.
     @PutMapping(value = "/user", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> updateUserApi(
             @AuthenticationPrincipal UserEntity currentUser,
             @Validated @RequestBody UserUpdateRequestDTO dto
-                                             ) throws AccessDeniedException {
-        // 본인 검증: dto에 username이 있으면 currentUser와 일치해야 함 (Story-5-4에서 dto.username 제거 예정).
-        if (dto.getUsername() != null && !currentUser.getUsername().equals(dto.getUsername())) {
-            throw new AccessDeniedException("본인 계정만 수정할 수 있습니다.");
-        }
+                                             ) {
         return ResponseEntity.status(200).body(userCommandService.updateUser(currentUser, dto));
     }
 
     // ✅ 유저 제거 (자체/소셜) (Command)
     // Story-5-3: 본인 / 관리자 권한 검증을 Controller에서 수행. Service는 순수 삭제만.
+    // Story-5-4: AccessDeniedException은 RuntimeException 상속이라 throws 명시 불요 — updateUserApi와 시그니처 정합.
     @DeleteMapping(value = "/user")
     public ResponseEntity<Boolean> deleteUserApi(
             @AuthenticationPrincipal UserEntity currentUser,
             @Validated @RequestBody UserDeleteRequestDTO dto
-                                                ) throws AccessDeniedException {
+                                                ) {
         boolean isAdmin = currentUser.getRoleType() == UserRoleType.ADMIN;
         boolean isSelfDelete = currentUser.getUsername().equals(dto.getUsername());
         if (!isSelfDelete && !isAdmin) {

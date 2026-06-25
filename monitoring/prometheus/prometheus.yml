@@ -1,0 +1,24 @@
+# ThirdTool Prometheus scrape config (Story 2-1)
+# - scrape_interval=10s — Grafana auto-refresh와 동일 주기로 정합 (Epic 결정)
+# - thirdtool job — Spring Boot Actuator의 /actuator/prometheus를 스크랩
+# - target: host.docker.internal:8080 — Mac/Windows 기본 지원, Linux는 compose의 extra_hosts로 보강
+
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+  external_labels:
+    monitor: thirdtool-local
+
+scrape_configs:
+  # Prometheus 자기 자신
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ThirdTool Spring Boot 애플리케이션
+  - job_name: thirdtool
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        labels:
+          env: local

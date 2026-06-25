@@ -27,6 +27,29 @@ com.example.thirdtool
 └── RemindSearch/             # (빈 디렉토리, v2 — 검색 인프라는 운영 중)
 ```
 
+프로젝트 루트(`src/main/java/` 외)의 운영 인프라:
+
+```
+{프로젝트 루트}/
+├── src/main/java/com/example/thirdtool/   # 위 트리
+├── src/main/resources/
+│   ├── application.yml             # 공통 + profile별 active default
+│   ├── application-dev.yml         # H2 + dev secrets (env vars)
+│   ├── application-prod.yml        # RDS + prod secrets (env vars)
+│   ├── application-local.yml       # 로컬 개발자 override (h2 console, show-sql)
+│   └── logback-spring.xml          # ADR008 + ADR011 (MDC 6 키 화이트리스트)
+├── monitoring/                     # 로컬 모니터링 스택 (Story 2-1, 0-b Epic 2)
+│   ├── docker-compose.monitoring.yml   # Prometheus 2.54 + Grafana 11.2
+│   ├── prometheus/prometheus.yml       # 10s scrape, thirdtool job
+│   ├── grafana/provisioning/{datasources,dashboards}/*.yml
+│   ├── grafana/dashboards/*.json   # (Epic 3 Story 3-1에서 thirdtool.json 추가)
+│   └── .env.monitoring.example     # 실제 .env.monitoring은 .gitignore
+└── docs/                           # 의도·결정 기록 (코드만으론 알 수 없는 것)
+    ├── DOMAIN.md, PACKAGE.md, adr/
+    ├── operations/troubleshooting/ # ts001(actuator) · ts002(env vars) · ts003(profiles) · ts004(monitoring)
+    └── ...
+```
+
 신규 BC를 추가할 때는 §2의 4-레이어 구조를 그대로 따른다. 빈 BC 디렉토리는 의도 모호를 유발하므로 도입 시점에 생성한다.
 
 ---

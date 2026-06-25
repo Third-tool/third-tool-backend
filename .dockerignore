@@ -1,4 +1,54 @@
+# Docker 빌드 컨텍스트 축소 + 이미지 안 secret/문서 차단 (Story 1-1 AC: 컨텍스트 < 1MB)
+
+# === IDE · OS ===
+.idea
+.vscode
+.gradle
+*.iml
+*.iws
+*.ipr
+.DS_Store
+
+# === 빌드 산출물 ===
+build/
+out/
+**/build/
+**/out/
+
+# === QueryDSL Q클래스 (이미지 안에서 다시 생성) ===
+src/main/generated/
+
+# === 환경 secret (런타임 환경변수 주입) ===
 src/main/resources/application.yml
 .env
+.env.*
 *.env
-*.yml~
+
+# === 모니터링 스택 (별도 컨테이너) ===
+monitoring/
+
+# === 문서·워크플로 (이미지에 불필요) ===
+docs/
+workflow/
+meta/
+private-docs/
+update-docs/
+portfolio/
+*.md
+HELP.md
+
+# === 테스트 ===
+src/test/
+
+# === Git ===
+.git
+.gitignore
+.gitattributes
+
+# === AI agent 메타 ===
+.claude/
+.claude
+.agents/
+.codex/
+AGENTS.md
+CLAUDE.md

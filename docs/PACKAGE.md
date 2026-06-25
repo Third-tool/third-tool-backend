@@ -38,6 +38,9 @@ com.example.thirdtool
 │   ├── application-prod.yml        # RDS + prod secrets (env vars)
 │   ├── application-local.yml       # 로컬 개발자 override (h2 console, show-sql)
 │   └── logback-spring.xml          # ADR008 + ADR011 (MDC 6 키 화이트리스트)
+├── Dockerfile                      # Spring Boot 서버 컨테이너 이미지 (Story 1-1, multi-stage + JRE alpine + layered jar)
+├── Dockerfile-elasticsearch        # ES + 한국어 nori 플러그인 (별도 ECR repo, 수동 빌드)
+├── .dockerignore                   # 빌드 컨텍스트 < 1MB 목표 (docs/workflow/meta/test/.git 제외)
 ├── monitoring/                     # 로컬 모니터링 스택 (Story 2-1, 0-b Epic 2)
 │   ├── docker-compose.monitoring.yml   # Prometheus 2.54 + Grafana 11.2
 │   ├── prometheus/prometheus.yml       # 10s scrape, thirdtool job

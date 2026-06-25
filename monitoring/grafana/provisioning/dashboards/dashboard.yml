@@ -1,0 +1,18 @@
+# Grafana Dashboard provider (Story 2-1)
+# - /var/lib/grafana/dashboards 경로의 *.json 파일을 자동 로드
+# - 본 PR 시점엔 빈 dashboards/ 디렉토리. Epic 3 Story 3-1에서 thirdtool.json 추가
+# - updateIntervalSeconds: 30 — JSON 파일 변경 감지 주기 (Grafana 재시작 없이 반영)
+
+apiVersion: 1
+
+providers:
+  - name: thirdtool
+    orgId: 1
+    folder: ThirdTool
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

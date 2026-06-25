@@ -1,0 +1,61 @@
+# ThirdTool 모니터링 스택 (Story 2-1, Product 0-b 메트릭 Epic 2)
+#
+# 실행:
+#   docker compose --env-file monitoring/.env.monitoring \
+#                  -f monitoring/docker-compose.monitoring.yml up -d
+#
+# 사전 준비:
+#   1. Spring Boot 앱이 :8080에서 실행 중 (다른 터미널에서 ./gradlew bootRun)
+#   2. application.yml에 management.endpoints.web.exposure.include: prometheus
+#      (ts001 가이드 참조)
+#   3. monitoring/.env.monitoring 파일에 GRAFANA_ADMIN_PASSWORD 설정
+#      (.env.monitoring.example 복사 후 비밀번호 변경)
+#
+# 가이드: monitoring/README.md + docs/operations/troubleshooting/ts004-*.md
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    container_name: thirdtool-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+    # Linux 환경에서 host.docker.internal 해석을 위해 extra_hosts 추가 (Mac/Windows는 기본 지원)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: thirdtool-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # 외부 공개 차단 — 대시보드는 운영 상태를 노출하므로 anonymous 비활성화 (Story 2-1 Epic 결정)
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  prometheus-data:
+  grafana-data:

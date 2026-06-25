@@ -1,0 +1,14 @@
+# Grafana Datasource provisioning (Story 2-1)
+# - 컨테이너 부팅 시 자동 로드 — GUI 수동 설정 불필요
+# - Prometheus를 default Datasource로 등록 (대시보드 패널이 별도 지정 없이 사용)
+# - access: proxy — Grafana가 백엔드에서 Prometheus 호출 (CORS·인증 단순화)
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

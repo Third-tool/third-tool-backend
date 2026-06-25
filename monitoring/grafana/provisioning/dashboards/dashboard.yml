@@ -14,5 +14,6 @@ providers:
     updateIntervalSeconds: 30
     allowUiUpdates: true
     options:
-      path: /var/lib/grafana/dashboards
+      # dashboards bind mount는 /etc/grafana/dashboards에 위치 — named volume(/var/lib/grafana)과 분리
+      path: /etc/grafana/dashboards
       foldersFromFilesStructure: false

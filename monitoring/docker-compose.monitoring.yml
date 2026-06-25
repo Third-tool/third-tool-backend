@@ -19,6 +19,14 @@ services:
     container_name: thirdtool-prometheus
     ports:
       - "9090:9090"
+    # retention 명시 — 1주 데이터 보존(부하 테스트 baseline) + 2GB 디스크 상한으로 폭증 방지
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--storage.tsdb.retention.size=2GB"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -27,7 +35,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
       interval: 15s
       timeout: 3s
       retries: 3
@@ -42,9 +50,14 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       # 외부 공개 차단 — 대시보드는 운영 상태를 노출하므로 anonymous 비활성화 (Story 2-1 Epic 결정)
       GF_AUTH_ANONYMOUS_ENABLED: "false"
+      # provisioning 경로 명시 — dashboards bind mount 충돌 회피 (Reviewer Critical)
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      # dashboards를 named volume 하위(/var/lib/grafana/...)가 아닌 /etc/grafana/dashboards로
+      # 분리 마운트 — grafana-data named volume과 경로 충돌 방지.
+      # dashboard.yml의 path도 동일하게 /etc/grafana/dashboards로 정합.
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     depends_on:
       prometheus:

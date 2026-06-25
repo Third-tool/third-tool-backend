@@ -17,6 +17,13 @@ monitoring/
     └── dashboards/                    # Epic 3 Story 3-1에서 thirdtool.json 추가 예정
 ```
 
+## 사전 조건
+
+- **Docker Desktop (Mac/Windows) 또는 Docker Engine 20.10+ (Linux)** 실행 중
+- **Spring Boot 앱(`./gradlew bootRun`)이 `:8080`에서 떠 있어야 한다** (별도 터미널)
+- **`application.yml` actuator 설정 완료** — `docs/operations/troubleshooting/ts001-actuator-prometheus-application-yml.md` 가이드 따라 갱신 (미적용 시 thirdtool job 영구 DOWN)
+- (Linux 한정) `extra_hosts: host-gateway`로 `host.docker.internal` 해석 — 본 compose 파일에 이미 포함
+
 ## 실행 절차
 
 ### 1. Spring Boot 앱 실행 (별도 터미널)
@@ -70,7 +77,15 @@ docker compose -f monitoring/docker-compose.monitoring.yml down -v
 ## 환경별 주의
 
 - **Mac / Windows**: `host.docker.internal:8080`이 호스트의 Spring Boot로 자동 해석된다.
-- **Linux**: `docker-compose.monitoring.yml`에 `extra_hosts: ["host.docker.internal:host-gateway"]`를 명시해 동일 동작을 보장. 그래도 안 되면 `network_mode: host` 또는 호스트 IP 직접 지정 — `docs/operations/troubleshooting/ts004-monitoring-stack-runtime.md` 참고.
+- **Linux**: `docker-compose.monitoring.yml`에 `extra_hosts: ["host.docker.internal:host-gateway"]`를 명시해 동일 동작을 보장 (Docker 20.10+). 미지원 환경 또는 fallback 절차는 `docs/operations/troubleshooting/ts004-monitoring-stack-runtime.md` ts004-2 참고.
+
+## 디스크 사용량
+
+Prometheus는 retention 7일 + 2GB 상한(`--storage.tsdb.retention.{time,size}`)으로 폭증을 차단한다. 다음 명령으로 사용량 확인:
+
+```bash
+docker system df -v | grep -E "prometheus-data|grafana-data"
+```
 
 ## 검증
 

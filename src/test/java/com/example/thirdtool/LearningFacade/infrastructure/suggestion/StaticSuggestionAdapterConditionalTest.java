@@ -29,7 +29,7 @@ class StaticSuggestionAdapterConditionalTest {
 
     @Nested
     @SpringBootTest(properties = "thirdtool.suggestion.provider=static")
-    @ActiveProfiles("dev")
+    @ActiveProfiles("test")
     @DisplayName("provider=static (또는 미설정 matchIfMissing)")
     class WhenStaticProvider {
 
@@ -54,7 +54,7 @@ class StaticSuggestionAdapterConditionalTest {
 
     @Nested
     @SpringBootTest(properties = "thirdtool.suggestion.provider=llm")
-    @ActiveProfiles("dev")
+    @ActiveProfiles("test")
     @DisplayName("provider=llm (비-static)")
     class WhenNonStaticProvider {
 

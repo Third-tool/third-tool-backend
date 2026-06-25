@@ -53,7 +53,9 @@ public class SecurityConfig {
             "/api/auth/refresh",
             "/social/login/**",
             "/oauth2/**",
-            "/actuator/health"// ✅ 카카오/네이버 로그인 엔드포인트도 화이트리스트에 추가
+            "/actuator/health",
+            "/actuator/info",
+            "/actuator/prometheus"// ✅ 카카오/네이버 로그인 엔드포인트도 화이트리스트에 추가 + 모니터링 스크랩(Story 4-1)
     };
 
     private final UserRepository userRepository;
@@ -159,6 +161,9 @@ public class SecurityConfig {
                                         "/swagger-ui/swagger-config"
                                                 ).permitAll()
 
+                                // ✅ 모니터링 — 익명 허용 외 actuator 경로는 명시 차단 (defense in depth, Story 4-1)
+                                .requestMatchers("/actuator/**").denyAll()
+
                                 // ✅ 회원가입/중복확인 API
                                 .requestMatchers(HttpMethod.POST, "/user", "/user/exist").permitAll()
 
@@ -184,8 +189,10 @@ public class SecurityConfig {
 
         // ==============================
         // 6️⃣ MDC 로깅 필터 (Story 2-1) — 최선단에서 requestId 부여 + 응답 헤더 echo + MDC clear
+        //    anchor는 Spring Security 등록 표준 필터(UsernamePasswordAuthenticationFilter)로 통일.
+        //    같은 anchor의 addFilterBefore는 등록 순서대로 정렬되므로 본 줄이 가장 먼저 실행됨.
         // ==============================
-        http.addFilterBefore(new MdcLoggingFilter(), BlockListFilter.class);
+        http.addFilterBefore(new MdcLoggingFilter(), UsernamePasswordAuthenticationFilter.class);
 
         // ==============================
         // 7️⃣ 악성 URL 차단 필터 (Story 3-3) — JWTFilter 앞단에서 즉시 404

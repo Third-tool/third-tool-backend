@@ -43,11 +43,18 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
     static final String MDC_PATH = "path";
     static final int MAX_LEN = 64;
 
-    private static final Set<String> SKIP_PATHS = Set.of("/actuator/health", "/health");
+    private static final String ACTUATOR_PREFIX = "/actuator/";
+    private static final Set<String> SKIP_EXACT_PATHS = Set.of("/health", "/actuator");
 
+    /**
+     * 노이즈 차단을 위해 actuator 경로 전체와 비-actuator health probe를 스킵.
+     * Story 4-1로 {@code /actuator/prometheus}가 10초 간격 스크랩되면 request.start/end가
+     * 그만큼 출력되므로 prefix 매칭으로 한 번에 차단.
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return SKIP_PATHS.contains(request.getRequestURI());
+        String uri = request.getRequestURI();
+        return uri.startsWith(ACTUATOR_PREFIX) || SKIP_EXACT_PATHS.contains(uri);
     }
 
     /**

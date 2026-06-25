@@ -170,9 +170,13 @@ public LearningFacadeResponse.UpdateAxisName updateAxisName(
 - `config/` — MvcConfig, QuerydslConfig, S3Config, SecurityConfig, SwaggerConfig, WebClientConfig
 - `Exception/` — `BusinessException`, `GlobalExceptionHandler`, `ErrorCode/ErrorCode`(Enum, 전 BC 에러 코드 등록처)
 - `init/` — 초기 데이터 로딩
-- `security/` — `auth/jwt/{JwtController, JwtService, RefreshEntity, RefreshRepository}`, `filter/JWTFilter`
+- `logging/` — `filter/MdcLoggingFilter` (Story 2-1), `util/SensitiveLogMasker` (Story 3-1)
+- `observability/` — `config/ActuatorMetricsConfig` (Story 4-1, Prometheus 공통 태그·histogram·actuator URI deny)
+- `security/` — `auth/jwt/{JwtController, JwtService, RefreshEntity, RefreshRepository}`, `filter/JWTFilter`, `filter/BlockListFilter`
 - `Util/` — `JWTUtil`, `UUIDUtil`, `mapper/`
 - `BaseEntity` — JPA Auditing 공통
+
+**logging vs observability 책임 분리**: 양쪽 모두 관찰성 인프라지만, `logging/`은 이벤트 시계열(요청·예외 라인), `observability/`는 수치 메트릭(응답시간·처리량 시리즈). 분산 트레이싱·APM 도입 시 `observability/tracing/` 등 추가 예정.
 
 ### infra (BC 아님)
 - `S3/S3StorageAdapter` — AWS S3 어댑터

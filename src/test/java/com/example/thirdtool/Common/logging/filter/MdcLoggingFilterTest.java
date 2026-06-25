@@ -246,6 +246,30 @@ class MdcLoggingFilterTest {
     }
 
     @Test
+    @DisplayName("/actuator/prometheus 경로도 필터가 스킵된다 (Story 4-1 prefix 매칭 확장 회귀)")
+    void actuator_prometheus_경로도_필터가_스킵된다() throws Exception {
+        request.setRequestURI("/actuator/prometheus");
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getHeader(MdcLoggingFilter.HEADER)).isNull();
+        assertThat(logAppender.list).isEmpty();
+    }
+
+    @Test
+    @DisplayName("/actuator-자체-아닌-prefix는 스킵되지 않는다 (false positive 차단)")
+    void 유사한_prefix_경로는_스킵되지_않는다() throws Exception {
+        // /actuators (s 포함) 또는 /actuator-metrics 같은 false positive 패턴은 스킵 X
+        request.setRequestURI("/actuator-metrics");
+
+        filter.doFilter(request, response, chain);
+
+        // 정상 필터 동작 — 응답 헤더 + 로그 출력
+        assertThat(response.getHeader(MdcLoggingFilter.HEADER)).isNotBlank();
+        assertThat(logAppender.list).isNotEmpty();
+    }
+
+    @Test
     @DisplayName("chain doFilter에서 예외가 throw되어도 MDC가 clear된다")
     void chain_doFilter에서_예외가_throw되어도_MDC가_clear된다() throws Exception {
         doThrow(new ServletException("boom")).when(chain).doFilter(request, response);

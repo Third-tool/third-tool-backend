@@ -82,9 +82,28 @@ public class UserEntity extends BaseEntity {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<NaverMember> naverMembers = new ArrayList<>();
 
+    /**
+     * Story-5-4: patch semantics — null/blank 입력은 변경 없음, trim 후 적용.
+     * conventions.md §1.1 (String trim·선택적 blank→null 정규화) 준수.
+     * "비우기" 의도는 별도 endpoint 신호로 분리 (현재 미지원).
+     */
     public void updateUser(UserUpdateRequestDTO dto) {
-        this.email = dto.getEmail();
-        this.nickname = dto.getNickname();
+        String trimmedEmail = trimToNull(dto.getEmail());
+        if (trimmedEmail != null) {
+            this.email = trimmedEmail;
+        }
+        String trimmedNickname = trimToNull(dto.getNickname());
+        if (trimmedNickname != null) {
+            this.nickname = trimmedNickname;
+        }
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     //internalBuilder + private 생성자

@@ -88,11 +88,12 @@ public class UserController {
 
     // ✅ 유저 제거 (자체/소셜) (Command)
     // Story-5-3: 본인 / 관리자 권한 검증을 Controller에서 수행. Service는 순수 삭제만.
+    // Story-5-4: AccessDeniedException은 RuntimeException 상속이라 throws 명시 불요 — updateUserApi와 시그니처 정합.
     @DeleteMapping(value = "/user")
     public ResponseEntity<Boolean> deleteUserApi(
             @AuthenticationPrincipal UserEntity currentUser,
             @Validated @RequestBody UserDeleteRequestDTO dto
-                                                ) throws AccessDeniedException {
+                                                ) {
         boolean isAdmin = currentUser.getRoleType() == UserRoleType.ADMIN;
         boolean isSelfDelete = currentUser.getUsername().equals(dto.getUsername());
         if (!isSelfDelete && !isAdmin) {

@@ -87,8 +87,8 @@ class UserCommandServiceUpdateUserTest {
     }
 
     @Test
-    @DisplayName("dto.email = null이면 entity.email도 null로 변경된다 (덮어쓰기)")
-    void dto_email이_null이면_entity_email도_null로_변경된다() {
+    @DisplayName("dto.email = null이면 entity.email은 변경되지 않는다 (patch semantics)")
+    void dto_email이_null이면_entity_email은_변경되지_않는다() {
         UserUpdateRequestDTO dto = new UserUpdateRequestDTO("새닉네임", null);
         given(userRepository.findByUsernameAndIsLockAndIsSocial("user@example.com", false, false))
                 .willReturn(Optional.of(currentUser));
@@ -96,13 +96,13 @@ class UserCommandServiceUpdateUserTest {
 
         userCommandService.updateUser(currentUser, dto);
 
-        assertThat(currentUser.getEmail()).isNull();
+        assertThat(currentUser.getEmail()).isEqualTo("old@example.com");
         assertThat(currentUser.getNickname()).isEqualTo("새닉네임");
     }
 
     @Test
-    @DisplayName("dto.nickname = null이면 entity.nickname도 null로 변경된다 (덮어쓰기)")
-    void dto_nickname이_null이면_entity_nickname도_null로_변경된다() {
+    @DisplayName("dto.nickname = null이면 entity.nickname은 변경되지 않는다 (patch semantics)")
+    void dto_nickname이_null이면_entity_nickname은_변경되지_않는다() {
         UserUpdateRequestDTO dto = new UserUpdateRequestDTO(null, "new@example.com");
         given(userRepository.findByUsernameAndIsLockAndIsSocial("user@example.com", false, false))
                 .willReturn(Optional.of(currentUser));
@@ -110,7 +110,49 @@ class UserCommandServiceUpdateUserTest {
 
         userCommandService.updateUser(currentUser, dto);
 
-        assertThat(currentUser.getNickname()).isNull();
+        assertThat(currentUser.getNickname()).isEqualTo("기존닉네임");
+        assertThat(currentUser.getEmail()).isEqualTo("new@example.com");
+    }
+
+    @Test
+    @DisplayName("dto.email/nickname이 둘 다 null이면 entity는 양쪽 모두 변경되지 않는다 (no-op)")
+    void dto_둘다_null이면_entity는_변경되지_않는다() {
+        UserUpdateRequestDTO dto = new UserUpdateRequestDTO(null, null);
+        given(userRepository.findByUsernameAndIsLockAndIsSocial("user@example.com", false, false))
+                .willReturn(Optional.of(currentUser));
+        given(userRepository.save(any(UserEntity.class))).willAnswer(inv -> inv.getArgument(0));
+
+        userCommandService.updateUser(currentUser, dto);
+
+        assertThat(currentUser.getNickname()).isEqualTo("기존닉네임");
+        assertThat(currentUser.getEmail()).isEqualTo("old@example.com");
+    }
+
+    @Test
+    @DisplayName("dto.email/nickname이 공백 문자열이면 변경되지 않는다 (trim 후 blank→null 정규화)")
+    void dto가_공백_문자열이면_변경되지_않는다() {
+        UserUpdateRequestDTO dto = new UserUpdateRequestDTO("   ", "  ");
+        given(userRepository.findByUsernameAndIsLockAndIsSocial("user@example.com", false, false))
+                .willReturn(Optional.of(currentUser));
+        given(userRepository.save(any(UserEntity.class))).willAnswer(inv -> inv.getArgument(0));
+
+        userCommandService.updateUser(currentUser, dto);
+
+        assertThat(currentUser.getNickname()).isEqualTo("기존닉네임");
+        assertThat(currentUser.getEmail()).isEqualTo("old@example.com");
+    }
+
+    @Test
+    @DisplayName("dto에 전후 공백 포함된 값은 trim 후 entity에 반영된다 (§1.1 정규화)")
+    void dto에_전후_공백_포함된_값은_trim_후_entity에_반영된다() {
+        UserUpdateRequestDTO dto = new UserUpdateRequestDTO("  새닉  ", "  new@example.com  ");
+        given(userRepository.findByUsernameAndIsLockAndIsSocial("user@example.com", false, false))
+                .willReturn(Optional.of(currentUser));
+        given(userRepository.save(any(UserEntity.class))).willAnswer(inv -> inv.getArgument(0));
+
+        userCommandService.updateUser(currentUser, dto);
+
+        assertThat(currentUser.getNickname()).isEqualTo("새닉");
         assertThat(currentUser.getEmail()).isEqualTo("new@example.com");
     }
 

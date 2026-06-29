@@ -12,14 +12,20 @@ ts005(Dockerfile)·ts007(OIDC)와 cross-link. 본 절차는 1인 운영자가 1�
 - AWS 콘솔 IAM 관리 권한 (`iam:CreateRole` · `iam:PutRolePolicy`)
 - AWS 콘솔 ECS 관리 권한 (`ecs:CreateCluster` · `ecs:RegisterTaskDefinition` · `ecs:CreateService`)
 - AWS CLI 설치 (선택 — 콘솔 대신 명령으로도 진행 가능)
+- **CloudWatch Log group 2개 사전 생성 필수**(§2 단계) — Task Def `awslogs-create-group: "false"` 설정. 누락 시 컨테이너 부팅 시점 logConfiguration 에러로 즉시 STOPPED
+- **ALB Target Group `target-type: ip` 강제** — Fargate는 EC2 인스턴스 등록 불가. #13 ALB 셋업 시 `--target-type ip` 명시 (instance 사용 시 본 ts008 §6 Service 생성 자체가 거부됨)
 
 **placeholder 의존 상태 (후속 Story로 치환됨)**:
 - `<APP_SUBNET_2A>` · `<APP_SUBNET_2C>` · `<APP_SG>` → milestone 0.0.1v item #12 VPC 완료 후
-- `<PROD_TARGET_GROUP_ARN>` · `<STAGING_TARGET_GROUP_ARN>` → milestone 0.0.1v item #13 ALB 완료 후
-- `<RDS endpoint>` (Task Def secrets의 `DB_HOST`) → milestone 0.0.1v item #14 RDS 완료 후
+- `<PROD_TARGET_GROUP_ARN>` · `<STAGING_TARGET_GROUP_ARN>` → milestone 0.0.1v item #13 ALB 완료 후 (target-type=ip 필수)
+- `<RDS endpoint>` (Task Def secrets의 `DB_HOST` 값) → milestone 0.0.1v item #14 RDS 완료 후
 - `secrets.valueFrom` ARN suffix `<SUFFIX>` → milestone 0.0.1v item #15 Secrets Manager 완료 후
 
-본 ts008은 위 4 placeholder가 모두 치환된 시점에 end-to-end 실행 가능. 그 전까지는 §1-2 (Log group + IAM Role)까지만 진입하고 §3-5는 dry-run 가이드로 유지.
+본 ts008은 위 4 placeholder가 모두 치환된 시점에 end-to-end 실행 가능. **§5-7은 4 placeholder 미완료 시 명령 실행 불가** (Task Def register 시 valueFrom ARN invalid · Service create 시 subnet/SG/TG ARN invalid). §2 (Log group) + §3 (IAM Role) + §4 (Cluster)까지는 #12-#15 의존 없이 선행 가능 — 1회성 셋업 추천 순서.
+
+> **staging Task Def transitional 함정**: `task-definition-staging.json:26`의 `SPRING_PROFILES_ACTIVE=prod`는 `application-staging.yml` 코드 부재로 인한 transitional 결정 (ADR014 follow-up 참조). staging 환경에서 Task 부팅 시 prod 프로파일 적용 → Swagger 차단, Hibernate SQL 로그 OFF, JWT Secure=true 적용. staging 디버깅 시 혼선 가능. 정상 동작이지만 의도된 가드로 인지할 것. `application-staging.yml` 신설 + Task Def env 정정은 별도 Story (환경 분리 Epic).
+
+> **healthCheck `wget` 의존**: Task Def healthCheck command가 `wget` 사용. base image `eclipse-temurin:21-jre-alpine`은 BusyBox 포함 → `wget`이 BusyBox applet으로 항상 가용. distroless 등 다른 base로 전환 시 healthCheck 명령 재설계 필요. ADR012 참조.
 
 ---
 
@@ -47,7 +53,7 @@ retention: prod 30일 / staging 7일 (product Epic 2 §대안 비교 Q "로그 �
 1. AWS 콘솔 → IAM → Roles → `gha-deploy-role` → Permissions → inline policy `gha-deploy-role-permissions` → Edit
 2. JSON 탭 → `infra/iam/gha-deploy-role-permissions-policy.json` 내용으로 교체
 3. `<AWS_ACCOUNT_ID>` 12자리 치환
-4. **치환 누락 검증**: 입력 직전 `<` 문자 0건 확인
+4. **치환 누락 검증** (필수 — IAM이 invalid ARN 거부): 임시 파일에 붙여넣은 후 `grep -c '<' /tmp/policy.json` 결과 **0이어야 함**
 
 신규 Statement 2건 (`EcsDeploy` + `IamPassRoleToEcsTasks`)이 보임. 기존 `EcrAuthToken` + `EcrPushPull`은 보존.
 
@@ -68,6 +74,8 @@ retention: prod 30일 / staging 7일 (product Epic 2 §대안 비교 Q "로그 �
 - Trust policy: `infra/iam/ecs-task-role-trust-policy.json` (Execution Role과 동일 내용이지만 별도 Role로 분리 — ADR014)
 - Role name: `ecs-task-role`
 - Inline policy name: `ecs-task-role-permissions` / 내용: `infra/iam/ecs-task-role-permissions-policy.json` + `<AWS_ACCOUNT_ID>` 치환
+
+> **치환 누락 검증 통일**: §3.1 / §3.2 / §3.3 / §5.1 / §6.1 모두 동일 `grep -c '<' <임시파일>` 명령으로 0건 확인. 본 검증을 빠뜨려도 AWS IAM/ECS가 invalid ARN으로 거부하므로 안전망이 있지만, 사후 디버깅 비용이 크다.
 
 > **검증**: 두 Role의 신뢰 정책은 동일하지만 권한 정책은 달라야 한다. Execution = ECR/Logs/Secrets, Task = S3/SSM. 동일하게 됐으면 ADR014 §결정의 권한 분리 의도 위반 → Role 합쳐진 셈.
 
@@ -158,7 +166,10 @@ aws ecs describe-services \
 
 ---
 
-## 7. 검증
+## 7. 검증 (end-to-end — 4 placeholder 모두 치환된 시점에 실행)
+
+§7은 §1 전제의 4 placeholder(#12 VPC + #13 ALB + #14 RDS + #15 Secrets)가 모두 치환된 후 실행 가능. 그 전까지는 §7 dry-run 정도로만 — `aws ecs describe-services` 같은 read-only 명령 일부만 동작 (Service 자체가 생성 안 됐으면 미응답).
+
 
 ### 7.1 Task 상태
 
@@ -214,14 +225,18 @@ aws ecs execute-command \
 ### ts008-2: Task RUNNING이지만 ALB Target unhealthy
 
 **원인 가능성**:
-- ECS container `healthCheck` 명령이 실패 — `wget` 미설치 또는 Spring Boot 부팅 시간 > startPeriod(60s)
+- ECS container `healthCheck` 명령이 실패 — `wget` 미설치 (BusyBox 의존, ADR012 참조) 또는 Spring Boot 부팅 시간 > startPeriod(60s)
 - ALB Target Group의 health check path가 `/health`가 아닌 다른 경로 (#13에서 설정)
+- ALB Target Group `target-type`이 `instance`로 설정 (Fargate는 `ip` 필수 — §1 전제)
 - Security Group이 ALB → Task 8080 허용 안 함
+- ALB health check interval × healthy threshold 가 Service `healthCheckGracePeriodSeconds`(90초)와 race — interval=30s × threshold=2 = 60초여야 grace 안에 안정 판정 가능
 
 **해결**:
 1. Task 컨테이너 로그에서 `Started ThirdToolApplication in N.NNN seconds` 확인 — 60초 초과면 startPeriod 증가
 2. ECS Exec로 진입 후 `wget -q -O- http://localhost:8080/health` 실행 → 200 OK 응답 확인
-3. ALB Target Group health check 설정: path=`/health`, port=`traffic-port`(8080), healthy threshold 2
+3. ALB Target Group health check 설정: path=`/health`, port=`traffic-port`(8080), healthy threshold 2, interval 30s
+4. ALB Target Group `target-type=ip` 확인 (콘솔 → Target Group → Attributes)
+5. **알려진 false positive**: 현재 `/health`는 단순 200 응답 — DB 다운 시에도 healthy 판정. ECS는 unhealthy를 검출 못 함. 후속 Story(별도 PR — `/actuator/health`로 전환 + DB indicator 활성) 권장. ADR014 follow-up 참조.
 
 ### ts008-3: Task STOPPED, 사유 `Essential container exited with code N`
 
@@ -260,16 +275,19 @@ aws ecs execute-command \
 
 ---
 
-## 9. 후속 (별도 Story)
+## 9. 후속 (별도 Story — 미할당 번호는 follow-up 트래커가 잡을 시점에 부여)
 
-- **VPC subnet/SG 치환** — milestone 0.0.1v item #12 완료 후 service JSON placeholder 치환
-- **ALB Target Group ARN 치환** — milestone 0.0.1v item #13 완료 후
-- **RDS endpoint** — milestone 0.0.1v item #14 완료 후 Secrets Manager `DB_HOST` 값 갱신
-- **Secrets Manager 시크릿 실제 등록** — milestone 0.0.1v item #15. Task Def secrets ARN의 `<SUFFIX>` 치환
-- **GHA workflow의 `aws-actions/amazon-ecs-deploy-task-definition` 도입** — main push 시 자동 Task Def update + Service deploy. 본 Story 다음.
-- **5xx 폭증 자동 롤백 + 5분 모니터링** — product Epic 3 Story 3-1 잔여
-- **`S3Config.java` → `DefaultCredentialsProvider` 전환 + Task Def AWS 키 secret 제거** — Task Role 자동 주입으로 대체
-- **EC2 SSH 배포 step 제거** — ECS 운영 검증 통과 후
+- **Story-TBD(VPC)**: subnet/SG 치환 — milestone 0.0.1v item #12 완료 후 service JSON placeholder 치환
+- **Story-TBD(ALB)**: Target Group ARN 치환 (target-type=ip 필수) — milestone 0.0.1v item #13 완료 후
+- **Story-TBD(RDS)**: endpoint Secrets Manager `DB_HOST` 값 갱신 — milestone 0.0.1v item #14 완료 후
+- **Story-TBD(Secrets)**: 실제 시크릿 등록 + Task Def `<SUFFIX>` 치환 — milestone 0.0.1v item #15
+- **Story-TBD(Deploy Automation)**: GHA workflow의 `aws-actions/amazon-ecs-deploy-task-definition` 도입 — main push 시 자동 Task Def update + Service deploy. 본 Story 다음
+- **Story-TBD(Rollback Hardening)**: 5xx 폭증 자동 롤백 + 5분 모니터링 — product Epic 3 Story 3-1 잔여
+- **Story-TBD(S3 Credentials)**: `S3Config.java` → `DefaultCredentialsProvider` 전환 + Task Def AWS_ACCESS_KEY_ID/SECRET secret 2건 제거 — Task Role 자동 주입으로 대체. **transitional 영구화 방지 가시화**
+- **Story-TBD(EC2 폐기)**: `dev-cicd.yml`의 EC2 SSH 배포 step 제거 — ECS 운영 검증 통과 후
+- **Story-TBD(Health Indicator)**: `/health` → `/actuator/health` + DB/Redis HealthIndicator 활성 — 현재 false-positive 위험(ts008-2 #5) 해결
+- **Story-TBD(staging profile)**: `application-staging.yml` 신설 + staging Task Def env 정정 — staging transitional 해소
+- **Story-TBD(SPOT 안정성)**: staging server.shutdown=graceful 도입 + interruption 알림 처리 — SPOT Task가 부하 테스트 중 abruptly 종료 시 graceful 종료 보장
 
 ---
 

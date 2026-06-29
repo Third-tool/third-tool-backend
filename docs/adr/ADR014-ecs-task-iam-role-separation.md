@@ -42,11 +42,27 @@ product-infra-deploy.md Epic 2 §"핵심 설계 결정"에서 IAM Role 3종 분�
    - Execution Role의 Secrets Manager read는 `thirdtool/prod/*` + `thirdtool/staging/*`만 (다른 시크릿 차단)
    - Task Role의 S3는 `third-tool-s3-server` bucket만 (다른 버킷 차단)
 
+### `gha-deploy-role` ECS actions resource 한정 분석
+
+5 ECS actions가 모두 `Resource: "*"`를 사용한다. AWS IAM 문서 기준 한정 가능성:
+
+| Action | resource 한정 가능 여부 | 본 ADR 선택 사유 |
+| --- | --- | --- |
+| `ecs:RegisterTaskDefinition` | **불가** — task definition은 등록 *전에는* ARN 미존재 | `*` 사용 강제. 동일 family에 한정하려면 `Condition.StringLike."ecs:taskdefinition-family"` 사용 가능하나 GHA workflow가 본 Story에서 prod·staging 두 family 모두 다루므로 효과 작음 |
+| `ecs:DescribeTaskDefinition` | **불가** — 어떤 family든 read는 계정 단위로 풀림 | `*` 사용 표준 |
+| `ecs:DeregisterTaskDefinition` | **불가** — 동일 사유 | `*` 사용. 단 IAM 위험 작음 (deregister는 revision 단위 비활성화) |
+| `ecs:DescribeServices` | 한정 가능 — `arn:aws:ecs:region:acct:service/cluster/service-name` | M2에서 cluster-level 한정 검토. M1은 GHA가 새 service 생성 가능성 있어 `*` 유지 |
+| `ecs:UpdateService` | 한정 가능 — 동일 service ARN | M2에서 `arn:aws:ecs:ap-northeast-2:<acct>:service/thirdtool-{prod,staging}/thirdtool-app` 두 ARN으로 한정 권장. **본 Story 범위 내에서는 보안 표면이 크지만 GHA OIDC sub=main 잠금이 보조 가드** |
+
+→ **현재 결정**: 5 actions 모두 `*` 유지 + GHA OIDC sub 조건(`refs/heads/main`)으로 priviege escalation 표면 보조 차단. UpdateService/DescribeServices 한정은 **M2 follow-up Story** (deploy automation 도입 시 동시).
+
 ### 본 ADR이 다루지 않는 범위
 
 - **GCP Workload Identity Federation**: Spring AI Gemini용 Task Role의 GCP 인증은 Product 7 (Secrets·Terraform)에서 구체화
 - **staging IAM Role 분리**: 본 ADR은 prod/staging이 동일 Task Role 사용. 환경별 권한 분리는 환경 분리 Epic
 - **관리형 정책(`AmazonECSTaskExecutionRolePolicy`) 부착 vs inline 명시**: 본 ADR은 inline 명시 채택 — 감사·재현성·prefix 한정 가능
+- **`application-staging.yml` 코드 부재로 인한 staging Task Def `SPRING_PROFILES_ACTIVE=prod` transitional 결정**: staging profile 신설 + Task Def env 정정은 별도 Story (환경 분리 Epic). 본 Story는 코드 변경 없이 ts008 §1에 함정 명시로만 처리
+- **`/health` endpoint의 DB 의존성 미체크**: 단순 200 응답이라 DB down 시에도 healthCheck pass. ECS가 false-positive healthy 판정. `/actuator/health` + DB HealthIndicator 활성 전환은 별도 Story (ts008 §9 follow-up)
 
 ## 결과 (Consequences)
 
@@ -79,9 +95,12 @@ product-infra-deploy.md Epic 2 §"핵심 설계 결정"에서 IAM Role 3종 분�
 ## 알려진 follow-up (본 ADR 범위 외)
 
 - **milestone 0.0.1v item #15 (Secrets Manager)** 완료 후: `ecs-task-execution-role` permissions의 Secrets Manager resource ARN을 실제 시크릿 ARN(`<SUFFIX>` 포함)으로 정정
-- **`S3Config.java` → `DefaultCredentialsProvider` 전환**: Task Role의 S3 권한이 자동 주입돼 Task Def의 `AWS_ACCESS_KEY_ID/SECRET` secret 2건 제거 가능
-- **EC2 SSH 배포 step 제거**: ECS 운영 검증 통과 후. `dev-cicd.yml`의 `Deploy to EC2 via SSH` step + 컨테이너 env var pass-through 일괄 삭제
+- **`S3Config.java` → `DefaultCredentialsProvider` 전환**: Task Role의 S3 권한이 자동 주입돼 Task Def의 `AWS_ACCESS_KEY_ID/SECRET` secret 2건 제거 가능. **transitional 영구화 방지** — ts008 §9 `Story-TBD(S3 Credentials)`로 트래킹
+- **EC2 SSH 배포 step 제거**: ECS 운영 검증 통과 후. `dev-cicd.yml`의 `Deploy to EC2 via SSH` step + 컨테이너 env var pass-through 일괄 삭제 — ts008 §9 `Story-TBD(EC2 폐기)`
 - **staging 환경별 권한 분리**: 본 ADR은 prod/staging이 동일 Task Role. staging 권한 축소(예: `s3:GetObject`만) 시 별도 `ecs-task-role-staging` Role 신설
+- **`application-staging.yml` 신설 + staging Task Def env 정정**: 현재 staging Task Def `SPRING_PROFILES_ACTIVE=prod` 함정 해소 — ts008 §9 `Story-TBD(staging profile)`
+- **`/health` → `/actuator/health` + DB HealthIndicator 활성**: ECS healthCheck false-positive 차단 — ts008 §9 `Story-TBD(Health Indicator)`
+- **`gha-deploy-role` ECS UpdateService/DescribeServices resource 한정**: 본 ADR §대안 분석 표 — M2 deploy automation 도입 시 service ARN 2건으로 한정 권장
 - **GCP Workload Identity Federation**: Spring AI Gemini용. Task Role이 GCP STS에 OIDC token 제출하는 패턴 — Product 7
 - **Terraform IaC**: 본 ADR은 콘솔/CLI 셋업 가정. Terraform 모듈화는 Product 7 Epic 2
 

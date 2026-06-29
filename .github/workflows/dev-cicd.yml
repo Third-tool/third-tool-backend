@@ -1,3 +1,10 @@
+# Story-046: GHA → AWS 인증을 OIDC AssumeRole로 전환.
+#   - aws-actions/configure-aws-credentials@v4 step이 `role-to-assume`만 사용
+#     (long-lived access key 폐기) → 1시간 TTL 임시 자격증명을 STS가 발급
+#   - 신뢰 정책 sub 조건으로 repo:Third-tool/third-tool:ref:refs/heads/main 잠금
+#     (fork PR · 임의 branch 차단). 자세한 셋업 절차는 ts007 runbook 참조
+#   - EC2 SSH 배포 step의 AWS_ACCESS_KEY_ID/SECRET env var pass-through는
+#     transitional 유지 — milestone #11 ECS Task Role 이행 시 일괄 제거 예정
 name: Deploy To EC2 (dev-version)
 
 on:
@@ -15,6 +22,11 @@ on:
         default: false
         type: boolean
 
+# OIDC ID token 발급 권한 — Story-046. 모든 job에 적용.
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   # ======================================================
   # 1️⃣ Elasticsearch(Nori) 이미지 빌드 (수동 전용)
@@ -27,12 +39,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      # Story-046: OIDC AssumeRole — long-lived access key 폐기
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/gha-deploy-role
           aws-region: ap-northeast-2
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          audience: sts.amazonaws.com
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -59,14 +72,16 @@ jobs:
         uses: actions/checkout@v4
 
       # 2️⃣ AWS 자격 증명
+      # Story-046: OIDC AssumeRole — long-lived access key 폐기.
+      # gha-deploy-role 신뢰 정책이 repo:Third-tool/third-tool:ref:refs/heads/main 잠금.
       # (Story 1-1: host gradle build 단계 삭제 — Docker builder stage가 동일 작업
       #  수행하고 .dockerignore가 build/를 차단해 host 산출물은 image에 미반영)
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/gha-deploy-role
           aws-region: ap-northeast-2
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          audience: sts.amazonaws.com
 
       # 3️⃣ ECR 로그인
       - name: Login to Amazon ECR
@@ -86,6 +101,9 @@ jobs:
         run: docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
 
       # 9️⃣ EC2 SSH 배포
+      # TODO Story #11 (ECS Task Role 이행): 본 step 전체 — EC2 SSH 배포 + AWS_ACCESS_KEY_ID/SECRET
+      # env var pass-through — 는 ECS 이행 시 제거 예정. ECS Task Role 자동 주입 +
+      # S3Config의 DefaultCredentialsProvider 전환과 함께 묶음. ADR013 follow-up 참조.
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -139,6 +157,10 @@ jobs:
             docker image prune -af
 
             # Spring Boot 실행
+            # NOTE Story-046: AWS_ACCESS_KEY_ID/SECRET env 주입은 transitional 유지.
+            # GHA → AWS 인증은 OIDC로 전환됐지만, EC2 컨테이너 안의 S3Config가 여전히
+            # StaticCredentialsProvider 사용 중이라 env 변수 주입 필요.
+            # 제거 시점: #11 ECS Task Role 이행 + S3Config → DefaultCredentialsProvider.
             echo "⚙️ Running Spring Boot container..."
             docker run -d \
               --name third-tool-server \

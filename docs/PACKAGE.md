@@ -210,6 +210,16 @@ public LearningFacadeResponse.UpdateAxisName updateAxisName(
 - `Ai/presentation/` — AI 관련 (사용 중)
 - `redis/` — 빈 디렉토리 (인프라만 docker-compose에 존재)
 
+### AWS 인프라 자원 정의 (프로젝트 루트 `infra/` — 코드 아닌 IaC spec)
+
+`src/main/java/.../infra`(BC 횡단 어댑터)와 별개로 프로젝트 루트의 `infra/`는 AWS 리소스 spec JSON을 둔다. Terraform 모듈화(M2 Product 7) 이전까지 ts0NN runbook과 함께 단일 진실 소스 역할.
+
+- `infra/iam/` — IAM Role 신뢰·권한 정책 JSON (Story-046 OIDC + Story-047 ECS Task Role 3종)
+- `infra/ecs/` — ECS Task Definition + Service JSON (Story-047, prod/staging 2종씩)
+- `infra/vpc/` — VPC + 6 subnet + IGW + NAT + 2 route table + 5 SG spec JSON (Story-048)
+
+각 디렉토리의 JSON과 매핑되는 운영 runbook은 `docs/operations/troubleshooting/ts00N-*.md`, 결정 배경은 `docs/adr/ADR0NN-*.md`. 본 디렉토리 변경은 도메인 코드와 무관 — 코드 컨벤션·BC 의존 규칙 적용 대상 아님.
+
 ---
 
 ## 6. BC 간 의존 규칙

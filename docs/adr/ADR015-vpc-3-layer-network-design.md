@@ -25,8 +25,9 @@ milestone 0.0.1v 의존 chain에서 **VPC가 가장 큰 unblocker**다. #13 ALB�
 | --- | --- | --- |
 | Region | `ap-northeast-2` (서울) | 기존 dev-cicd / S3 / ECR 모두 동일 region. 한국 사용자 latency |
 | VPC CIDR | `10.0.0.0/16` (65,536 IP) | 향후 service 확장 여유. /20보다 큰 표준 |
-| AZ 수 | 2 (2a, 2c) | 서울 region 사용 가능 AZ — 2a/2c/2d 중 가장 안정 2개. 최소 multi-AZ 구성 |
+| AZ 수 | 2 (2a, 2c) | ap-northeast-2 사용 가능 AZ는 2a/2b/2c/2d 모두 — 본 ADR은 2a/2c 채택 (Default VPC 사용 AZ와 동일하여 기존 자원 마이그레이션 시 IP 회피 부담 최소화 + 2개 분산으로 multi-AZ 최소 구성). 어느 2개 조합이든 가용성 동등 |
 | Subnet | 3 layer × 2 AZ = 6개 | layer 분리로 보안 경계 명확. /24(251 호스트)로 충분 |
+| Subnet CIDR 예약 공간 | 10.0.2-9/24, 10.0.12-19/24, 10.0.22-255/24 (총 244 블록) | 의도된 reserve — 향후 신규 layer(ElastiCache 10.0.30.0/24, OpenSearch 10.0.40.0/24, Kubernetes worker 10.0.50.0/24 등) 추가 시 layer별 10번 단위 분리 패턴 유지. 임의 신규 subnet 추가 시 본 패턴 따를 것 |
 | public subnet (`10.0.0.0/24`, `10.0.1.0/24`) | ALB target + NAT Gateway | 인터넷 직접 노출 자원만 |
 | app subnet (`10.0.10.0/24`, `10.0.11.0/24`) | ECS Fargate Task | 외부 inbound 차단, NAT 경유 outbound |
 | data subnet (`10.0.20.0/24`, `10.0.21.0/24`) | RDS MySQL | 외부·ALB 어디서도 직접 접근 불가 |
@@ -64,7 +65,7 @@ vpc-endpoint-sg (app-sg → 443, M2 VPC Endpoint 대비)
 ### 긍정적
 
 - **보안 경계 명확**: RDS가 외부·ALB에서 직접 접근 불가. 침해 시 폭발 반경 한정. layer 별 SG 분리로 침해 1점이 다른 layer로 확산 차단
-- **multi-AZ 분산 즉시 가능**: ECS Service `availabilityZoneRebalancing: ENABLED`(Story-047)가 2a/2c에 Task 자동 분산. RDS도 multi-AZ 전환 시 data-2c 즉시 활용
+- **multi-AZ 분산 즉시 가능 (부분)**: ECS Service `availabilityZoneRebalancing: ENABLED`(Story-047)가 2a/2c에 Task 자동 분산. RDS도 multi-AZ 전환 시 data-2c 즉시 활용. **단 단일 NAT(public-2a) 때문에 2a 장애 시 app-2c Task의 outbound도 차단 — inbound 가용성만 부분 유지. 완전 multi-AZ 가용성은 multi-AZ NAT(M2) 도입 후 달성**
 - **CIDR 여유**: `/16` 65K IP 중 1.5K만 사용 — 향후 service 4-5배 확장 가능. peering 시 conflict 회피 여유 (10.x.x.x private는 흔하지만 우리 /16 한 블록만 사용)
 - **single source of truth**: `vpc-spec.json` + `security-groups.json`이 단일 진실 소스. ts009 runbook이 그대로 재현. M2 Terraform 모듈화 시 입력으로 활용
 - **SSH 키 폐기**: Bastion이 SSM 채택 → `bastion-sg` inbound 없음. SSH 키 관리·회전 불필요

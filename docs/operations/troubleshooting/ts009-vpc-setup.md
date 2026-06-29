@@ -268,6 +268,23 @@ aws ec2 attach-internet-gateway --vpc-id $VPC_ID --internet-gateway-id $IGW_ID -
 
 **해결**: 잘못 만든 subnet 삭제 후 재생성. ECS Service 생성 시 subnet 2개가 같은 AZ에 몰리면 Multi-AZ 분산 실패.
 
+### ts009-7: VPC peering 도입 시 CIDR 충돌 (`InvalidVpcPeeringConnectionId.Malformed` 또는 `OverlappingVpcCidrBlocks`)
+
+**원인**: 다른 VPC와 peering 시도 시 양쪽 VPC가 동일한 `10.0.0.0/16` CIDR 사용. `10.0.0.0/16`은 AWS Default VPC + 다른 회사·다른 프로젝트가 가장 흔히 사용하는 대역이라 충돌 가능성 높음.
+
+**해결 (사전 검증 — peering 시도 전에)**:
+1. peering 대상 VPC의 CIDR 확인:
+   ```bash
+   aws ec2 describe-vpcs --vpc-ids <PEER_VPC_ID> --region <peer-region> | jq '.Vpcs[].CidrBlock'
+   ```
+2. 본 VPC `10.0.0.0/16`과 겹치면 peering 불가 — 다음 중 1개 선택:
+   - 다른 쪽 VPC가 CIDR 변경 가능하면 그쪽 변경 요청
+   - 본 VPC를 별도 region (예: ap-northeast-1)에 `10.1.0.0/16`으로 재구축 후 peering
+   - peering 대신 PrivateLink·Transit Gateway 검토 (CIDR 충돌 우회)
+3. ADR015 §"다시 검토할 시점" — multi-region 진입 시 IP 대역 분리(`10.1.0.0/16` 등) 가이드
+
+> **예방**: 본 VPC를 portfolio 외에 다른 환경과 연결할 계획이 있으면, 초기 셋업 시점에 `10.0.0.0/16` 대신 사용 빈도 낮은 대역(`10.42.0.0/16` 등) 채택 검토. 현재는 단독 운영이라 그대로 진행.
+
 ### ts009-6: RDS 호스트명 미해석 (`Unknown host`) — DNS hostname OFF 인한
 
 **원인**: §2 단계의 `modify-vpc-attribute --enable-dns-hostnames` 누락. private VPC 안에서 RDS의 `*.rds.amazonaws.com` 도메인 해석 불가.

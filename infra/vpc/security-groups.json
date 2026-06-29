@@ -2,6 +2,7 @@
   "vpc": "thirdtool-vpc",
   "creationOrder": ["alb-sg", "app-sg", "db-sg", "bastion-sg", "vpc-endpoint-sg"],
   "creationOrderRationale": "SG 간 sourceSg 참조이므로 참조 대상이 먼저 존재해야 함 — alb-sg → app-sg(refs alb-sg) → db-sg(refs app-sg) → bastion-sg → vpc-endpoint-sg(refs app-sg)",
+  "egressNote": "AWS 기본 동작은 SG 생성 시 0.0.0.0/0 all egress가 자동 부여된다. 본 spec에서 egress=[] 빈 배열인 SG(db-sg, vpc-endpoint-sg)는 ts009 §7.3/§7.5의 revoke-security-group-egress 명령으로 default rule을 명시 제거해야 spec과 일치 (drift 차단). Terraform 이행 시 자동 처리.",
   "securityGroups": [
     {
       "name": "alb-sg",

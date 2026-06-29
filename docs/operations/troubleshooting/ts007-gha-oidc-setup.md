@@ -9,7 +9,7 @@ ts005(Dockerfile)·ts006(로컬 실행)과 cross-link. 본 절차는 repository 
 ## 1. 전제
 
 - AWS 콘솔 IAM 관리 권한 (`iam:CreateOpenIDConnectProvider` · `iam:CreateRole` · `iam:PutRolePolicy`)
-- GitHub repository `Third-tool/third-tool` Settings 접근 권한 (Actions Variables 등록)
+- GitHub repository `Third-tool/third-tool-backend` Settings 접근 권한 (Actions Variables 등록)
 - repository 코드에 `infra/iam/gha-deploy-role-trust-policy.json` + `gha-deploy-role-permissions-policy.json` 존재 확인 (Story-046 머지 후)
 
 ---
@@ -43,11 +43,13 @@ AWS 계정당 **1회만**. 이미 다른 GHA workflow에서 등록한 적이 있
 9. Policy name: `gha-deploy-role-permissions`
 10. **Create policy** 클릭
 
+> **치환 누락 검증 (필수)**: 두 JSON 모두 콘솔에 붙여넣기 **직전에** `<` 문자가 0건임을 시각 확인. `<AWS_ACCOUNT_ID>` 그대로 콘솔에 입력 시 AWS가 invalid ARN으로 거부 → Role/Policy 생성 자체가 실패. (CLI 사용 시: `grep -c '<' /tmp/role-policy.json` → 0이어야 함)
+
 ---
 
 ## 4. GitHub repo Settings — `AWS_ACCOUNT_ID` Variable 등록
 
-1. GitHub repo `Third-tool/third-tool` → **Settings** → **Secrets and variables** → **Actions** → **Variables** tab
+1. GitHub repo `Third-tool/third-tool-backend` → **Settings** → **Secrets and variables** → **Actions** → **Variables** tab
 2. **New repository variable** 클릭
 3. Name: `AWS_ACCOUNT_ID`
 4. Value: 12자리 AWS 계정 ID (Secret이 아닌 Variable — 비밀 아님)
@@ -90,9 +92,29 @@ AWS 콘솔 → **CloudTrail** → **Event history** → Filter: `Event name = As
 - `requestParameters.roleArn`이 `arn:aws:iam::<ACCT>:role/gha-deploy-role`
 - `responseElements.assumedRoleUser.assumedRoleId`로 임시 자격증명 발급 확인
 
-### 5.4 ECR push 검증
+### 5.4 ECR push 검증 + 리포명 정합성
 
 `Build and Push ES Image` step이 성공하면 push가 발생한 것. AWS 콘솔 → **ECR** → `third-tool-elaticsearch` 리포 → 최신 image tag 시각 확인.
+
+> **리포명 오타 주의**: `infra/iam/gha-deploy-role-permissions-policy.json`의 `Resource`와 `dev-cicd.yml`의 docker push tag가 **`third-tool-elaticsearch`** (오타 — "elasticsearch"가 아님)로 일치돼 있다. 실제 AWS ECR 리포 이름과 정확히 매치되는지 사전 확인:
+> ```bash
+> aws ecr describe-repositories --region ap-northeast-2 \
+>   | jq -r '.repositories[].repositoryName' | sort
+> ```
+> 출력에 `third-tool-elaticsearch`가 그대로 있으면 OK. `third-tool-elasticsearch`(정확 철자)로 존재하면 ECR 리포 이름과 정책/workflow 양쪽 정합성 정정 필요 — 별도 Story로 분리.
+
+### 5.5 End-to-end 검증 (main branch push 배포)
+
+§5.1-5.4는 ECR push까지만 검증한다. EC2 SSH 배포 step + 컨테이너 부팅 + S3 접근까지의 end-to-end는 **main branch 실제 push로만** 검증된다:
+
+1. small one-line change(예: README 1줄)로 main push trigger
+2. GHA workflow 로그에서 `Configure AWS credentials (OIDC)` step 성공 (§5.2 동일)
+3. `Push to Amazon ECR` step 성공
+4. `Deploy to EC2 via SSH` step에서 `🎉 Deployment Success!` 라인 확인
+5. `curl https://<dev-domain>/health` 200 OK (또는 EC2 host:8080)
+6. EC2 컨테이너 안에서 S3 접근 동작 확인 — 파일 업로드 endpoint 호출 1회 (transitional env var pass-through가 정상 작동하는지)
+
+본 5단계 통과해야 Story-046이 진짜로 끝난 것. §5.1-5.4까지만 통과 후 머지하면 EC2 배포 회귀를 catch 못 함.
 
 ---
 
@@ -109,7 +131,7 @@ AWS 콘솔 → **CloudTrail** → **Event history** → Filter: `Event name = As
 ### ts007-1: `Not authorized to perform sts:AssumeRoleWithWebIdentity`
 
 **원인**: 신뢰 정책 `sub` 조건이 실제 GHA workflow context와 불일치.
-- repo 슬러그 오타 (`Third-tool/third-tool` 대문자/하이픈 정확)
+- repo 슬러그 오타 (`Third-tool/third-tool-backend` 대문자/하이픈 정확)
 - branch 다름 (main 외 branch에서 워크플로 실행했는데 신뢰 정책은 `refs/heads/main`만 허용)
 - `aud` 조건 불일치 (`sts.amazonaws.com` 아닌 다른 값)
 
@@ -164,6 +186,26 @@ role-to-assume: arn:aws:iam:::role/gha-deploy-role
 2. AWS 콘솔 → ECR → 리포 목록에서 실제 이름과 정확 매치 확인 (오타 포함 — `third-tool-elaticsearch` 그대로)
 3. `<AWS_ACCOUNT_ID>` 치환이 됐는지 확인 (AWS 콘솔 IAM Role policy 탭에서 직접 본 값으로 비교)
 4. 다른 region에 리포가 있다면 region prefix(`ap-northeast-2`) 확인
+
+### ts007-6: EC2 배포 step에서 `AWS_ACCESS_KEY_ID/SECRET` 빈 값 → S3 인증 실패
+
+GHA workflow 로그에서 EC2 step은 성공했으나, EC2 컨테이너 로그에서:
+```
+software.amazon.awssdk.services.s3.model.S3Exception: The AWS Access Key Id you provided does not exist (Status Code: 403)
+```
+또는 부팅 단계에서:
+```
+Could not resolve placeholder 'AWS_ACCESS_KEY_ID'
+```
+
+**원인**: GitHub repo Settings에서 `AWS_ACCESS_KEY_ID` 또는 `AWS_SECRET_ACCESS_KEY` Secret이 **이미 삭제됨**. Story-046 머지 후 milestone "비밀 신호" 달성 의도로 선제 삭제했지만, EC2 컨테이너 step이 여전히 두 Secret을 참조 중 → 빈 값 주입.
+
+**해결**:
+1. GitHub repo Settings → Secrets and variables → Actions → Secrets tab에서 `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` 존재 여부 확인
+2. 없으면 §6 가이드대로 milestone 0.0.1v item #11 (ECS Task Role) 이행 **전까지는 보존** — 두 Secret을 다시 등록
+3. milestone item #11 머지 + S3Config가 `DefaultCredentialsProvider`로 전환 + EC2 SSH 배포 step 제거 완료 후에 영구 삭제
+
+**검증**: ts006 §6 (진단 정보 수집)의 환경변수 length 확인 명령 EC2 host에서 실행. length 0이면 Secret 미주입 상태.
 
 ---
 

@@ -28,13 +28,13 @@
 
 ### 신뢰 정책 sub 조건
 
-`gha-deploy-role` 신뢰 정책의 `Condition.StringLike."token.actions.githubusercontent.com:sub"`를 다음으로 잠근다:
+`gha-deploy-role` 신뢰 정책의 `Condition.StringEquals."token.actions.githubusercontent.com:sub"`를 다음으로 잠근다:
 
 ```
-repo:Third-tool/third-tool:ref:refs/heads/main
+repo:Third-tool/third-tool-backend:ref:refs/heads/main
 ```
 
-→ main branch에서의 workflow 실행만 허용. fork PR · 임의 branch에서의 prod 자격증명 획득 차단.
+→ main branch에서의 workflow 실행만 허용. fork PR · 임의 branch에서의 prod 자격증명 획득 차단. `StringEquals` 사용(`StringLike` 아님)은 와일드카드 미포함 정책에서 정확 매치가 가능하기 때문 — AWS IAM best practice.
 
 ### 권한 정책 최소화
 
@@ -42,7 +42,7 @@ repo:Third-tool/third-tool:ref:refs/heads/main
 - `ecr:GetAuthorizationToken` (resource `*` — STS endpoint 호출용)
 - `ecr:BatchCheckLayerAvailability` · `BatchGetImage` · `GetDownloadUrlForLayer` · `InitiateLayerUpload` · `UploadLayerPart` · `CompleteLayerUpload` · `PutImage` (resource: `third-tool-server` · `third-tool-elaticsearch` 두 ECR repo로 한정)
 
-milestone #11 (ECS Task Def + Service) 이행 시 `ecs:UpdateService` · `iam:PassRole`을 동일 Role에 추가 — 별도 Story로 위임.
+milestone 0.0.1v item #11 (ECS Task Def + Service) 이행 시 `ecs:UpdateService` · `iam:PassRole`을 동일 Role에 추가 — 별도 Story로 위임.
 
 ### Account ID 노출 정책
 
@@ -50,7 +50,7 @@ milestone #11 (ECS Task Def + Service) 이행 시 `ecs:UpdateService` · `iam:Pa
 
 ### 본 ADR이 다루지 않는 범위
 
-- **EC2 컨테이너 → AWS S3 인증**: EC2 SSH 배포 step에서 `-e AWS_ACCESS_KEY_ID=... -e AWS_SECRET_ACCESS_KEY=...` env var pass-through는 transitional 유지. 실제 제거는 milestone #11 ECS Task Role 이행 시.
+- **EC2 컨테이너 → AWS S3 인증**: EC2 SSH 배포 step에서 `-e AWS_ACCESS_KEY_ID=... -e AWS_SECRET_ACCESS_KEY=...` env var pass-through는 transitional 유지. 실제 제거는 milestone 0.0.1v item #11 ECS Task Role 이행 시.
 - **`S3Config.java`의 `StaticCredentialsProvider`**: Task Role 도입과 묶어 `DefaultCredentialsProvider`로 전환하는 별도 Story로 위임.
 - **staging IAM Role**: `refs/heads/develop` 잠금된 별도 Role은 환경 분리 Epic(Product 5 Epic 4)에서 추가.
 
@@ -83,9 +83,9 @@ milestone #11 (ECS Task Def + Service) 이행 시 `ecs:UpdateService` · `iam:Pa
 
 ## 알려진 follow-up (본 ADR 범위 외)
 
-- **milestone #11 (ECS Task Definition + Service)**: 동일 `gha-deploy-role`에 `ecs:UpdateService` · `iam:PassRole(ecs-task-execution-role, ecs-task-role)` 추가. permissions policy JSON 확장.
+- **milestone 0.0.1v item #11 (ECS Task Definition + Service)**: 동일 `gha-deploy-role`에 `ecs:UpdateService` · `iam:PassRole(ecs-task-execution-role, ecs-task-role)` 추가. permissions policy JSON 확장.
 - **staging IAM Role 분리**: `refs/heads/develop` 잠금된 `gha-deploy-role-staging`을 환경 분리 Epic에서 생성. trust policy `sub` 조건이 prod와 다름.
-- **EC2 SSH 배포 + AWS_ACCESS_KEY_ID/SECRET env var pass-through 폐기**: milestone #11 ECS 이행 시점에 일괄. S3Config `DefaultCredentialsProvider` 전환과 함께.
+- **EC2 SSH 배포 + AWS_ACCESS_KEY_ID/SECRET env var pass-through 폐기**: milestone 0.0.1v item #11 ECS 이행 시점에 일괄. S3Config `DefaultCredentialsProvider` 전환과 함께.
 - **`S3Config.java` 리팩터링**: `StaticCredentialsProvider` 제거 + `DefaultCredentialsProvider.create()`로 전환. ECS Task Role 도입 시 자동 픽업.
 - **GitHub Secrets `AWS_ACCESS_KEY_ID/SECRET` 영구 삭제**: 위 두 follow-up 완료 후 GitHub repo Settings에서 직접 삭제. 그 시점에 ts007 §6 갱신.
 - **GCP Workload Identity Federation (Spring AI Gemini용)**: ECS Task Role이 `sts:AssumeRoleWithWebIdentity`로 GCP 인증하는 패턴은 Product 7 (Secrets·Terraform)에서 구체화.

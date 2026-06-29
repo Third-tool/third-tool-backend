@@ -23,6 +23,32 @@
         "arn:aws:ecr:ap-northeast-2:<AWS_ACCOUNT_ID>:repository/third-tool-server",
         "arn:aws:ecr:ap-northeast-2:<AWS_ACCOUNT_ID>:repository/third-tool-elaticsearch"
       ]
+    },
+    {
+      "Sid": "EcsDeploy",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:RegisterTaskDefinition",
+        "ecs:DescribeTaskDefinition",
+        "ecs:DeregisterTaskDefinition",
+        "ecs:DescribeServices",
+        "ecs:UpdateService"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IamPassRoleToEcsTasks",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecs-task-execution-role",
+        "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecs-task-role"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ecs-tasks.amazonaws.com"
+        }
+      }
     }
   ]
 }

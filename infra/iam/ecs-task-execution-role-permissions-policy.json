@@ -1,0 +1,48 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EcrAuthToken",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*"
+    },
+    {
+      "Sid": "EcrPullThirdToolImages",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage"
+      ],
+      "Resource": [
+        "arn:aws:ecr:ap-northeast-2:<AWS_ACCOUNT_ID>:repository/third-tool-server",
+        "arn:aws:ecr:ap-northeast-2:<AWS_ACCOUNT_ID>:repository/third-tool-elaticsearch"
+      ]
+    },
+    {
+      "Sid": "CloudWatchLogsWriteEcsStreams",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": [
+        "arn:aws:logs:ap-northeast-2:<AWS_ACCOUNT_ID>:log-group:/ecs/thirdtool-prod:log-stream:*",
+        "arn:aws:logs:ap-northeast-2:<AWS_ACCOUNT_ID>:log-group:/ecs/thirdtool-staging:log-stream:*"
+      ]
+    },
+    {
+      "Sid": "SecretsManagerReadThirdToolPrefix",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/*",
+        "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/*"
+      ]
+    }
+  ]
+}

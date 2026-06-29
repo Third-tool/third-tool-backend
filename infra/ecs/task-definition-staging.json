@@ -1,0 +1,61 @@
+{
+  "family": "thirdtool-staging",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecs-task-execution-role",
+  "taskRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecs-task-role",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "containerDefinitions": [
+    {
+      "name": "app",
+      "image": "<AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/third-tool-server:<IMAGE_TAG>",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp",
+          "name": "http"
+        }
+      ],
+      "environment": [
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "prod" },
+        { "name": "TZ", "value": "Asia/Seoul" },
+        { "name": "DB_PORT", "value": "3306" }
+      ],
+      "secrets": [
+        { "name": "DB_HOST",              "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/db-<SUFFIX>:HOST::" },
+        { "name": "DB_NAME",              "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/db-<SUFFIX>:NAME::" },
+        { "name": "DB_USERNAME",          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/db-<SUFFIX>:USERNAME::" },
+        { "name": "DB_PASSWORD",          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/db-<SUFFIX>:PASSWORD::" },
+        { "name": "JWT_SECRET_KEY",       "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/jwt-<SUFFIX>:SECRET_KEY::" },
+        { "name": "KAKAO_CLIENT_ID",      "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/oauth-<SUFFIX>:KAKAO_CLIENT_ID::" },
+        { "name": "KAKAO_CLIENT_SECRET",  "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/oauth-<SUFFIX>:KAKAO_CLIENT_SECRET::" },
+        { "name": "NAVER_CLIENT_ID",      "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/oauth-<SUFFIX>:NAVER_CLIENT_ID::" },
+        { "name": "NAVER_CLIENT_SECRET",  "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/oauth-<SUFFIX>:NAVER_CLIENT_SECRET::" },
+        { "name": "AWS_ACCESS_KEY_ID",     "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/aws-<SUFFIX>:ACCESS_KEY_ID::" },
+        { "name": "AWS_SECRET_ACCESS_KEY", "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/staging/aws-<SUFFIX>:SECRET_ACCESS_KEY::" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/thirdtool-staging",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "app",
+          "awslogs-create-group": "false"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -q -O- http://localhost:8080/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

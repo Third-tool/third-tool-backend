@@ -1,0 +1,39 @@
+{
+  "cluster": "thirdtool-prod",
+  "serviceName": "thirdtool-app",
+  "taskDefinition": "thirdtool-prod",
+  "desiredCount": 2,
+  "launchType": "FARGATE",
+  "platformVersion": "LATEST",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": ["<APP_SUBNET_2A>", "<APP_SUBNET_2C>"],
+      "securityGroups": ["<APP_SG>"],
+      "assignPublicIp": "DISABLED"
+    }
+  },
+  "loadBalancers": [
+    {
+      "targetGroupArn": "<PROD_TARGET_GROUP_ARN>",
+      "containerName": "app",
+      "containerPort": 8080
+    }
+  ],
+  "deploymentConfiguration": {
+    "minimumHealthyPercent": 100,
+    "maximumPercent": 200,
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    }
+  },
+  "healthCheckGracePeriodSeconds": 90,
+  "enableExecuteCommand": true,
+  "availabilityZoneRebalancing": "ENABLED",
+  "propagateTags": "SERVICE",
+  "tags": [
+    { "key": "Application", "value": "thirdtool" },
+    { "key": "Environment", "value": "prod" },
+    { "key": "ManagedBy",   "value": "Story-047" }
+  ]
+}

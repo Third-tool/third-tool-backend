@@ -1,0 +1,42 @@
+{
+  "cluster": "thirdtool-staging",
+  "serviceName": "thirdtool-app",
+  "taskDefinition": "thirdtool-staging",
+  "desiredCount": 1,
+  "platformVersion": "LATEST",
+  "capacityProviderStrategy": [
+    { "capacityProvider": "FARGATE",      "weight": 50 },
+    { "capacityProvider": "FARGATE_SPOT", "weight": 50 }
+  ],
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": ["<APP_SUBNET_2A>", "<APP_SUBNET_2C>"],
+      "securityGroups": ["<APP_SG>"],
+      "assignPublicIp": "DISABLED"
+    }
+  },
+  "loadBalancers": [
+    {
+      "targetGroupArn": "<STAGING_TARGET_GROUP_ARN>",
+      "containerName": "app",
+      "containerPort": 8080
+    }
+  ],
+  "deploymentConfiguration": {
+    "minimumHealthyPercent": 100,
+    "maximumPercent": 200,
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    }
+  },
+  "healthCheckGracePeriodSeconds": 90,
+  "enableExecuteCommand": true,
+  "availabilityZoneRebalancing": "ENABLED",
+  "propagateTags": "SERVICE",
+  "tags": [
+    { "key": "Application", "value": "thirdtool" },
+    { "key": "Environment", "value": "staging" },
+    { "key": "ManagedBy",   "value": "Story-047" }
+  ]
+}

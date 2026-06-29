@@ -15,3 +15,4 @@
 | [ADR011](ADR011.md) | MDC 화이트리스트에 errorCode 키를 추가한다 (Story 3-1) | Accepted | 2026-06-23 |
 | [ADR012](ADR012.md) | 운영 컨테이너 base image `eclipse-temurin:21-jre-alpine` 채택, Distroless 보류 (Story 1-1) | Accepted | 2026-06-25 |
 | [ADR013](ADR013-gha-oidc-assume-role.md) | GitHub Actions → AWS 인증을 OIDC AssumeRole로 전환 (Story-046) | Accepted | 2026-06-29 |
+| [ADR014](ADR014-ecs-task-iam-role-separation.md) | ECS Task IAM Role 3종 분리 — Execution/Task/GHA Deploy (Story-047) | Accepted | 2026-06-29 |

@@ -20,6 +20,9 @@ ts009(VPC)·ts008(ECS)와 cross-link. 1인 운영자가 1회만 실행.
 
 ## 2. ACM 인증서 발급 (도메인 보유 시)
 
+> **사전 발급 권장**: ACM DNS 검증은 NS 전파 + 발급까지 **최대 72시간** 소요 가능 (보통 5-30분). 본 Story 운영 셋업 일정 1주 전에 §2를 선행 실행해 ISSUED 상태로 미리 발급해두는 것이 D-Day 일정 차단 방지에 효과적. milestone.md "리스크와 관찰 포인트" 표에 추가 검토 권장.
+
+
 ```bash
 # wildcard 또는 multi-domain 인증서
 CERT_ARN=$(aws acm request-certificate \

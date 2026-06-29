@@ -103,7 +103,7 @@ TLS 1.2 + 1.3 모두 지원, 약한 cipher 제거. portfolio 프로젝트라 구
 - **Story-TBD(ECS Service 치환)**: Story-047 `service-{prod,staging}.json`의 `<*_TARGET_GROUP_ARN>` 치환 + ECS Service 생성 시 Target Group 자동 등록
 - **Story-TBD(WAF)**: AWS WAF web ACL — Rate-based + SQLi/XSS/Common rules. M2 보안 강화
 - **Story-TBD(Route 53 IaC)**: Terraform 모듈로 alias record 자동 관리. M2 Product 7 Epic 2
-- **Story-TBD(Spring Forward Headers)**: `application-prod.yml`에 `server.forward-headers-strategy: native` 추가 — ALB X-Forwarded-Proto 정확 인식. 본 ADR 결정의 application 측 정합. ts010-3·ts010-4 해결책 코드화
+- **Story-TBD(Spring Forward Headers + Graceful Shutdown)** ⚠ **즉시 후속 권장**: `application-prod.yml`에 `server.forward-headers-strategy: native` + `server.shutdown: graceful` + `spring.lifecycle.timeout-per-shutdown-phase: 30s` 추가. 본 ADR 결정의 application 측 정합 — **본 Story 머지 후 ALB Listener 셋업 시 첫 HTTPS 요청에서 ts010-3/ts010-4 즉시 발화 가능**. Spring Boot 3.x default는 `server.shutdown=immediate`라 deregistration_delay 30s가 default 동작에 의존하면 안 됨 — 명시 필수
 - **Story-TBD(HSTS)**: Spring Security `httpStrictTransportSecurity` 활성 — HTTPS 강제 강화
 - **Story-TBD(ALB 2개 분리)**: M2 staging 트래픽 발생 시 환경별 ALB 분리
 - **Story-TBD(WAF + Shield)**: DDoS 대비 — 트래픽 발생 후 검토

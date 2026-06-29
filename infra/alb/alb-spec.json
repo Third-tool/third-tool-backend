@@ -1,0 +1,67 @@
+{
+  "region": "ap-northeast-2",
+  "loadBalancers": [
+    {
+      "name": "thirdtool-alb",
+      "scheme": "internet-facing",
+      "type": "application",
+      "ipAddressType": "ipv4",
+      "subnets": ["public-2a", "public-2c"],
+      "securityGroups": ["alb-sg"],
+      "idleTimeoutSeconds": 60,
+      "deletionProtection": false,
+      "http2Enabled": true,
+      "attributes": {
+        "routing.http.drop_invalid_header_fields.enabled": true,
+        "routing.http.preserve_host_header.enabled": true,
+        "routing.http.xff_client_port.enabled": true
+      },
+      "listeners": [
+        {
+          "port": 80,
+          "protocol": "HTTP",
+          "defaultAction": {
+            "type": "redirect",
+            "redirectConfig": {
+              "protocol": "HTTPS",
+              "port": "443",
+              "statusCode": "HTTP_301",
+              "host": "#{host}",
+              "path": "/#{path}",
+              "query": "#{query}"
+            }
+          }
+        },
+        {
+          "port": 443,
+          "protocol": "HTTPS",
+          "sslPolicy": "ELBSecurityPolicy-TLS13-1-2-2021-06",
+          "certificateArn": "<ACM_CERT_ARN>",
+          "defaultAction": {
+            "type": "forward",
+            "targetGroupName": "thirdtool-prod-tg"
+          },
+          "rules": [
+            {
+              "priority": 10,
+              "conditions": [
+                { "field": "host-header", "values": ["staging.thirdstool.com"] }
+              ],
+              "action": {
+                "type": "forward",
+                "targetGroupName": "thirdtool-staging-tg"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tags": {
+    "default": {
+      "Project": "ThirdTool",
+      "Environment": "shared",
+      "ManagedBy": "Story-049"
+    }
+  }
+}

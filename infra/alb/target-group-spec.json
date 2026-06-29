@@ -1,0 +1,64 @@
+{
+  "vpc": "thirdtool-vpc",
+  "targetGroupTypeRationale": "Fargate awsvpc 네트워크 모드는 ENI 단위 IP를 받으므로 target-type=ip 필수 (instance 등록 불가). ECS Service가 LoadBalancers 설정으로 자동 register/deregister 수행.",
+  "targetGroups": [
+    {
+      "name": "thirdtool-prod-tg",
+      "targetType": "ip",
+      "protocol": "HTTP",
+      "protocolVersion": "HTTP1",
+      "port": 8080,
+      "vpc": "thirdtool-vpc",
+      "healthCheck": {
+        "enabled": true,
+        "protocol": "HTTP",
+        "path": "/health",
+        "port": "traffic-port",
+        "intervalSeconds": 30,
+        "timeoutSeconds": 5,
+        "healthyThresholdCount": 2,
+        "unhealthyThresholdCount": 2,
+        "matcher": { "httpCode": "200" }
+      },
+      "attributes": {
+        "deregistration_delay.timeout_seconds": 30,
+        "load_balancing.algorithm.type": "round_robin",
+        "stickiness.enabled": false
+      },
+      "tags": {
+        "Project": "ThirdTool",
+        "Environment": "prod",
+        "ManagedBy": "Story-049"
+      }
+    },
+    {
+      "name": "thirdtool-staging-tg",
+      "targetType": "ip",
+      "protocol": "HTTP",
+      "protocolVersion": "HTTP1",
+      "port": 8080,
+      "vpc": "thirdtool-vpc",
+      "healthCheck": {
+        "enabled": true,
+        "protocol": "HTTP",
+        "path": "/health",
+        "port": "traffic-port",
+        "intervalSeconds": 30,
+        "timeoutSeconds": 5,
+        "healthyThresholdCount": 2,
+        "unhealthyThresholdCount": 2,
+        "matcher": { "httpCode": "200" }
+      },
+      "attributes": {
+        "deregistration_delay.timeout_seconds": 30,
+        "load_balancing.algorithm.type": "round_robin",
+        "stickiness.enabled": false
+      },
+      "tags": {
+        "Project": "ThirdTool",
+        "Environment": "staging",
+        "ManagedBy": "Story-049"
+      }
+    }
+  ]
+}

@@ -39,7 +39,7 @@ server:
 
 **근거**:
 - `graceful` 활성 시 SIGTERM 수신 후 in-flight request 완료까지 대기 (web request thread만, 신규 요청은 503 응답)
-- `timeout-per-shutdown-phase: 30s` — 30s 도달 시 강제 종료. ADR016 deregistration_delay와 정확 매칭
+- `timeout-per-shutdown-phase: 30s` — **각 shutdown phase마다 30s** 적용 (Spring Boot 3.x 명세). 단일 phase 30s가 아니라 phase 수만큼 잠재적 누적. 일반 web request 1-phase 가정 시 30s 매칭, executor service 등 추가 phase 존재 시 30s 초과 가능 — ADR016 deregistration_delay 30s는 단일 phase 기준 매칭이며, 다중 phase 시 ECS가 SIGKILL 후속 trigger
 - **모든 profile 공통**: local/dev에서 30s 대기가 다소 답답하지만 운영 일관성 우선 — 디버깅 패턴이 production과 동일
 
 ### prod 한정 — `application-prod.yml`
@@ -61,17 +61,28 @@ server:
 - **Spring Security HSTS 활성** (`httpStrictTransportSecurity`): HTTPS 강제 강화. 별도 Story
 - **`X-Forwarded-For` 기반 client IP 로깅 정합**: LogstashEncoder MDC에 `clientIp` 추가 등 — `logback-spring.xml` 변경 필요. 별도 Story
 - **WebSocket / SSE graceful shutdown 처리**: 본 ADR은 일반 web request만 가정. WebSocket 도입 시 별도 검토
-- **liveness/readiness probe 분리** (Spring Boot Actuator `management.endpoint.health.probes.enabled`): graceful shutdown 중 readiness=DOWN 응답 → ALB Target unhealthy → 자동 deregister. 별도 Story (`/actuator/health/readiness` 노출과 묶음)
+- **WebClient (reactor-netty) graceful shutdown 정합성 검증**: 본 프로젝트는 `spring-boot-starter-webflux` 의존(KakaoOAuthClient/NaverOAuthClient용 WebClient 등록). OAuth token 교환 in-flight 시 SIGTERM 수신 시 reactor-netty가 graceful 단계와 어떻게 정합하는지 명시 부재. 현재 OAuth 호출은 로그인 시점 request-scoped + short-lived(~ms 단위)라 운영 위험 낮으나, **별도 Story로 reactor-netty `ConnectionProvider` shutdown 정책 + WebClient timeout 명시 검토**
+- **liveness/readiness probe 분리** (Spring Boot Actuator `management.endpoint.health.probes.enabled`): graceful shutdown 중 readiness=DOWN 응답 → ALB Target unhealthy → 자동 deregister. 본 ADR 결정만으로는 graceful 중에도 `/health` Controller가 200 응답 → ALB false-positive healthy 지속 → 신규 요청 라우팅 → 503 — **즉 본 Story로는 "다운타임 0초" 달성 못함**. 별도 Story (`/actuator/health/readiness` 노출 + ALB health check path 전환)와 묶음
+- **SecurityConfig `requiresChannel().anyRequest().requiresSecure()` 이중화**: ALB SG 외 진입 경로(예: VPC 내부 service mesh)가 임의 `X-Forwarded-Proto: https` 전송 시 신뢰 표면 증가. 본 ADR은 SG가 ALB만 허용한다는 L3 가정에 의존. application-layer 이중화는 별도 Story
+- **graceful shutdown 효과 검증 통합 테스트**: `@SpringBootTest + MockMvc + header("X-Forwarded-Proto","https")` → `request.getScheme() == "https"` 단언으로 native 동작 입증 가능. 본 ADR은 설정만 적용, 입증 통합 테스트는 별도 Story
+- **PACKAGE.md / DOMAIN.md 갱신**: 본 Story는 application 설정 변경 — 도메인 의존 방향·도메인 의도 변경 0건. 갱신 불요
 
 ## 결과 (Consequences)
 
 ### 긍정적
 
-- **ts010-3·ts010-4 즉시 발화 차단**: ALB Listener HTTPS redirect 무한 loop + 쿠키 거부 두 시나리오 application 단에서 해결
-- **ECS rolling update 다운타임 0초**: deregistration_delay 30s 동안 in-flight request 정상 완료 → 5xx 0건
+- **ts010-3·ts010-4 application 측 전제 차단**: ALB Listener HTTPS redirect 무한 loop + 쿠키 거부 두 시나리오의 application 측 원인(scheme 미인식) 해결. **단, 실제 발화 차단 입증은 ECS Task 배포 + ALB Listener 통합 환경에서만 검증 가능 — 본 Story는 application 설정 측 전제만 충족**
+- **ECS rolling update 5xx 종료 측 0건 차단의 application 측 전제 충족**: graceful + timeout-per-shutdown-phase 매칭으로 SIGTERM 후 in-flight request 완료 보장. **단, 최종 "다운타임 0초" KPI(product-infra-deploy.md)는 본 Story 단독 책임 아님** — `minimumHealthyPercent=100` + `maximumPercent=200` (product Epic 2 §) + `healthCheckGracePeriod=90s` (ADR016) + readiness probe(별도 Story) + 새 Task healthy 도달까지 모두 정합해야 보장
 - **운영 일관성**: local/dev에서도 30s graceful shutdown 적용 — prod와 동일 종료 패턴, 디버깅 reproducible
 - **Tomcat valve 단계 처리**: application 코드 무영향. `@RestController`/`Filter`에서 `request.isSecure()` 등이 자연스럽게 https 인식
 - **ADR016 deregistration_delay 결정의 실효성 확보**: default 동작 의존 → 명시 의존으로 강화
+
+### 효과 발현 시점
+
+본 Story 머지로 application 설정은 즉시 적용되지만, **실제 효과 발현은 다음 ECS Task 배포 시점부터**:
+- **staging Task**: Story-047 `SPRING_PROFILES_ACTIVE=prod` 사용 중이라 다음 staging Task 배포 시점에 즉시 발현
+- **prod Task**: milestone item #11/#13 (ECS Service 등록 + ALB Target 등록) 완료 후 prod Task 첫 배포 시점에 발현
+- 본 Story만 단독 머지된 상태에서는 **dev-cicd.yml EC2 배포에 영향 0건** (EC2는 8080 직접 노출, ALB 미사용)
 
 ### 트레이드오프 / 부정적
 
@@ -79,6 +90,7 @@ server:
 - **WebSocket 미고려**: 현재 WebSocket 미사용 — 영향 없음. 도입 시 별도 graceful 정책 필요
 - **`X-Forwarded-*` 헤더 신뢰 표면 증가**: ALB가 신뢰 가능한 upstream이라는 가정. ALB 외 직접 호출(예: VPC 내부 다른 service)이 임의 `X-Forwarded-Proto: https` 전송 시 Spring이 신뢰 → SG로 ALB만 진입 허용(ts009 §7.1 alb-sg → app-sg)이므로 차단됨. 보안 표면 증가는 SG에서 막힘
 - **prod 한정 적용으로 staging Task에 미적용**: Story-047 staging Task가 `SPRING_PROFILES_ACTIVE=prod` 사용 중이므로 staging에도 자동 적용됨 (의도된 결과). 향후 `application-staging.yml` 신설 시 staging profile에도 명시 필요 — ADR014 follow-up `application-staging.yml`에 포함
+- **30s 초과 query/migration 강제 종료 위험**: `timeout-per-shutdown-phase: 30s` phase 도달 시 in-flight thread interrupt → `@Transactional` rollback. 현 시점 도메인 코드 중 30s 초과 query 없음 (OLTP single-card CRUD 위주). Flyway migration은 부팅 시점 1회로 shutdown phase와 무관. 발견 시 phase timeout 재검토
 
 ## 대안 비교
 

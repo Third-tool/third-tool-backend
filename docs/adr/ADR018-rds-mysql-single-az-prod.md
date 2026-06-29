@@ -28,12 +28,12 @@ Story-048(VPC) + Story-047(ECS Task Def secrets DB 4종) + Story-049(ALB) 후 �
 | 항목 | 결정 | 근거 |
 | --- | --- | --- |
 | 엔진 | MySQL 8.0.39 | application-prod.yml `org.hibernate.dialect.MySQLDialect` + Flyway V1~V13 정합. 8.0.39는 2026-06 시점 LTS |
-| 인스턴스 클래스 | `db.t4g.micro` (1 vCPU / 1 GB / ARM Graviton) | cost.md baseline $0.45/일 정합. M1 트래픽 0명에 t3.medium은 5배 과도 |
+| 인스턴스 클래스 | `db.t4g.micro` (1 vCPU / 1 GB / ARM Graviton2) | cost.md baseline $0.45/일 정합. M1 트래픽 0명에 t3.medium은 5배 과도. **AWS RDS는 ARM Graviton용 MySQL 8.0 proprietary binary build 제공** (MySQL community 공식 ARM 배포가 아닌 RDS-specific managed build) |
 | Multi-AZ | **false (single-AZ)** | milestone item #14 명시 deviation. M2 multi-AZ는 modify-db-instance로 무중단 활성 가능 |
 | AZ | `ap-northeast-2a` | data-2a subnet 배치 |
 | 스토리지 | 20 GB gp3 + max 50 GB autoscale | M1 schema(V13) + 시드 데이터 < 1 GB. autoscale로 트래픽 증가 시 자동 확장 |
 | 스토리지 암호화 | true (KMS `alias/aws/rds`) | AWS 관리형 default. 운영 시 KMS 비용 없음 |
-| 백업 retention | 7일 + automated daily 17:00-18:00 KST | RTO 7일 (PITR 1초 단위). M1 트래픽 0 단계라 충분 |
+| 백업 retention | 7일 + automated daily 17:00-18:00 KST | RTO 7일 (PITR 1초 단위). RDS는 `backupRetentionPeriod` 값과 동일하게 binlog 자동 retention → 7일 PITR 보장. M1 트래픽 0 단계라 충분 |
 | Maintenance window | Sun 18:00-19:00 KST | 한국 새벽 시간 회피 |
 | deletion_protection | true | 단일 운영자 실수 삭제 차단 안전망 |
 | autoMinorVersionUpgrade | true | 8.0.39 → 8.0.40+ 자동 보안 패치. Maintenance window 내 적용 |
@@ -46,7 +46,7 @@ Story-048(VPC) + Story-047(ECS Task Def secrets DB 4종) + Story-049(ALB) 후 �
 | Parameter | Value | 적용 시점 | 근거 |
 | --- | --- | --- | --- |
 | `character_set_server` | utf8mb4 | pending-reboot | JDBC URL `characterEncoding=UTF-8` 정합. emoji + 한글 multi-byte 정확 |
-| `collation_server` | utf8mb4_0900_ai_ci | pending-reboot | MySQL 8.0 default + accent/case insensitive 한글 정렬 |
+| `collation_server` | utf8mb4_unicode_ci | pending-reboot | Flyway V1~V13 모든 테이블이 `COLLATE=utf8mb4_unicode_ci` 명시 사용(MySQL 5.7 legacy). server-level을 맞춰 V14+ 신규 테이블 collation drift 차단. MySQL 8.0 default(utf8mb4_0900_ai_ci) 채택 시 기존 테이블과 mix 에러 위험 |
 | `time_zone` | Asia/Seoul | immediate | JDBC URL `serverTimezone=Asia/Seoul` + logback + Docker TZ 정합 |
 | `slow_query_log` | 1 | immediate | 1초 초과 쿼리 로깅 활성 |
 | `long_query_time` | 1.0 | immediate | OLTP CRUD ms 단위라 1초 초과는 비정상 |
@@ -118,6 +118,7 @@ Story-048(VPC) + Story-047(ECS Task Def secrets DB 4종) + Story-049(ALB) 후 �
 ## 다시 검토할 시점
 
 - **트래픽 발생 시점**: Multi-AZ 활성 + read replica 검토
+- **ECS Service desiredCount > 8 도달 시점**: Hikari pool 10 × Task 8 = 80 in-use → max_connections 100 임계 접근. RDS Proxy 도입 또는 max_connections 200 상향
 - **max_connections 100 도달 시점**: ECS Service desiredCount 증가 또는 Hikari pool size 증가. RDS Proxy 검토
 - **storage 80% 도달 시점**: gp3 max 50 GB autoscale → 추가 확장 또는 archive 전략
 - **utf8mb4 → utf8mb4_0900_bin 변경 필요 시점**: case-sensitive 정렬 필요 도메인 도입 시 (현재 axis topic 이름 등은 case-insensitive 정합)

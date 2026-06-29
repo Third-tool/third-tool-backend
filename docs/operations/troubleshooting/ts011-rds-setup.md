@@ -11,7 +11,13 @@ ts009(VPC)·ts008(ECS)·ts010(ALB)·ts012(Secrets Manager, 후속 Story)와 cros
 - **VPC 셋업 완료** (ts009 §1-8) — VPC ID + data-2a/data-2c subnet ID + db-sg ID 발행
 - AWS 콘솔 RDS 관리 권한 (`rds:*`, `kms:DescribeKey`, `logs:CreateLogGroup`, `iam:CreateServiceLinkedRole` — Performance Insights/Enhanced Monitoring용)
 - AWS CLI 권장
-- **결제**: RDS 인스턴스 시간 비용 즉시 발생 (db.t4g.micro = $0.019/시간 = $0.45/일) + storage 비용($0.115/GB·월 × 20 = $2.30/월) + Performance Insights 무료(7일 retention)
+- **결제**: 다음 비용 즉시 발생
+  - RDS 인스턴스 db.t4g.micro = $0.019/시간 = $0.45/일
+  - storage 비용 $0.115/GB·월 × 20 = $2.30/월
+  - Performance Insights 무료 (7일 retention, AWS 2026-06 docs 기준)
+  - Enhanced Monitoring 60s — CloudWatch metric 비용 미미
+  - CloudWatch Logs ingestion $0.50/GB + storage $0.03/GB·월 (M1 추정 < $0.50/월 — slow query + error log 합쳐)
+  - 자동 백업 — `backupRetentionPeriod` 일수만큼 storage 비용 추가 ($0.095/GB·월 × 20 × 7/30 ≈ $0.44/월 평균)
 
 > **단일 운영자 안전망**: `deletionProtection: true` 명시 — 콘솔에서 실수로 instance 삭제 시도 시 거부. 영구 삭제는 명시적으로 `deletion_protection=false` 변경 후 재시도 필요.
 
@@ -64,6 +70,39 @@ aws rds create-db-subnet-group \
 
 ---
 
+## 3.5 (CLI 운영자 1회성) Enhanced Monitoring IAM Role 사전 생성
+
+§5에서 `--monitoring-role-arn`을 사용하려면 본 Role이 사전 존재해야 한다. AWS Console에서 RDS 첫 생성 시 자동 생성되지만, CLI 운영자는 다음 명령 1회 실행 필수 (ts011-2 트러블슈팅으로 빠지기 전 사전 차단):
+
+```bash
+cat > /tmp/rds-monitoring-trust.json <<'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "Service": "monitoring.rds.amazonaws.com" },
+    "Action": "sts:AssumeRole"
+  }]
+}
+EOF
+
+aws iam create-role --role-name rds-monitoring-role \
+  --assume-role-policy-document file:///tmp/rds-monitoring-trust.json
+
+aws iam attach-role-policy --role-name rds-monitoring-role \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+
+# 1-2분 IAM 전파 대기 권장
+```
+
+기존 Role 존재 확인:
+```bash
+aws iam get-role --role-name rds-monitoring-role 2>/dev/null | jq '.Role.Arn'
+# 출력 있으면 skip
+```
+
+---
+
 ## 4. 초기 master password 생성
 
 운영자가 안전한 임의 password 생성 — 본 password는 Story-052 Secrets Manager에 `DB_PASSWORD`로 등록. RDS 생성 후 즉시 Secrets Manager로 옮기고 운영자 local에서 폐기.
@@ -76,6 +115,8 @@ echo "INITIAL_PASSWORD=$INITIAL_PASSWORD"
 ```
 
 > **MySQL master password 제약**: 8~41자, 영문/숫자/`! # $ % & ' ( ) * + , - . / : ; < = > ? @ [ ] ^ _ \` { | } ~`만 가능. `/`, `"`, `@` 등 일부 special char는 JDBC URL에 들어가면 escaping 필요 — 위 명령은 `/`, `+`, `=` 제거.
+
+> **JDBC URL escaping 회피 보강**: 본 프로젝트는 password를 application-prod.yml `${DB_PASSWORD}` 환경변수로 주입 → JDBC URL에 직접 들어가지 않음 (Hikari가 별도 property로 처리). 따라서 위 password가 `@`, `/` 포함해도 무해. 다만 운영자가 수동으로 `mysql -h ... -p` 명령에 password 입력 시 shell escaping은 별개 — single-quote로 감싸기 `mysql -h $DB_ENDPOINT -p'$INITIAL_PASSWORD'`.
 
 ---
 

@@ -11,9 +11,9 @@
     },
     {
       "parameterName": "collation_server",
-      "parameterValue": "utf8mb4_0900_ai_ci",
+      "parameterValue": "utf8mb4_unicode_ci",
       "applyMethod": "pending-reboot",
-      "rationale": "MySQL 8.0 default + accent/case insensitive — 한글 정렬 일관성"
+      "rationale": "Flyway V1~V13의 모든 테이블이 COLLATE=utf8mb4_unicode_ci(MySQL 5.7 legacy default) 명시 사용. server-level collation을 utf8mb4_unicode_ci로 맞춰 향후 신규 테이블(V14+) collation drift 차단. MySQL 8.0 default(utf8mb4_0900_ai_ci) 채택 시 기존 테이블과 collation mix 에러 위험"
     },
     {
       "parameterName": "time_zone",

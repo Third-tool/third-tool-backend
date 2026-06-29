@@ -1,0 +1,52 @@
+{
+  "vpc": "thirdtool-vpc",
+  "creationOrder": ["alb-sg", "app-sg", "db-sg", "bastion-sg", "vpc-endpoint-sg"],
+  "creationOrderRationale": "SG 간 sourceSg 참조이므로 참조 대상이 먼저 존재해야 함 — alb-sg → app-sg(refs alb-sg) → db-sg(refs app-sg) → bastion-sg → vpc-endpoint-sg(refs app-sg)",
+  "securityGroups": [
+    {
+      "name": "alb-sg",
+      "description": "ALB internet-facing — HTTP/HTTPS from anywhere",
+      "ingress": [
+        { "protocol": "tcp", "fromPort": 80,  "toPort": 80,  "source": "0.0.0.0/0",     "description": "HTTP from internet (will redirect to 443)" },
+        { "protocol": "tcp", "fromPort": 443, "toPort": 443, "source": "0.0.0.0/0",     "description": "HTTPS from internet" }
+      ],
+      "egress": [
+        { "protocol": "-1",  "fromPort": 0,   "toPort": 0,   "destination": "0.0.0.0/0", "description": "all outbound (ALB → app-sg targets)" }
+      ]
+    },
+    {
+      "name": "app-sg",
+      "description": "ECS Task in app subnet — accepts only from alb-sg on container port",
+      "ingress": [
+        { "protocol": "tcp", "fromPort": 8080, "toPort": 8080, "sourceSecurityGroup": "alb-sg", "description": "Spring Boot container port from ALB only" }
+      ],
+      "egress": [
+        { "protocol": "-1",  "fromPort": 0,    "toPort": 0,    "destination": "0.0.0.0/0",      "description": "all outbound (ECR pull · Secrets Manager · CloudWatch Logs · external API via NAT)" }
+      ]
+    },
+    {
+      "name": "db-sg",
+      "description": "RDS MySQL — accepts only from app-sg on 3306. No egress.",
+      "ingress": [
+        { "protocol": "tcp", "fromPort": 3306, "toPort": 3306, "sourceSecurityGroup": "app-sg", "description": "MySQL from ECS Task only" }
+      ],
+      "egress": []
+    },
+    {
+      "name": "bastion-sg",
+      "description": "Bastion via SSM Session Manager — no SSH inbound (SSM uses outbound only)",
+      "ingress": [],
+      "egress": [
+        { "protocol": "-1",  "fromPort": 0,    "toPort": 0,    "destination": "0.0.0.0/0",      "description": "all outbound (SSM agent → ssm/ssmmessages/ec2messages endpoints)" }
+      ]
+    },
+    {
+      "name": "vpc-endpoint-sg",
+      "description": "VPC Interface Endpoints (M2) — accepts HTTPS from app-sg only",
+      "ingress": [
+        { "protocol": "tcp", "fromPort": 443,  "toPort": 443,  "sourceSecurityGroup": "app-sg", "description": "HTTPS from ECS Task for endpoint resolution" }
+      ],
+      "egress": []
+    }
+  ]
+}

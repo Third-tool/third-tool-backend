@@ -1,0 +1,56 @@
+{
+  "region": "ap-northeast-2",
+  "vpc": {
+    "name": "thirdtool-vpc",
+    "cidr": "10.0.0.0/16",
+    "enableDnsSupport": true,
+    "enableDnsHostnames": true,
+    "instanceTenancy": "default"
+  },
+  "availabilityZones": ["ap-northeast-2a", "ap-northeast-2c"],
+  "subnets": [
+    { "name": "public-2a", "cidr": "10.0.0.0/24",  "az": "ap-northeast-2a", "layer": "public", "mapPublicIpOnLaunch": true,  "purpose": "ALB + NAT Gateway" },
+    { "name": "public-2c", "cidr": "10.0.1.0/24",  "az": "ap-northeast-2c", "layer": "public", "mapPublicIpOnLaunch": true,  "purpose": "ALB (multi-AZ target)" },
+    { "name": "app-2a",    "cidr": "10.0.10.0/24", "az": "ap-northeast-2a", "layer": "app",    "mapPublicIpOnLaunch": false, "purpose": "ECS Fargate Task" },
+    { "name": "app-2c",    "cidr": "10.0.11.0/24", "az": "ap-northeast-2c", "layer": "app",    "mapPublicIpOnLaunch": false, "purpose": "ECS Fargate Task" },
+    { "name": "data-2a",   "cidr": "10.0.20.0/24", "az": "ap-northeast-2a", "layer": "data",   "mapPublicIpOnLaunch": false, "purpose": "RDS MySQL primary" },
+    { "name": "data-2c",   "cidr": "10.0.21.0/24", "az": "ap-northeast-2c", "layer": "data",   "mapPublicIpOnLaunch": false, "purpose": "RDS MySQL standby (M2 multi-AZ)" }
+  ],
+  "internetGateway": {
+    "name": "thirdtool-igw",
+    "attachToVpc": "thirdtool-vpc"
+  },
+  "natGateway": {
+    "name": "thirdtool-nat",
+    "subnet": "public-2a",
+    "connectivityType": "public",
+    "elasticIp": "auto-allocate",
+    "comment": "single-AZ — 2a 장애 시 private 트래픽 전체 차단. M2에서 multi-AZ 확장 (public-2c에 NAT 추가 + private-rt 분리)"
+  },
+  "routeTables": [
+    {
+      "name": "public-rt",
+      "associatedSubnets": ["public-2a", "public-2c"],
+      "routes": [
+        { "destinationCidrBlock": "0.0.0.0/0", "gatewayId": "thirdtool-igw" }
+      ]
+    },
+    {
+      "name": "private-rt",
+      "associatedSubnets": ["app-2a", "app-2c", "data-2a", "data-2c"],
+      "routes": [
+        { "destinationCidrBlock": "0.0.0.0/0", "natGatewayId": "thirdtool-nat" }
+      ]
+    }
+  ],
+  "tags": {
+    "default": {
+      "Project": "ThirdTool",
+      "Environment": "shared",
+      "ManagedBy": "Story-048"
+    },
+    "perResource": {
+      "subnet": { "Layer": "{public|app|data}" }
+    }
+  }
+}

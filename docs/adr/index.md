@@ -16,3 +16,4 @@
 | [ADR012](ADR012.md) | 운영 컨테이너 base image `eclipse-temurin:21-jre-alpine` 채택, Distroless 보류 (Story 1-1) | Accepted | 2026-06-25 |
 | [ADR013](ADR013-gha-oidc-assume-role.md) | GitHub Actions → AWS 인증을 OIDC AssumeRole로 전환 (Story-046) | Accepted | 2026-06-29 |
 | [ADR014](ADR014-ecs-task-iam-role-separation.md) | ECS Task IAM Role 3종 분리 — Execution/Task/GHA Deploy (Story-047) | Accepted | 2026-06-29 |
+| [ADR015](ADR015-vpc-3-layer-network-design.md) | VPC 10.0.0.0/16 + 2 AZ × 3-layer subnet + 단일 NAT (Story-048) | Accepted | 2026-06-29 |

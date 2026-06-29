@@ -21,6 +21,17 @@ spring:
     # CI/서버는 SPRING_PROFILES_ACTIVE=dev 또는 prod 명시. 가이드: ts003.
     active: ${SPRING_PROFILES_ACTIVE:dev,local}
 
+  # Story-050 (ADR017): graceful shutdown — SIGTERM 수신 후 in-flight request 완료 대기.
+  # ECS rolling update 시 Target Group deregistration_delay(30s, ADR016)와 매칭.
+  # 모든 profile 공통 — local/dev에서 30s 대기가 다소 답답하나 운영 일관성 우선.
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+# Story-050 (ADR017): Spring Boot 3.x default shutdown=immediate를 graceful로 변경.
+# spring.lifecycle.timeout-per-shutdown-phase 와 짝.
+server:
+  shutdown: graceful
+
 # 로깅 설정은 logback-spring.xml로 일원화 (ADR008)
 
 # JWT 토큰 공통 (Story 1-1 외부화) — cookie.secure는 profile별 override

@@ -33,6 +33,13 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+# Story-050 (ADR017): ALB HTTPS termination → ECS HTTP forwarding 경로에서
+# X-Forwarded-Proto/Host/For 헤더를 Tomcat이 정확히 인식. native 사용 시
+# Tomcat RemoteIpValve가 동작 → self-referential URL 생성 시 https scheme 보존
+# + jwt.cookie.secure=true 적용 정합. dev에서는 미적용(localhost 직접 접속이라 무관).
+server:
+  forward-headers-strategy: native
+
 # prod 프로파일 — HTTPS 환경. Secure=true (Story 1-3)
 jwt:
   cookie:

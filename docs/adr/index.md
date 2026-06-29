@@ -18,3 +18,4 @@
 | [ADR014](ADR014-ecs-task-iam-role-separation.md) | ECS Task IAM Role 3종 분리 — Execution/Task/GHA Deploy (Story-047) | Accepted | 2026-06-29 |
 | [ADR015](ADR015-vpc-3-layer-network-design.md) | VPC 10.0.0.0/16 + 2 AZ × 3-layer subnet + 단일 NAT (Story-048) | Accepted | 2026-06-29 |
 | [ADR016](ADR016-alb-listener-target-group.md) | ALB 1개 공유 + Listener 80→443 + Target Group type=ip + TLS 1.3 (Story-049) | Accepted | 2026-06-29 |
+| [ADR017](ADR017-spring-forward-headers-graceful-shutdown.md) | Spring `forward-headers-strategy=native` + `server.shutdown=graceful` (Story-050) | Accepted | 2026-06-29 |

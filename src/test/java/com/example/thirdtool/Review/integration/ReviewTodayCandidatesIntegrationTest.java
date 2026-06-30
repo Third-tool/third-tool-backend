@@ -77,7 +77,7 @@ class ReviewTodayCandidatesIntegrationTest {
     }
 
     private Deck persistDeck(String name, Long axisId) {
-        Deck deck = Deck.createFromLearningMaterial(user, axisId, 0L, name);
+        Deck deck = Deck.createFromAxis(user, axisId, name);
         em.persist(deck);
         return deck;
     }

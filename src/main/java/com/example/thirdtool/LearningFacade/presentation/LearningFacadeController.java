@@ -179,9 +179,7 @@ public class LearningFacadeController {
                         request.aiProvider(),
                         request.webSource(),
                         request.memo(),
-                        request.linkedTopicIds(),
-                        request.deckName(),
-                        Boolean.TRUE.equals(request.forceCreateDeck())));
+                        request.linkedTopicIds()));
     }
 
     // 13. GET /learning-facade/materials

@@ -63,7 +63,7 @@ class ReviewQueryServiceTest {
         ReflectionTestUtils.setField(owner, "id", 1L);
         other = UserEntity.ofLocal("other", "pw", "n", "x@e.com");
         ReflectionTestUtils.setField(other, "id", 2L);
-        deck = Deck.createFromLearningMaterial(owner, 10L, 200L, "DDD");
+        deck = Deck.createFromAxis(owner, 10L, "DDD");
         ReflectionTestUtils.setField(deck, "id", 500L);
     }
 

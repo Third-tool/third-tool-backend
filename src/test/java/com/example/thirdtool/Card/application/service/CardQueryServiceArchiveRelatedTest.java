@@ -51,7 +51,7 @@ class CardQueryServiceArchiveRelatedTest {
 
         user = UserEntity.ofLocal("u", "pw", "n", "u@e.com");
         ReflectionTestUtils.setField(user, "id", 1L);
-        deck = Deck.createFromLearningMaterial(user, 10L, 200L, "DDD");
+        deck = Deck.createFromAxis(user, 10L, "DDD");
         ReflectionTestUtils.setField(deck, "id", 500L);
     }
 

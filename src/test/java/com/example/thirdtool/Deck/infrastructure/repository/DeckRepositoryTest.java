@@ -45,7 +45,8 @@ class DeckRepositoryTest {
     }
 
     private Deck persistDeckWithFacadeLink(String name, Long axisId, Long materialId) {
-        Deck deck = Deck.createFromLearningMaterial(user, axisId, materialId, name);
+        Deck deck = Deck.createFromAxis(user, axisId, name);
+        org.springframework.test.util.ReflectionTestUtils.setField(deck, "learningMaterialId", materialId);
         em.persist(deck);
         em.flush();
         return deck;
@@ -106,5 +107,31 @@ class DeckRepositoryTest {
         List<Deck> result = deckRepository.findByLearningMaterialIdAndDeletedFalse(999L);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("existsByAxisIdAndDeletedFalse — 해당 axisId Deck 존재 시 true")
+    void existsByAxisId_true() {
+        persistDeckWithFacadeLink("Axis10 Deck", 10L, 100L);
+
+        assertThat(deckRepository.existsByAxisIdAndDeletedFalse(10L)).isTrue();
+    }
+
+    @Test
+    @DisplayName("existsByAxisIdAndDeletedFalse — 해당 axisId Deck 없으면 false")
+    void existsByAxisId_false() {
+        persistDeckWithFacadeLink("Axis10 Deck", 10L, 100L);
+
+        assertThat(deckRepository.existsByAxisIdAndDeletedFalse(99L)).isFalse();
+    }
+
+    @Test
+    @DisplayName("existsByAxisIdAndDeletedFalse — soft delete된 Deck는 false")
+    void existsByAxisId_softDelete_제외() {
+        Deck deck = persistDeckWithFacadeLink("Axis10 Deck", 10L, 100L);
+        deck.softDelete();
+        em.flush();
+
+        assertThat(deckRepository.existsByAxisIdAndDeletedFalse(10L)).isFalse();
     }
 }

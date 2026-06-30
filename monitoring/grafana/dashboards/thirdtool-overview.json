@@ -1,0 +1,305 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "ThirdTool Spring Boot 백엔드 — 상태 · API · JVM · DB 4 row 종합 대시보드 (Story-054, Product 0-b Want 3-1)",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "panels": [],
+      "title": "1. 상태 (Service Health)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Spring Boot 인스턴스의 up 상태 (1=정상, 0=중단). Prometheus가 /actuator/prometheus scrape 성공 시 1.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "options": { "0": { "color": "red", "text": "DOWN" }, "1": { "color": "green", "text": "UP" } }, "type": "value" }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+        }
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 1 },
+      "id": 101,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "value_and_name" },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "up{job=\"third-tool\"}", "legendFormat": "{{instance}}", "refId": "A" }
+      ],
+      "title": "인스턴스 UP/DOWN",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "프로세스 uptime — Spring Boot 부팅 후 경과 시간 (초). 재배포·재시작 추적.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "s" } },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 1 },
+      "id": 102,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "process_uptime_seconds{job=\"third-tool\"}", "legendFormat": "{{instance}}", "refId": "A" }
+      ],
+      "title": "Process Uptime",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Spring Boot 시작 완료 시점. ECS rolling update 시 새 instance 부팅 시간 추적.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "s" } },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 1 },
+      "id": 103,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "application_started_time_seconds{job=\"third-tool\"}", "legendFormat": "{{instance}}", "refId": "A" }
+      ],
+      "title": "Application Started Time",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "JVM 부팅 후 경과 시간 (Spring start와 별개). startup time 진단.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "s" } },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 1 },
+      "id": 104,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "application_ready_time_seconds{job=\"third-tool\"}", "legendFormat": "{{instance}}", "refId": "A" }
+      ],
+      "title": "Application Ready Time",
+      "type": "stat"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "id": 200,
+      "panels": [],
+      "title": "2. API (HTTP Server Requests)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "URI별 HTTP 요청 rate (req/s, 5분 window). Hot endpoint 식별.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 4, "showPoints": "auto", "spanNulls": false }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "reqps" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 201,
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (uri, method) (rate(http_server_requests_seconds_count{job=\"third-tool\"}[5m]))", "legendFormat": "{{method}} {{uri}}", "refId": "A" }
+      ],
+      "title": "HTTP Request Rate (req/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "URI별 p95 latency. SLO 위반 endpoint 식별. 1초 초과 = 슬로우 쿼리 의심.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 4, "showPoints": "auto", "spanNulls": false }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 0.5 }, { "color": "red", "value": 1 } ] }, "unit": "s" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 202,
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "histogram_quantile(0.95, sum by (uri, le) (rate(http_server_requests_seconds_bucket{job=\"third-tool\"}[5m])))", "legendFormat": "p95 {{uri}}", "refId": "A" }
+      ],
+      "title": "API p95 Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "응답 status별 rate. 4xx/5xx 비율 추적.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "pointSize": 4, "showPoints": "auto", "spanNulls": false, "stacking": { "mode": "normal", "group": "A" } }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "reqps" } },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 16 },
+      "id": 203,
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (status, outcome) (rate(http_server_requests_seconds_count{job=\"third-tool\"}[5m]))", "legendFormat": "{{status}} ({{outcome}})", "refId": "A" }
+      ],
+      "title": "Response Status Rate (4xx/5xx 추적)",
+      "type": "timeseries"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "id": 300,
+      "panels": [],
+      "title": "3. JVM",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "JVM heap memory used (area 별 분할). Old Gen 누적 증가 = GC 압박 또는 메모리 leak 의심.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "pointSize": 4, "showPoints": "auto", "spanNulls": false, "stacking": { "mode": "none", "group": "A" } }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "bytes" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "id": 301,
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "jvm_memory_used_bytes{job=\"third-tool\", area=\"heap\"}", "legendFormat": "{{id}}", "refId": "A" }
+      ],
+      "title": "JVM Heap Memory Used",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "JVM live thread count + state별. 갑작스러운 thread 증가 = blocked thread 추적 신호.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 4, "showPoints": "auto", "spanNulls": false }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "none" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "id": 302,
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "jvm_threads_live_threads{job=\"third-tool\"}", "legendFormat": "live", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "jvm_threads_states_threads{job=\"third-tool\"}", "legendFormat": "{{state}}", "refId": "B" }
+      ],
+      "title": "JVM Threads (live + state별)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Process + System CPU 사용률. ECS Task burst credit 소진 추적.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 4, "showPoints": "auto", "spanNulls": false }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 0.7 }, { "color": "red", "value": 0.9 } ] }, "unit": "percentunit", "max": 1, "min": 0 } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "id": 303,
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "process_cpu_usage{job=\"third-tool\"}", "legendFormat": "process", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "system_cpu_usage{job=\"third-tool\"}", "legendFormat": "system", "refId": "B" }
+      ],
+      "title": "CPU Usage (process + system)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "GC pause time (action·cause별). 잦은 G1 Old GC = heap 부족 신호.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisLabel": "", "axisPlacement": "auto", "drawStyle": "bars", "fillOpacity": 60, "lineWidth": 1, "pointSize": 4, "showPoints": "never", "spanNulls": false }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "s" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "id": 304,
+      "options": { "legend": { "calcs": ["mean", "sum"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(jvm_gc_pause_seconds_sum{job=\"third-tool\"}[5m])", "legendFormat": "{{action}} ({{cause}})", "refId": "A" }
+      ],
+      "title": "GC Pause Time (rate, 5m)",
+      "type": "timeseries"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 40 },
+      "id": 400,
+      "panels": [],
+      "title": "4. DB (HikariCP Connection Pool)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Hikari 활성 connection 수. application-prod.yml maximum-pool-size=10 대비 80% 도달 시 pool 부족 신호.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 7 }, { "color": "red", "value": 9 } ] }, "unit": "none" } },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 41 },
+      "id": 401,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "hikaricp_connections_active{job=\"third-tool\"}", "legendFormat": "{{pool}}", "refId": "A" }
+      ],
+      "title": "Active Connections",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Hikari pending (대기 중) connection 수. > 0 지속 = pool 부족 — maximum-pool-size 상향 검토.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] }, "unit": "none" } },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 41 },
+      "id": 402,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "hikaricp_connections_pending{job=\"third-tool\"}", "legendFormat": "{{pool}}", "refId": "A" }
+      ],
+      "title": "Pending Connections",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Hikari 누적 connection timeout. 증가 시 RDS network 또는 max_connections 임계 도달 추적.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] }, "unit": "none" } },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 41 },
+      "id": 403,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "hikaricp_connections_timeout_total{job=\"third-tool\"}", "legendFormat": "{{pool}}", "refId": "A" }
+      ],
+      "title": "Connection Timeout (누적)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Hikari pool 사용률 — active / max. 80% 지속 시 maximum-pool-size 상향 검토.",
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 0.6 }, { "color": "red", "value": 0.8 } ] }, "unit": "percentunit", "max": 1, "min": 0 } },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 41 },
+      "id": 404,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "hikaricp_connections_active{job=\"third-tool\"} / hikaricp_connections_max{job=\"third-tool\"}", "legendFormat": "{{pool}}", "refId": "A" }
+      ],
+      "title": "Pool Utilization",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Hikari connection acquisition latency (p95) + connection usage duration (p95). acquire가 0보다 크게 누적 = pool 경합.",
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisLabel": "", "axisPlacement": "auto", "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 4, "showPoints": "auto", "spanNulls": false }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }, "unit": "s" } },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 47 },
+      "id": 405,
+      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "pluginVersion": "11.2.0",
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(hikaricp_connections_acquire_seconds_bucket{job=\"third-tool\"}[5m])))", "legendFormat": "acquire p95", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(hikaricp_connections_usage_seconds_bucket{job=\"third-tool\"}[5m])))", "legendFormat": "usage p95", "refId": "B" }
+      ],
+      "title": "Connection Acquire / Usage Time (p95)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["thirdtool", "spring-boot", "overview"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "ThirdTool Overview (Story-054)",
+  "uid": "thirdtool-overview-v1",
+  "version": 1,
+  "weekStart": ""
+}

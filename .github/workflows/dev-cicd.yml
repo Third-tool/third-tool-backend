@@ -106,17 +106,36 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # Story-055: git_sha 기반 이미지 태깅 — :latest는 가독성, :{sha7}은 추적·롤백 단위.
+      # ECR lifecycle policy(Tier 2 Product 5 Story 1-3, M2)가 sha 태그 보존 정책 기준.
+      - name: Resolve image tag from git_sha
+        id: image_tag
+        run: |
+          SHA7="${GITHUB_SHA::7}"
+          REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+          REPO="$REGISTRY/third-tool-server"
+          echo "sha7=$SHA7" >> "$GITHUB_OUTPUT"
+          echo "registry=$REGISTRY" >> "$GITHUB_OUTPUT"
+          echo "repo=$REPO" >> "$GITHUB_OUTPUT"
+          echo "image_sha=$REPO:$SHA7" >> "$GITHUB_OUTPUT"
+          echo "image_latest=$REPO:latest" >> "$GITHUB_OUTPUT"
+          echo "::notice::Image tag resolved — sha7=$SHA7 latest=$REPO:latest"
+
       # 4️⃣ Spring Image Build (Story 1-1: 단일 루트 Dockerfile 통합 + builder stage가 gradle bootJar 수행)
       - name: Build Docker image
         run: docker build -t third-tool-server -f ./Dockerfile .
 
-      # 5️⃣ 태그 지정
-      - name: Tag Docker image
-        run: docker tag third-tool-server:latest ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+      # 5️⃣ 태그 지정 — dual tag (Story-055)
+      - name: Tag Docker image (latest + sha7)
+        run: |
+          docker tag third-tool-server:latest ${{ steps.image_tag.outputs.image_latest }}
+          docker tag third-tool-server:latest ${{ steps.image_tag.outputs.image_sha }}
 
-      # 6️⃣ Push Image to ECR
-      - name: Push to Amazon ECR
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/third-tool-server:latest
+      # 6️⃣ Push Image to ECR — both tags (Story-055)
+      - name: Push to Amazon ECR (latest + sha7)
+        run: |
+          docker push ${{ steps.image_tag.outputs.image_latest }}
+          docker push ${{ steps.image_tag.outputs.image_sha }}
 
       # 9️⃣ EC2 SSH 배포
       # TODO follow-up Story (TBD — milestone 0.0.1v item #11 / ECS Task Role 이행 시점):
@@ -125,13 +144,20 @@ jobs:
       # DefaultCredentialsProvider 전환과 함께 묶음. ADR013 follow-up 참조.
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          # Story-055: deploy 단계가 sha7 추적 가능한 image를 명시적으로 pull
+          IMAGE_TAG_SHA7: ${{ steps.image_tag.outputs.image_sha }}
+          IMAGE_TAG_LATEST: ${{ steps.image_tag.outputs.image_latest }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
           script_stop: true
+          envs: IMAGE_TAG_SHA7,IMAGE_TAG_LATEST
           script: |
             echo "🚀 [Deploy] Starting deployment on EC2..."
+            echo "📦 IMAGE_TAG_SHA7=$IMAGE_TAG_SHA7"
+            echo "📦 IMAGE_TAG_LATEST=$IMAGE_TAG_LATEST"
 
             cd /home/ubuntu/third-tool || mkdir -p /home/ubuntu/third-tool
             cd /home/ubuntu/third-tool
@@ -168,8 +194,10 @@ jobs:
             docker stop third-tool-server || true
             docker rm third-tool-server || true
 
-            echo "📦 Pulling latest Spring image..."
-            docker pull $ECR_REGISTRY/third-tool-server:latest
+            # Story-055: sha7-tagged image를 우선 pull (롤백 추적성 + ECR lifecycle 정합).
+            # :latest는 보조 — 운영자가 콘솔에서 빠르게 확인할 때 사용.
+            echo "📦 Pulling Spring image (sha7-tagged)..."
+            docker pull "$IMAGE_TAG_SHA7"
 
             # 🧹 쓰레기 이미지 자동 삭제
             echo "🧹 Cleaning unused Docker images..."
@@ -181,7 +209,7 @@ jobs:
             # StaticCredentialsProvider 사용 중이라 env 변수 주입 필요.
             # 제거 시점: milestone 0.0.1v item #11 (ECS Task Role 이행) + S3Config →
             # DefaultCredentialsProvider 전환과 함께 묶음.
-            echo "⚙️ Running Spring Boot container..."
+            echo "⚙️ Running Spring Boot container (image: $IMAGE_TAG_SHA7)..."
             docker run -d \
               --name third-tool-server \
               --network third-tool-net \
@@ -197,7 +225,7 @@ jobs:
               -e NAVER_CLIENT_ID="${{ secrets.NAVER_CLIENT_ID }}" \
               -e NAVER_CLIENT_SECRET="${{ secrets.NAVER_CLIENT_SECRET }}" \
               -e TZ=Asia/Seoul \
-              $ECR_REGISTRY/third-tool-server:latest
+              "$IMAGE_TAG_SHA7"
 
             echo "🔍 Containers running:"
             docker ps

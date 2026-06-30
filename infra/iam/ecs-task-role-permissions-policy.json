@@ -25,6 +25,39 @@
         "ssmmessages:OpenDataChannel"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "SecretsManagerReadOwnEnvPrefixes",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:ap-northeast-2:*:secret:thirdtool/dev/db-credential-*",
+        "arn:aws:secretsmanager:ap-northeast-2:*:secret:thirdtool/dev/jwt-secret-*",
+        "arn:aws:secretsmanager:ap-northeast-2:*:secret:thirdtool/dev/oauth-kakao-*",
+        "arn:aws:secretsmanager:ap-northeast-2:*:secret:thirdtool/dev/oauth-naver-*",
+        "arn:aws:secretsmanager:ap-northeast-2:*:secret:thirdtool/dev/gemini-api-key-*",
+        "arn:aws:secretsmanager:ap-northeast-2:*:secret:thirdtool/prod/db-credential-*",
+        "arn:aws:secretsmanager:ap-northeast-2:*:secret:thirdtool/prod/jwt-secret-*",
+        "arn:aws:secretsmanager:ap-northeast-2:*:secret:thirdtool/prod/oauth-kakao-*",
+        "arn:aws:secretsmanager:ap-northeast-2:*:secret:thirdtool/prod/oauth-naver-*",
+        "arn:aws:secretsmanager:ap-northeast-2:*:secret:thirdtool/prod/gemini-api-key-*"
+      ]
+    },
+    {
+      "Sid": "KMSDecryptForSecretsManager",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "secretsmanager.ap-northeast-2.amazonaws.com"
+        }
+      }
     }
   ]
 }

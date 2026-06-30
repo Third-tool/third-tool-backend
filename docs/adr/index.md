@@ -20,3 +20,4 @@
 | [ADR016](ADR016-alb-listener-target-group.md) | ALB 1개 공유 + Listener 80→443 + Target Group type=ip + TLS 1.3 (Story-049) | Accepted | 2026-06-29 |
 | [ADR017](ADR017-spring-forward-headers-graceful-shutdown.md) | Spring `forward-headers-strategy=native` + `server.shutdown=graceful` (Story-050) | Accepted | 2026-06-29 |
 | [ADR018](ADR018-rds-mysql-single-az-prod.md) | RDS MySQL prod single-AZ + db.t4g.micro + utf8mb4 + Asia/Seoul (Story-051) | Accepted | 2026-06-29 |
+| [ADR019](ADR019-secrets-manager-naming-and-task-role-scope.md) | Secrets Manager 5종 비밀 명명 + env-prefix 격리 + Task Role Resource scope (Story-052) | Accepted | 2026-06-30 |

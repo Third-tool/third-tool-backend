@@ -116,14 +116,14 @@ ON_FIELD ↔ ARCHIVE
 
 ### 2.2 Deck — 카드 분류 컨테이너
 
-**한 줄 책임**: 카드를 주제 단위로 계층 구조화하고, depth 일관성을 강제하며 공개 상태와 학습 진행 상태를 관리한다. 학습 자료 등록 흐름에서 자동 생성될 수도 있다 (Story-005-1, ADR007).
+**한 줄 책임**: 카드를 주제 단위로 계층 구조화하고, depth 일관성을 강제하며 공개 상태와 학습 진행 상태를 관리한다. **LearningAxis 추가 시 1:1로 자동 생성**된다 (Fix-Story 1~4 / ADR007 Amended 2026-06-30).
 
 **Aggregate Root**: `Deck` — 카드 목록과 하위 덱을 계층 일관성 하에 관리.
 
 **Entity / VO**:
 - 속성 — `name`, `lastAccessed`, `onLibrary`, `publishedAt`, `parentDeck`, `depth`, `subDecks`, `cards`, `user`
-- `axisId` (Long, nullable) — LearningFacade 축 연결 (Story-005-1). 자료 삭제와 무관하게 영구 보존.
-- `learningMaterialId` (Long, nullable) — 원천 학습 자료 ID (Story-005-1). 자료 삭제 시 null → "자료 미연결 Deck".
+- `axisId` (Long, nullable) — LearningFacade 축 연결. Axis 추가 시 자동 생성된 Deck은 채워진 상태로 시작 (Fix-Story 1).
+- `learningMaterialId` (Long, nullable) — 원천 학습 자료 ID (Story-005-1 잔존 컬럼). **Fix-Story 1 이후 새 흐름에서는 항상 null로 시작** — 후속 Story에서 컬럼 제거 검토 예정.
 - `progressStatus` (`DeckProgressStatus`, NOT NULL) — 학습 진행 상태 (Story-005-2). 기본값 `NOT_STARTED`.
 - `DeckProgressStatus` (Enum) — `NOT_STARTED` / `IN_PROGRESS` / `COMPLETED`
 - Aggregate Root 단일. 별도 VO 없음 (v1 단계).
@@ -137,7 +137,7 @@ ON_FIELD ↔ ARCHIVE
 6. 부모 변경 시 순환 구조 방지 검증 필요.
 7. 이름 변경 시 revisionCount 증가 없음 (revisionCount는 AxisTopic만 추적).
 8. 하위 덱 및 카드 구조 삭제 시 연쇄 삭제 — depth 재계산 불필요.
-9. `axisId`/`learningMaterialId`는 nullable — 사용자가 직접 만든 Deck은 둘 다 null. 자료 등록 흐름에서 만들어진 Deck은 둘 다 채워진 채로 시작 (Story-005-1).
+9. `axisId`/`learningMaterialId`는 nullable — 사용자가 직접 만든 Deck은 둘 다 null. **Axis 등록 흐름에서 만들어진 Deck은 `axisId`만 채워진 채로 시작** (Fix-Story 1, 2026-06-30). `learningMaterialId`는 새 흐름에서 채워지지 않는다.
 10. 자료 삭제 시 `markMaterialDeleted()`로 `learningMaterialId`만 null 전환 (멱등). `axisId`는 로드맵 추적성을 위해 보존.
 11. `progressStatus`는 외부 주입 금지 — `markInProgress()` / `recalculateProgressStatus()`로만 변경 (Story-005-2).
 12. `markInProgress()`는 **`NOT_STARTED → IN_PROGRESS` 전용 마커** (멱등 — 이미 IN_PROGRESS / COMPLETED면 무시). 회귀는 책임 아님.
@@ -145,7 +145,7 @@ ON_FIELD ↔ ARCHIVE
 
 **팩토리 메서드**:
 - `Deck.of(name, parentDeck, user)` — 사용자가 직접 생성 (기존 흐름).
-- `Deck.createFromLearningMaterial(user, axisId, materialId, name)` — 자료 등록 이벤트 핸들러가 호출 (Story-005-1, ADR007).
+- `Deck.createFromAxis(user, axisId, name)` — Axis 등록 이벤트 핸들러가 호출 (Fix-Story 1 / ADR007 Amended). 이름은 `LearningAxis.name`을 그대로 사용.
 
 **진행 상태 자동 갱신 트리거 (Story-005-2)**:
 - `CardCommandService.create`가 카드 추가 후 `deck.markInProgress()` 호출 → `NOT_STARTED → IN_PROGRESS`.
@@ -153,15 +153,20 @@ ON_FIELD ↔ ARCHIVE
 - `ReviewCommandService.incrementViewAndHandleMaxView`가 maxView 도달 시 archive 직후 `deck.recalculateProgressStatus()` 호출.
 - 모두 Card BC가 Deck Aggregate의 행위 메서드를 호출 (conventions §1.7 — 다른 Aggregate 상태를 직접 변경하지 않음). Card 도메인 자체는 변경 없음.
 
-**자료 삭제 협력 (Story-005-2)**:
+**Axis 추가 협력 (Fix-Story 1~4 / ADR007 Amended 2026-06-30)**:
+- `LearningFacadeCommandService.addAxis`가 Axis 저장 직후 `LearningAxisCreatedEvent`(immutable record, ADR007) 발행.
+- Deck BC 핸들러(`LearningAxisCreatedEventHandler`)가 `existsByAxisIdAndDeletedFalse(axisId)` 멱등 검사 후, 없으면 `Deck.createFromAxis(user, axisId, axisName)` → save.
+- 호출자 트랜잭션 안에서 동기 실행 — 핸들러가 throw하면 Axis 추가도 함께 롤백.
+- 같은 axis에 활성 Deck이 이미 있으면 no-op (재발행·재시도 안전).
+
+**자료 삭제 협력 (Story-005-2 잔존)**:
 - `LearningMaterialCommandService.deleteMaterial`이 자료 물리 삭제 **직전**에 `LearningMaterialDeletedEvent`(immutable record, ADR007) 발행.
 - Deck BC 핸들러(`LearningMaterialDeletedEventHandler`)가 `findByLearningMaterialIdAndDeletedFalse(materialId)`로 영향 Deck들을 조회 → 각각 `markMaterialDeleted()` 호출.
-- 호출자 트랜잭션 안에서 dirty checking으로 함께 flush — Deck.learning_material_id가 null로 update된 뒤 자료 row가 DELETE되어 FK 안전.
-- Story 5-1의 `LearningMaterialCreatedEvent`(mutable class — 결과 통신 필요)와 의도적으로 다른 형태(immutable record — 결과 통신 불필요).
+- Fix-Story 1 이후 새로 생성되는 Deck은 `learningMaterialId`가 항상 null이므로 이 핸들러는 **레거시 Deck(V7 이전 흐름으로 생성)에만 영향**. 후속 Story에서 컬럼·이벤트·핸들러 일괄 제거 검토.
 
 **주의·결정 메모**:
 - 동일 사용자 내 이름 중복 불가는 DB `uk_deck_user_name` UNIQUE 제약 + 도메인 검증 이중 방어.
-- 자료 등록 흐름의 자동 생성 시 동명 Deck 존재하면 핸들러가 `forceCreateDeck=false`면 `DECK_NAME_DUPLICATE`(409)로 전체 트랜잭션 롤백, `forceCreateDeck=true`면 suffix `(2)`~`(100)` 자동 부여 (100 초과 시 `DECK_NAME_DUPLICATE`).
+- ~~자료 등록 흐름의 자동 생성 시 동명 Deck 존재 시 핸들러가 `forceCreateDeck`로 분기~~ — **Fix-Story 1~4로 폐기**. 새 흐름은 Axis 단위 멱등(`existsByAxisIdAndDeletedFalse`)으로 처리하며, Axis 이름이 `learning_axis (facade_id, name)` UNIQUE로 이미 facade 내 유일하므로 동명 Deck collision은 발생하지 않는다.
 - Deck `axisId`·`learningMaterialId` FK는 `ON DELETE SET NULL` (Flyway V7) — 축·자료 삭제 시 Deck 자체는 보존.
 - `progressStatus` DB 컬럼은 `VARCHAR(20) NOT NULL DEFAULT 'NOT_STARTED'` + CHECK 제약 + 인덱스 (Flyway V8). 도메인 + DB 이중 방어.
 - 빈 Deck(활성 Card 0)에서 `markInProgress()` 호출은 NOT_STARTED → IN_PROGRESS로 전환되지만 직후 `recalculateProgressStatus()`가 호출되면 다시 NOT_STARTED로 회귀 — 둘 다 정상 흐름.
@@ -256,8 +261,8 @@ NO_MATERIAL ─ TopicMaterial 연결 → PARTIALLY_COVERED ─ proficiencyLevel�
 - `revisionCount >= 3` 시 "단련 중" 안내 (강제 제한 아님).
 - 신규 주제 저장 후 "기존 자료 연결" 옵션은 Repository 조합으로 처리 (`linkableMaterials` 응답 필드, Story-004-2).
 - 주제 삭제 시 archive 패턴 — `TopicDeletionRecord` 스냅샷 보존 (ADR003: AxisTopic은 soft delete 미적용).
-- **자료 등록 시 Deck 자동 생성** — `LearningMaterialCommandService.createMaterial`이 자료 저장 직후 `LearningMaterialCreatedEvent`(동기 도메인 이벤트, ADR007) 발행. Deck BC 핸들러가 같은 트랜잭션에서 동명의 Deck 생성. `linkedTopicIds`가 있으면 첫 주제의 축 ID가 Deck에 귀속, 비어있으면 axisId=null (Story-005-1).
-- 자료 응답에 `deckCreated`/`deckId`/`deckName` 포함 (이벤트의 mutable 결과 통신 채널 — ADR007 설계 결정).
+- **Axis 등록 시 Deck 자동 생성** — `LearningFacadeCommandService.addAxis`가 Axis 저장 직후 `LearningAxisCreatedEvent`(동기 immutable record, ADR007 Amended) 발행. Deck BC 핸들러가 같은 트랜잭션에서 Axis와 같은 이름의 Deck을 생성 (Fix-Story 1~4, 2026-06-30). 동일 axis에 활성 Deck이 이미 있으면 no-op (멱등).
+- 자료 등록 응답에서 `deckCreated`/`deckId`/`deckName` 필드 **제거** — Material은 더 이상 Deck 생성 진입점이 아니다 (Fix-Story 3).
 - **자료 삭제 시 Deck 자료 참조 끊기** — `LearningMaterialCommandService.deleteMaterial`이 자료 물리 삭제 **직전**에 `LearningMaterialDeletedEvent`(immutable record, ADR007) 발행. Deck BC 핸들러가 영향 Deck들의 `learningMaterialId`만 null로 끊고 Deck 자체는 보존(`axisId`는 로드맵 추적성을 위해 유지). 호출자 트랜잭션 안에서 dirty checking → DB FK 안전 (Story-005-2).
 - **getFacade 응답에 축별 linkedDecks 노출** — `LearningFacadeQueryService.getFacade`가 facade의 axis ID 목록을 한 번에 `DeckQueryService.findByAxisIds(...)`로 조회한 뒤 axisId 기준 그룹핑해 `FacadeDetail.axes[].linkedDecks`로 매핑. N+1 회피. 자료 미연결 Deck은 `isMaterialUnlinked=true` 뱃지로 식별 (Story-005-2).
 

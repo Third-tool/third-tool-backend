@@ -21,6 +21,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -102,9 +103,23 @@ class LearningFacadeCommandServiceAxisEventTest {
     void addAxis_facade없음_이벤트미발행() {
         when(facadeRepository.findByUserId(1L)).thenReturn(Optional.empty());
 
-        try {
-            service.addAxis(new LearningFacadeCommand.AddAxis(1L, "Java 심화"));
-        } catch (Exception ignored) {}
+        assertThatThrownBy(() -> service.addAxis(new LearningFacadeCommand.AddAxis(1L, "Java 심화")))
+                .isInstanceOf(com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException.class)
+                .hasFieldOrPropertyWithValue("errorCode",
+                        com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode.LEARNING_FACADE_NOT_FOUND);
+
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("addAxis_axisId_null_예외 — JPA 회귀 시 IllegalStateException으로 즉시 실패")
+    void addAxis_axisId_null_예외() {
+        // save 후에도 id를 주입하지 않는 mock — JPA cascade 회귀 시나리오 모사
+        when(facadeRepository.save(any(LearningFacade.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThatThrownBy(() -> service.addAxis(new LearningFacadeCommand.AddAxis(1L, "Java 심화")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("LearningAxis");
 
         verify(eventPublisher, never()).publishEvent(any());
     }

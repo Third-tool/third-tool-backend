@@ -66,6 +66,13 @@ public class LearningFacadeCommandService {
         LearningAxis axis = facade.addAxis(command.name());
         facadeRepository.save(facade);
 
+        // IDENTITY cascade로 save 직후 axis.getId()가 채워져야 정상 (ADR007 §결정).
+        // null이면 cascade·flush 설정 변경의 회귀 신호 — 즉시 실패시켜 무음 NPE 방지.
+        if (axis.getId() == null) {
+            throw new IllegalStateException(
+                    "LearningAxis id가 cascade save 후에도 null입니다. JPA 설정 회귀 가능성.");
+        }
+
         eventPublisher.publishEvent(
                 new LearningAxisCreatedEvent(command.userId(), axis.getId(), axis.getName()));
 

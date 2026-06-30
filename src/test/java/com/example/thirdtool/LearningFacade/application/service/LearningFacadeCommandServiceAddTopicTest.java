@@ -52,7 +52,8 @@ class LearningFacadeCommandServiceAddTopicTest {
 
         service = new LearningFacadeCommandService(
                 facadeRepository, topicRevisionRepository, revisionReasonOptionRepository,
-                topicDeletionRecordRepository, learningMaterialRepository, topicMaterialRepository);
+                topicDeletionRecordRepository, learningMaterialRepository, topicMaterialRepository,
+                mock(org.springframework.context.ApplicationEventPublisher.class));
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);

@@ -74,6 +74,12 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
          */
         boolean existsByUserIdAndNameAndDeletedFalse(Long userId, String name);
 
+        /**
+         * 축 ID 기준 활성 Deck 존재 여부 확인.
+         * Axis 당 1 Deck 멱등 생성 시 사용한다 ({@code LearningAxisCreatedEventHandler}).
+         */
+        boolean existsByAxisIdAndDeletedFalse(Long axisId);
+
         // ─── 업데이트 ─────────────────────────────────────────
 
         /**

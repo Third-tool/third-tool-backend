@@ -160,6 +160,35 @@ public class Deck {
     }
 
     /**
+     * Axis 생성 흐름에서 호출되는 정적 팩토리.
+     * {@code LearningAxisCreatedEventHandler}가 사용한다.
+     *
+     * @param user   소유 사용자
+     * @param axisId 연결된 축 ID (필수)
+     * @param name   Deck 이름 (= Axis.name)
+     */
+    public static Deck createFromAxis(UserEntity user, Long axisId, String name) {
+        validateName(name);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: user는 null일 수 없습니다.");
+        }
+        if (axisId == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: axisId는 null일 수 없습니다.");
+        }
+
+        Deck deck = new Deck();
+        deck.name               = name.trim();
+        deck.user               = user;
+        deck.axisId             = axisId;
+        deck.learningMaterialId = null;
+        deck.parentDeck         = null;
+        deck.depth              = 0;
+        deck.lastAccessed       = LocalDateTime.now();
+        deck.mode               = DeckMode.ON_FIELD;
+        return deck;
+    }
+
+    /**
      * 원천 학습 자료가 삭제되었을 때 호출 (Story-005-1).
      * Deck 자체는 유지하고 {@code learningMaterialId}만 null로 전환 — "자료 미연결 Deck".
      * {@code axisId}는 로드맵 추적성을 위해 보존한다.

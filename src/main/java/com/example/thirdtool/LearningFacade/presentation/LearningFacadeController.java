@@ -1,5 +1,7 @@
 package com.example.thirdtool.LearningFacade.presentation;
 
+import com.example.thirdtool.Card.domain.model.CardStatus;
+import com.example.thirdtool.Card.presentation.dto.CardResponse;
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand;
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery;
 import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialCommand;
@@ -102,6 +104,16 @@ public class LearningFacadeController {
     ) {
         return facadeCommandService.reorderAxes(
                 new LearningFacadeCommand.ReorderAxes(user.getId(), request.orderedAxisIds()));
+    }
+
+    // 7-ter. GET /learning-facade/axes/{axisId}/cards  (Fix-Story 4: 축 스코프 Card 조회)
+    @GetMapping("/axes/{axisId}/cards")
+    public List<CardResponse.Summary> getAxisCards(
+            @AuthenticationPrincipal UserEntity user,
+            @PathVariable Long axisId,
+            @RequestParam(defaultValue = "ON_FIELD") CardStatus status
+    ) {
+        return facadeQueryService.findAxisCards(user.getId(), axisId, status);
     }
 
     // 8. POST /learning-facade/axes/{axisId}/topics

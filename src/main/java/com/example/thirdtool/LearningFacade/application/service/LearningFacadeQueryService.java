@@ -1,5 +1,8 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
+import com.example.thirdtool.Card.application.service.CardQueryService;
+import com.example.thirdtool.Card.domain.model.CardStatus;
+import com.example.thirdtool.Card.presentation.dto.CardResponse;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.application.service.DeckQueryService;
 import com.example.thirdtool.Deck.domain.model.Deck;
@@ -31,6 +34,7 @@ public class LearningFacadeQueryService {
     private final LearningFacadeRepository facadeRepository;
     private final TopicMaterialRepository topicMaterialRepository;
     private final DeckQueryService deckQueryService;
+    private final CardQueryService cardQueryService;
 
     /**
      * Cross-BC inbound (Story 6-1 Layer 1 한정) — 사용자 LearningFacade가 보유한 모든 axis ID를 반환.
@@ -57,6 +61,27 @@ public class LearningFacadeQueryService {
     @Transactional(readOnly = true)
     public Map<Long, String> findAxisNamesByIds(Collection<Long> axisIds) {
         return facadeRepository.findAxisNamesByIds(axisIds);
+    }
+
+    /**
+     * fix-deck-axis-visibility (0.0.2v) Story 4 — 축 스코프 Card 조회.
+     *
+     * <p>"내 축을 누르면 그 축의 카드가 보인다"는 사용자 의도를 단일 호출로 충족한다. facade/axis
+     * 소유권을 검증(Story 2 createDeckUnderAxis와 동형)한 뒤 Card BC의 단일 read-model
+     * {@link CardQueryService#findByAxisIds}로 위임 — today 집계와 동일 쿼리를 공유한다.
+     *
+     * @throws LearningFacadeDomainException facade 미보유(LEARNING_FACADE_NOT_FOUND) /
+     *                                       axis 미소유(LEARNING_AXIS_NOT_FOUND)
+     */
+    @Transactional(readOnly = true)
+    public List<CardResponse.Summary> findAxisCards(Long userId, Long axisId, CardStatus status) {
+        LearningFacade facade = facadeRepository.findByUserId(userId)
+                .orElseThrow(() -> LearningFacadeDomainException.of(ErrorCode.LEARNING_FACADE_NOT_FOUND));
+        boolean owned = facade.getAxes().stream().anyMatch(a -> a.getId().equals(axisId));
+        if (!owned) {
+            throw LearningFacadeDomainException.of(ErrorCode.LEARNING_AXIS_NOT_FOUND);
+        }
+        return cardQueryService.findByAxisIds(userId, List.of(axisId), status);
     }
 
     @Transactional(readOnly = true)

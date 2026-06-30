@@ -4,6 +4,7 @@ package com.example.thirdtool.Card.application.service;
 import com.example.thirdtool.Card.domain.exception.CardDomainException;
 import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.CardRelationFinder;
+import com.example.thirdtool.Card.domain.model.CardStatus;
 import com.example.thirdtool.Card.domain.model.RelatedCardCandidate;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Card.presentation.dto.CardResponse;
@@ -45,6 +46,18 @@ public class CardQueryService {
 
     public List<CardResponse.Summary> findByTag(Long tagId, Long userId) {
         return cardRepository.findByTagIdAndUserIdAndDeletedFalse(tagId, userId)
+                             .stream()
+                             .map(CardResponse.Summary::of)
+                             .toList();
+    }
+
+    // ─── 축 스코프 카드 조회 (fix-deck-axis-visibility 0.0.2v Story 3·4) ───
+    // 사용자의 axes에 연결된 Deck의 특정 status 카드를 단일 호출로 반환.
+    // GET /learning-facade/axes/{axisId}/cards가 사용하며, today 집계와 동일 read-model
+    // (CardRepository.findByUserIdAndAxisIdsAndStatus)을 공유한다.
+
+    public List<CardResponse.Summary> findByAxisIds(Long userId, List<Long> axisIds, CardStatus status) {
+        return cardRepository.findByUserIdAndAxisIdsAndStatus(userId, axisIds, status)
                              .stream()
                              .map(CardResponse.Summary::of)
                              .toList();

@@ -192,8 +192,8 @@ class LearningFacadeQueryServiceTest {
         when(topicMaterialRepository.findByTopicIdIn(List.of(100L, 101L, 102L)))
                 .thenReturn(List.of());
 
-        Deck deck1 = Deck.createFromLearningMaterial(user, 10L, 200L, "DDD");
-        Deck deck2 = Deck.createFromLearningMaterial(user, 10L, 201L, "Clean Architecture");
+        Deck deck1 = Deck.createFromAxis(user, 10L, "DDD");
+        Deck deck2 = Deck.createFromAxis(user, 10L, "Clean Architecture");
         ReflectionTestUtils.setField(deck1, "id", 500L);
         ReflectionTestUtils.setField(deck2, "id", 501L);
         when(deckQueryService.findByAxisIds(List.of(10L))).thenReturn(List.of(deck1, deck2));
@@ -208,7 +208,7 @@ class LearningFacadeQueryServiceTest {
         assertThat(axisItem.linkedDecks()).allSatisfy(d ->
                 assertThat(d.progressStatus()).isEqualTo("NOT_STARTED"));
         assertThat(axisItem.linkedDecks()).allSatisfy(d ->
-                assertThat(d.isMaterialUnlinked()).isFalse());
+                assertThat(d.isMaterialUnlinked()).isTrue());
     }
 
     @Test
@@ -217,7 +217,7 @@ class LearningFacadeQueryServiceTest {
         when(topicMaterialRepository.findByTopicIdIn(List.of(100L, 101L, 102L)))
                 .thenReturn(List.of());
 
-        Deck orphan = Deck.createFromLearningMaterial(user, 10L, 999L, "고아 Deck");
+        Deck orphan = Deck.createFromAxis(user, 10L, "고아 Deck");
         orphan.markMaterialDeleted();
         ReflectionTestUtils.setField(orphan, "id", 600L);
         when(deckQueryService.findByAxisIds(List.of(10L))).thenReturn(List.of(orphan));

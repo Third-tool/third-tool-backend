@@ -130,28 +130,27 @@ public class Deck {
     }
 
     /**
-     * 학습 자료 등록 흐름에서 호출되는 정적 팩토리 (Story-005-1).
-     * {@code LearningMaterialCreatedEvent} 핸들러가 사용한다.
+     * Axis 생성 흐름에서 호출되는 정적 팩토리.
+     * {@code LearningAxisCreatedEventHandler}가 사용한다.
      *
-     * @param user      소유 사용자 (자료의 user와 동일)
-     * @param axisId    자료가 연결된 축 ID (없으면 null — Deck은 어디 축에도 안 붙은 상태로 생성)
-     * @param materialId 원천 자료 ID
-     * @param name      Deck 이름 (자료명 또는 사용자가 요청한 별도 이름)
+     * @param user   소유 사용자
+     * @param axisId 연결된 축 ID (필수)
+     * @param name   Deck 이름 (= Axis.name)
      */
-    public static Deck createFromLearningMaterial(UserEntity user, Long axisId, Long materialId, String name) {
+    public static Deck createFromAxis(UserEntity user, Long axisId, String name) {
         validateName(name);
         if (user == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: user는 null일 수 없습니다.");
         }
-        if (materialId == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: materialId는 null일 수 없습니다.");
+        if (axisId == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: axisId는 null일 수 없습니다.");
         }
 
         Deck deck = new Deck();
         deck.name               = name.trim();
         deck.user               = user;
         deck.axisId             = axisId;
-        deck.learningMaterialId = materialId;
+        deck.learningMaterialId = null;
         deck.parentDeck         = null;
         deck.depth              = 0;
         deck.lastAccessed       = LocalDateTime.now();

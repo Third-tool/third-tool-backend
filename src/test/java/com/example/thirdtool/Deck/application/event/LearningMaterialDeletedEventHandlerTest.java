@@ -36,8 +36,10 @@ class LearningMaterialDeletedEventHandlerTest {
     @Test
     @DisplayName("handle_연결_Deck_여러건 — 모두 markMaterialDeleted 적용 (learningMaterialId=null)")
     void handle_multiple_affected_decks() {
-        Deck deck1 = Deck.createFromLearningMaterial(user, 10L, 200L, "DDD");
-        Deck deck2 = Deck.createFromLearningMaterial(user, 10L, 200L, "DDD (2)");
+        Deck deck1 = Deck.createFromAxis(user, 10L, "DDD");
+        ReflectionTestUtils.setField(deck1, "learningMaterialId", 200L);
+        Deck deck2 = Deck.createFromAxis(user, 10L, "DDD (2)");
+        ReflectionTestUtils.setField(deck2, "learningMaterialId", 200L);
         ReflectionTestUtils.setField(deck1, "id", 500L);
         ReflectionTestUtils.setField(deck2, "id", 501L);
         when(deckRepository.findByLearningMaterialIdAndDeletedFalse(200L))
@@ -68,7 +70,7 @@ class LearningMaterialDeletedEventHandlerTest {
     @Test
     @DisplayName("handle_이미_자료미연결_Deck — markMaterialDeleted 멱등 (예외 X)")
     void handle_already_unlinked_idempotent() {
-        Deck orphan = Deck.createFromLearningMaterial(user, 10L, 200L, "고아");
+        Deck orphan = Deck.createFromAxis(user, 10L, "고아");
         orphan.markMaterialDeleted();
         ReflectionTestUtils.setField(orphan, "id", 700L);
         when(deckRepository.findByLearningMaterialIdAndDeletedFalse(200L))

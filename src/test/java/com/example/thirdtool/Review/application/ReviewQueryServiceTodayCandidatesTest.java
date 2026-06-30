@@ -59,7 +59,7 @@ class ReviewQueryServiceTodayCandidatesTest {
 
         user = UserEntity.ofLocal("u", "pw", "n", "u@e.com");
         ReflectionTestUtils.setField(user, "id", 1L);
-        deck = Deck.createFromLearningMaterial(user, 10L, 200L, "DDD");
+        deck = Deck.createFromAxis(user, 10L, "DDD");
         ReflectionTestUtils.setField(deck, "id", 500L);
 
         // 기본 dailyTarget stub — 각 테스트가 override 가능

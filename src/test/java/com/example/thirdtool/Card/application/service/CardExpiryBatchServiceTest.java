@@ -67,11 +67,11 @@ class CardExpiryBatchServiceTest {
         userB = UserEntity.ofLocal("b", "pw", "n", "b@e.com");
         ReflectionTestUtils.setField(userB, "id", 2L);
 
-        deckA = Deck.createFromLearningMaterial(userA, 10L, 200L, "A 덱");
+        deckA = Deck.createFromAxis(userA, 10L, "A 덱");
         ReflectionTestUtils.setField(deckA, "id", 500L);
         ReflectionTestUtils.setField(deckA, "progressStatus", DeckProgressStatus.IN_PROGRESS);
 
-        deckB = Deck.createFromLearningMaterial(userB, 11L, 201L, "B 덱");
+        deckB = Deck.createFromAxis(userB, 11L, "B 덱");
         ReflectionTestUtils.setField(deckB, "id", 501L);
         ReflectionTestUtils.setField(deckB, "progressStatus", DeckProgressStatus.IN_PROGRESS);
     }

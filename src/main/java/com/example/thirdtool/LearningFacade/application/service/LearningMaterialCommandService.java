@@ -3,7 +3,6 @@ package com.example.thirdtool.LearningFacade.application.service;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialCommand;
 import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialQuery;
-import com.example.thirdtool.LearningFacade.domain.event.LearningMaterialCreatedEvent;
 import com.example.thirdtool.LearningFacade.domain.event.LearningMaterialDeletedEvent;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.*;
@@ -50,7 +49,6 @@ public class LearningMaterialCommandService {
                 command.memo());
         materialRepository.save(material);
 
-        Long firstAxisId = null;
         List<Long> linkedTopicIds = command.linkedTopicIds();
         if (linkedTopicIds != null && !linkedTopicIds.isEmpty()) {
             for (Long topicId : linkedTopicIds) {
@@ -58,32 +56,12 @@ public class LearningMaterialCommandService {
                 TopicMaterial mapping = TopicMaterial.create(topic, material);
                 topicMaterialRepository.save(mapping);
                 coverageRecalculator.recalculate(topic);
-                if (firstAxisId == null) {
-                    firstAxisId = topic.getAxis().getId();
-                }
             }
-        }
-
-        // Story-005-1 (ADR007): 자료 등록 직후 동기 도메인 이벤트 발행 → Deck BC가 Deck 자동 생성.
-        // 같은 트랜잭션 안에서 실행 — 동명 발견 시 핸들러가 DECK_NAME_DUPLICATE throw → 전체 롤백.
-        LearningMaterialCreatedEvent event = new LearningMaterialCreatedEvent(
-                command.userId(),
-                material.getId(),
-                material.getName(),
-                firstAxisId,
-                command.deckName(),
-                command.forceCreateDeck());
-        eventPublisher.publishEvent(event);
-
-        // Reviewer C2: 핸들러가 0개 또는 setResult 누락 시 silent fail 방지. 동기 이벤트 가정상
-        // 정상 흐름에서는 항상 createdDeckId가 채워져 있어야 한다.
-        if (event.createdDeckId() == null) {
-            throw LearningFacadeDomainException.of(ErrorCode.DECK_AUTO_CREATE_FAILED);
         }
 
         LearningMaterial saved = materialRepository.findById(material.getId())
                 .orElseThrow(() -> LearningFacadeDomainException.of(ErrorCode.LEARNING_MATERIAL_NOT_FOUND));
-        return CreateMaterial.of(saved, event.createdDeckId(), event.createdDeckName());
+        return CreateMaterial.of(saved);
     }
 
     private MaterialType parseMaterialType(String raw) {

@@ -2,6 +2,7 @@ package com.example.thirdtool.LearningFacade.application.service;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand;
+import com.example.thirdtool.LearningFacade.domain.event.LearningAxisCreatedEvent;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.*;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
@@ -14,6 +15,7 @@ import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeRespo
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ public class LearningFacadeCommandService {
     private final TopicDeletionRecordRepository topicDeletionRecordRepository;
     private final LearningMaterialRepository learningMaterialRepository;
     private final TopicMaterialRepository topicMaterialRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ──────────────────────────────────────────────────────
     // 1. LearningFacade 생성
@@ -62,6 +65,17 @@ public class LearningFacadeCommandService {
         LearningFacade facade = loadFacade(command.userId());
         LearningAxis axis = facade.addAxis(command.name());
         facadeRepository.save(facade);
+
+        // IDENTITY cascade로 save 직후 axis.getId()가 채워져야 정상 (ADR007 §결정).
+        // null이면 cascade·flush 설정 변경의 회귀 신호 — 즉시 실패시켜 무음 NPE 방지.
+        if (axis.getId() == null) {
+            throw new IllegalStateException(
+                    "LearningAxis id가 cascade save 후에도 null입니다. JPA 설정 회귀 가능성.");
+        }
+
+        eventPublisher.publishEvent(
+                new LearningAxisCreatedEvent(command.userId(), axis.getId(), axis.getName()));
+
         return AddAxis.of(axis, facade.isAxisCountExceedsRecommended());
     }
 

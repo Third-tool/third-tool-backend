@@ -80,13 +80,9 @@ public class LearningMaterialResponse {
             String memo,
             String proficiencyLevel,
             List<LinkedTopicItem> linkedTopics,
-            LocalDateTime createdAt,
-            // Story-005-1: 자동 생성된 Deck 정보. 항상 true·non-null (Story 5-1 흐름은 Deck 동반 생성을 보장).
-            boolean deckCreated,
-            Long deckId,
-            String deckName
+            LocalDateTime createdAt
     ) {
-        public static CreateMaterial of(LearningMaterial material, Long deckId, String deckName) {
+        public static CreateMaterial of(LearningMaterial material) {
             return new CreateMaterial(
                     material.getId(),
                     material.getName(),
@@ -101,10 +97,7 @@ public class LearningMaterialResponse {
                     material.getTopicMappings().stream()
                             .map(LinkedTopicItem::of)
                             .collect(Collectors.toList()),
-                    material.getCreatedAt(),
-                    deckId != null,
-                    deckId,
-                    deckName
+                    material.getCreatedAt()
             );
         }
     }

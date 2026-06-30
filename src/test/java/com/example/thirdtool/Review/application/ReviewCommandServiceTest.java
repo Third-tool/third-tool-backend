@@ -74,7 +74,7 @@ class ReviewCommandServiceTest {
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);
-        deck = Deck.createFromLearningMaterial(user, 10L, 200L, "DDD");
+        deck = Deck.createFromAxis(user, 10L, "DDD");
         ReflectionTestUtils.setField(deck, "id", 500L);
     }
 
@@ -142,7 +142,7 @@ class ReviewCommandServiceTest {
         void startReview_otherUserDeck_throws() {
             UserEntity otherOwner = UserEntity.ofLocal("other", "pw", "n", "o@e.com");
             ReflectionTestUtils.setField(otherOwner, "id", 99L);
-            Deck otherDeck = Deck.createFromLearningMaterial(otherOwner, 10L, 200L, "DDD");
+            Deck otherDeck = Deck.createFromAxis(otherOwner, 10L, "DDD");
             ReflectionTestUtils.setField(otherDeck, "id", 500L);
             when(deckQueryService.getActiveDeck(500L)).thenReturn(otherDeck);
 

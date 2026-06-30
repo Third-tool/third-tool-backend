@@ -24,6 +24,18 @@ repositories {
     mavenCentral()
 }
 
+ext {
+    // Story-053 (ADR019 §1.2): Spring Cloud AWS — Secrets Manager 부팅 통합.
+    // BOM으로 spring-cloud-aws-* 의존 버전을 단일 출처로 고정.
+    set('springCloudAwsVersion', '3.2.1')
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudAwsVersion}"
+    }
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -63,7 +75,14 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-webflux:3.3.3'
 
-    implementation 'software.amazon.awssdk:s3:2.30.0'
+    // AWS SDK S3 — Spring Cloud AWS BOM(${springCloudAwsVersion})이 awssdk:core/regions 등을
+    // 함께 pin하므로 version 명시 없이 BOM 정렬에 위임 (s3:2.30.0 ↔ awssdk:core 버전 mismatch 회피).
+    implementation 'software.amazon.awssdk:s3'
+
+    // Story-053 (ADR019): Spring Cloud AWS Secrets Manager — application-prod.yml의
+    // spring.config.import 경로로 부팅 시 aws-secretsmanager:thirdtool/{env}/* 시크릿 fetch.
+    // M1 단계에서는 'optional:' prefix로 미존재 시 부팅 진행 (Task Def secrets env var가 주 경로).
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-secrets-manager'
 
     // Flyway
     implementation 'org.flywaydb:flyway-mysql'

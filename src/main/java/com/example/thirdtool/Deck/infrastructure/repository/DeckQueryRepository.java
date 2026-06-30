@@ -48,7 +48,8 @@ public class DeckQueryRepository {
                         deck.depth,
                         deck.lastAccessed,
                         deck.cards.size(),     // 카드 수
-                        deck.subDecks.size()   // 하위 덱 수
+                        deck.subDecks.size(),  // 하위 덱 수
+                        deck.axisId            // 축 참조(raw Long, 고아 덱은 null)
                 ))
                 .from(deck)
                 .where(

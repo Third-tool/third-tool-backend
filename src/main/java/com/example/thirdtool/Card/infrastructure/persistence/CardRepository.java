@@ -52,10 +52,12 @@ public interface CardRepository {
     List<Card> findOnFieldEligibleByUserId(Long userId, LocalDateTime threshold);
 
     /**
-     * Story 6-1 Layer 1 한정 — 사용자의 LearningFacade에 속한 axes에 연결된 Deck 한정 후보.
-     * axisIds null/빈 입력은 Adapter에서 빈 리스트로 단락.
+     * fix-deck-axis-visibility (0.0.2v) Story 3 — 축 스코프 Card 단일 read-model.
+     * <p>사용자의 axes에 연결된 Deck의 특정 status 활성 카드를 반환한다. 축 카드 뷰와 today 집계가 공유한다.
+     * eligibility(최소 간격) 재판정은 상위 호출자(Review)의 SoftScheduleTemplate가 in-memory로 수행하므로
+     * 본 메서드는 threshold를 받지 않는다. axisIds null/빈 입력은 Adapter에서 빈 리스트로 단락.
      */
-    List<Card> findOnFieldEligibleByUserIdAndAxisIds(Long userId, LocalDateTime threshold, List<Long> axisIds);
+    List<Card> findByUserIdAndAxisIdsAndStatus(Long userId, List<Long> axisIds, CardStatus status);
 
     /**
      * ON_FIELD 만료 배치용 카드 조회.

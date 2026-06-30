@@ -1,6 +1,7 @@
 package com.example.thirdtool.Review.application;
 
 import com.example.thirdtool.Card.domain.model.Card;
+import com.example.thirdtool.Card.domain.model.CardStatus;
 import com.example.thirdtool.Card.domain.model.MainNote;
 import com.example.thirdtool.Card.domain.model.SoftScheduleState;
 import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
@@ -231,7 +232,7 @@ class ReviewQueryServiceTodayCandidatesTest {
                 .thenReturn(List.of(10L, 20L));
 
         Card card = cardWith(1000L, null);
-        when(cardRepository.findOnFieldEligibleByUserIdAndAxisIds(eq(1L), any(), eq(List.of(10L, 20L))))
+        when(cardRepository.findByUserIdAndAxisIdsAndStatus(eq(1L), eq(List.of(10L, 20L)), eq(CardStatus.ON_FIELD)))
                 .thenReturn(List.of(card));
 
         ReviewResponse.TodayCandidates result = service.getTodayCandidates(user);
@@ -258,7 +259,7 @@ class ReviewQueryServiceTodayCandidatesTest {
         assertThat(result.total()).isEqualTo(1);
         // axisIds 적용 메서드는 호출되지 않아야 함
         org.mockito.Mockito.verify(cardRepository, org.mockito.Mockito.never())
-                .findOnFieldEligibleByUserIdAndAxisIds(any(), any(), any());
+                .findByUserIdAndAxisIdsAndStatus(any(), any(), any());
     }
 
     @Test

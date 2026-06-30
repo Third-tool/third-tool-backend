@@ -1,6 +1,7 @@
 package com.example.thirdtool.Review.application;
 
 import com.example.thirdtool.Card.domain.model.Card;
+import com.example.thirdtool.Card.domain.model.CardStatus;
 import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Card.domain.model.SoftScheduleState;
 import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
@@ -112,10 +113,15 @@ public class ReviewQueryService {
 
         // Story 6-1 Layer 1 한정: 사용자의 LearningFacade(직업 컨셉) 안의 axes 범위로만 수집.
         // LearningFacade 미보유 사용자는 axisIds 빈 리스트 → 전체 카드 fallback (Spec 6-1 엣지 케이스).
+        //
+        // fix-deck-axis-visibility (0.0.2v) Story 3: axis 한정 경로는 축 카드 뷰와 공유하는
+        // 단일 read-model(findByUserIdAndAxisIdsAndStatus)로 위임. 최소 간격(threshold) 재판정은
+        // 아래 template.resolveState()가 in-memory로 책임지므로 쿼리 단계 threshold가 불필요하다
+        // (NOT_YET 필터가 최종 게이트). fallback(전체 카드) 경로는 threshold 1차 필터를 유지한다.
         List<Long> axisIds = learningFacadeQueryService.findAxisIdsByUserId(userId);
         List<Card> candidates = axisIds.isEmpty()
                 ? cardRepository.findOnFieldEligibleByUserId(userId, threshold)
-                : cardRepository.findOnFieldEligibleByUserIdAndAxisIds(userId, threshold, axisIds);
+                : cardRepository.findByUserIdAndAxisIdsAndStatus(userId, axisIds, CardStatus.ON_FIELD);
 
         Map<SoftScheduleState, List<ReviewResponse.TodayCandidates.CandidateItem>> byState =
                 candidates.stream()

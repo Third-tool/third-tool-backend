@@ -118,21 +118,26 @@ public interface CardJpaRepository extends JpaRepository<Card, Long>, CardReposi
                                           );
 
     /**
-     * Story 6-1 Layer 1 한정 — 사용자의 LearningFacade(Layer 1)에 속한 axes에 연결된 Deck의
-     * ON_FIELD 활성 카드만 반환. axisIds 빈 입력은 Port/Adapter에서 단락(빈 리스트 반환).
+     * fix-deck-axis-visibility (0.0.2v) Story 3 — 축 스코프 Card 단일 read-model.
+     * <p>사용자의 axes에 연결된 Deck의 특정 status 활성 카드를 반환한다. 축 카드 뷰
+     * (GET /learning-facade/axes/{axisId}/cards)와 today 집계가 공유한다.
+     * <p>today의 eligibility(최소 간격) 재판정은 SoftScheduleTemplate가 in-memory로 수행하므로
+     * 본 쿼리는 threshold를 갖지 않는다(상위 호출자가 스케줄 분류를 얹는다).
+     * axisIds 빈 입력은 Port/Adapter에서 단락(빈 리스트 반환).
+     * <p>Deck만 fetch join(응답 매핑에 deckId 필요). keywordCues/cardTags는 미fetch
+     * (MultipleBagFetchException 회피).
      */
     @Query("""
             SELECT c FROM Card c
             JOIN FETCH c.deck d
             WHERE d.user.id = :userId
               AND d.axisId IN :axisIds
-              AND c.status = com.example.thirdtool.Card.domain.model.CardStatus.ON_FIELD
+              AND c.status = :status
               AND c.deleted = false
-              AND (c.lastViewedAt IS NULL OR c.lastViewedAt <= :threshold)
             """)
-    List<Card> findOnFieldEligibleByUserIdAndAxisIds(
+    List<Card> findByUserIdAndAxisIdsAndStatus(
             @Param("userId") Long userId,
-            @Param("threshold") java.time.LocalDateTime threshold,
-            @Param("axisIds") List<Long> axisIds
-                                                    );
+            @Param("axisIds") List<Long> axisIds,
+            @Param("status") CardStatus status
+                                              );
 }

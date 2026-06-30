@@ -24,21 +24,20 @@
       ],
       "environment": [
         { "name": "SPRING_PROFILES_ACTIVE", "value": "prod" },
-        { "name": "TZ", "value": "Asia/Seoul" },
-        { "name": "DB_PORT", "value": "3306" }
+        { "name": "TZ", "value": "Asia/Seoul" }
       ],
       "secrets": [
-        { "name": "DB_HOST",              "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/db-<SUFFIX>:HOST::" },
-        { "name": "DB_NAME",              "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/db-<SUFFIX>:NAME::" },
-        { "name": "DB_USERNAME",          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/db-<SUFFIX>:USERNAME::" },
-        { "name": "DB_PASSWORD",          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/db-<SUFFIX>:PASSWORD::" },
-        { "name": "JWT_SECRET_KEY",       "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/jwt-<SUFFIX>:SECRET_KEY::" },
-        { "name": "KAKAO_CLIENT_ID",      "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/oauth-<SUFFIX>:KAKAO_CLIENT_ID::" },
-        { "name": "KAKAO_CLIENT_SECRET",  "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/oauth-<SUFFIX>:KAKAO_CLIENT_SECRET::" },
-        { "name": "NAVER_CLIENT_ID",      "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/oauth-<SUFFIX>:NAVER_CLIENT_ID::" },
-        { "name": "NAVER_CLIENT_SECRET",  "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/oauth-<SUFFIX>:NAVER_CLIENT_SECRET::" },
-        { "name": "AWS_ACCESS_KEY_ID",     "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/aws-<SUFFIX>:ACCESS_KEY_ID::" },
-        { "name": "AWS_SECRET_ACCESS_KEY", "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/aws-<SUFFIX>:SECRET_ACCESS_KEY::" }
+        { "name": "DB_HOST",              "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/db-credential-<DB_SUFFIX>:HOST::" },
+        { "name": "DB_PORT",              "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/db-credential-<DB_SUFFIX>:PORT::" },
+        { "name": "DB_NAME",              "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/db-credential-<DB_SUFFIX>:NAME::" },
+        { "name": "DB_USERNAME",          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/db-credential-<DB_SUFFIX>:USERNAME::" },
+        { "name": "DB_PASSWORD",          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/db-credential-<DB_SUFFIX>:PASSWORD::" },
+        { "name": "JWT_SECRET_KEY",       "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/jwt-secret-<JWT_SUFFIX>:SECRET_KEY::" },
+        { "name": "KAKAO_CLIENT_ID",      "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/oauth-kakao-<KAKAO_SUFFIX>:CLIENT_ID::" },
+        { "name": "KAKAO_CLIENT_SECRET",  "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/oauth-kakao-<KAKAO_SUFFIX>:CLIENT_SECRET::" },
+        { "name": "NAVER_CLIENT_ID",      "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/oauth-naver-<NAVER_SUFFIX>:CLIENT_ID::" },
+        { "name": "NAVER_CLIENT_SECRET",  "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/oauth-naver-<NAVER_SUFFIX>:CLIENT_SECRET::" },
+        { "name": "GEMINI_API_KEY",       "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:<AWS_ACCOUNT_ID>:secret:thirdtool/prod/gemini-api-key-<GEMINI_SUFFIX>:API_KEY::" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

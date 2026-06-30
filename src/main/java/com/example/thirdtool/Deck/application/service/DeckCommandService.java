@@ -42,6 +42,28 @@ public class DeckCommandService {
     }
 
     /**
+     * Axis 스코프 Deck 생성 (Fix-Story 2).
+     * {@link com.example.thirdtool.LearningFacade.application.service.LearningFacadeCommandService}가
+     * axis 소유권을 검증한 후 호출한다. 본 메서드는 axis 검증을 다시 수행하지 않는다.
+     *
+     * <p>동일 (userId, name) 중복은 도메인 메시지로 친절히 차단 — DB UNIQUE 제약 위반에 의존하지 않음.
+     *
+     * @param user      소유 사용자 (검증된 facade.user)
+     * @param axisId    축 ID (검증된 axis.id)
+     * @param name      Deck 이름 (사용자 입력, trim 전 원본)
+     * @param axisName  검증된 axis.name — 응답 DTO에 동봉
+     */
+    public DeckResponse.Create createUnderAxis(UserEntity user, Long axisId, String name, String axisName) {
+        if (name != null && deckRepository.existsByUserIdAndNameAndDeletedFalse(user.getId(), name.trim())) {
+            throw new BusinessException(ErrorCode.DECK_NAME_DUPLICATE);
+        }
+
+        Deck deck = Deck.createUnderAxis(user, axisId, name);
+        deckRepository.save(deck);
+        return DeckResponse.Create.of(deck, axisName);
+    }
+
+    /**
      * 덱 이름 수정
      */
     public DeckResponse.UpdateName updateName(Long deckId, DeckRequest.UpdateName request) {

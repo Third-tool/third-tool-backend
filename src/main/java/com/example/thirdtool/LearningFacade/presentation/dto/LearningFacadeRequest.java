@@ -39,6 +39,11 @@ public class LearningFacadeRequest {
             List<Long> orderedAxisIds
     ) {}
 
+    public record CreateAxisDeck(
+            @NotBlank
+            String name
+    ) {}
+
     // ─── Topic ────────────────────────────────────────────
 
     public record AddTopic(

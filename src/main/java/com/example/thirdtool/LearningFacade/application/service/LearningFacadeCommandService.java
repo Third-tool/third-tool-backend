@@ -1,6 +1,8 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
+import com.example.thirdtool.Deck.application.service.DeckCommandService;
+import com.example.thirdtool.Deck.presentation.dto.DeckResponse;
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand;
 import com.example.thirdtool.LearningFacade.domain.event.LearningAxisCreatedEvent;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
@@ -31,6 +33,9 @@ public class LearningFacadeCommandService {
     private final LearningMaterialRepository learningMaterialRepository;
     private final TopicMaterialRepository topicMaterialRepository;
     private final ApplicationEventPublisher eventPublisher;
+    // Fix-Story 2: 축 스코프 Deck 생성 위임 (LearningFacade → Deck Application write).
+    // 자동 생성(LearningAxisCreatedEventHandler)과 별개로 사용자가 명시한 신규 Deck을 처리.
+    private final DeckCommandService deckCommandService;
 
     // ──────────────────────────────────────────────────────
     // 1. LearningFacade 생성
@@ -119,6 +124,28 @@ public class LearningFacadeCommandService {
         facade.reorderAxes(command.orderedAxisIds());
         facadeRepository.save(facade);
         return ReorderAxes.of(facade.getAxes());
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 7-bis. 축 스코프 Deck 생성 (Fix-Story 2)
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * 사용자가 axis에 명시적으로 신규 Deck을 추가한다.
+     *
+     * <p>Cross-BC write — Deck BC의 {@link DeckCommandService#createUnderAxis} 위임. 본 메서드는
+     * facade/axis 소유권만 검증하고 Deck 생성·중복 검증은 Deck BC가 담당한다.
+     *
+     * <p>응답 DTO에 axisName이 동봉되도록 검증된 axis.name을 그대로 전달 — 추가 lookup 없음.
+     */
+    public DeckResponse.Create createDeckUnderAxis(LearningFacadeCommand.CreateAxisDeck command) {
+        LearningFacade facade = loadFacade(command.userId());
+        LearningAxis axis = findAxis(facade, command.axisId());
+        return deckCommandService.createUnderAxis(
+                facade.getUser(),
+                axis.getId(),
+                command.name(),
+                axis.getName());
     }
 
     // ──────────────────────────────────────────────────────

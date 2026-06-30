@@ -1,5 +1,6 @@
 package com.example.thirdtool.LearningFacade.presentation;
 
+import com.example.thirdtool.Deck.presentation.dto.DeckResponse;
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand;
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery;
 import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialCommand;
@@ -102,6 +103,18 @@ public class LearningFacadeController {
     ) {
         return facadeCommandService.reorderAxes(
                 new LearningFacadeCommand.ReorderAxes(user.getId(), request.orderedAxisIds()));
+    }
+
+    // 7-bis. POST /learning-facade/axes/{axisId}/decks  (Fix-Story 2: 축 스코프 Deck 명시 생성)
+    @PostMapping("/axes/{axisId}/decks")
+    @ResponseStatus(HttpStatus.CREATED)
+    public DeckResponse.Create createAxisDeck(
+            @AuthenticationPrincipal UserEntity user,
+            @PathVariable Long axisId,
+            @Valid @RequestBody LearningFacadeRequest.CreateAxisDeck request
+    ) {
+        return facadeCommandService.createDeckUnderAxis(
+                new LearningFacadeCommand.CreateAxisDeck(user.getId(), axisId, request.name()));
     }
 
     // 8. POST /learning-facade/axes/{axisId}/topics

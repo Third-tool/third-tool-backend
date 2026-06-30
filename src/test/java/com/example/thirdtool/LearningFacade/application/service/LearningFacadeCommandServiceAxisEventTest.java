@@ -47,7 +47,8 @@ class LearningFacadeCommandServiceAxisEventTest {
                 mock(TopicDeletionRecordRepository.class),
                 mock(LearningMaterialRepository.class),
                 mock(TopicMaterialRepository.class),
-                eventPublisher);
+                eventPublisher,
+                mock(com.example.thirdtool.Deck.application.service.DeckCommandService.class));
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);

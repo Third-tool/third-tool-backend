@@ -86,6 +86,55 @@ class DeckTest {
                 .matches(e -> ((BusinessException) e).getErrorCode() == ErrorCode.DECK_NAME_BLANK);
     }
 
+    // ─── createUnderAxis (Fix-Story 2) ──────────────────────────────
+
+    @Test
+    @DisplayName("createUnderAxis_valid — 모든 필드 정상 매핑")
+    void createUnderAxis_valid() {
+        Deck deck = Deck.createUnderAxis(user, 100L, "백엔드 학습");
+
+        assertThat(deck.getName()).isEqualTo("백엔드 학습");
+        assertThat(deck.getAxisId()).isEqualTo(100L);
+        assertThat(deck.getLearningMaterialId()).isNull();
+        assertThat(deck.getUser()).isEqualTo(user);
+        assertThat(deck.getParentDeck()).isNull();
+        assertThat(deck.getDepth()).isZero();
+        assertThat(deck.getMode()).isEqualTo(DeckMode.ON_FIELD);
+        assertThat(deck.isDeleted()).isFalse();
+    }
+
+    @Test
+    @DisplayName("createUnderAxis_name_trim — 앞뒤 공백 제거")
+    void createUnderAxis_name_trim() {
+        Deck deck = Deck.createUnderAxis(user, 100L, "  Spring 내부  ");
+
+        assertThat(deck.getName()).isEqualTo("Spring 내부");
+    }
+
+    @Test
+    @DisplayName("createUnderAxis_axisId_null_예외 — axisId는 필수")
+    void createUnderAxis_axisId_null_예외() {
+        assertThatThrownBy(() -> Deck.createUnderAxis(user, null, "이름"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("axisId");
+    }
+
+    @Test
+    @DisplayName("createUnderAxis_user_null_예외")
+    void createUnderAxis_user_null_예외() {
+        assertThatThrownBy(() -> Deck.createUnderAxis(null, 100L, "이름"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("user");
+    }
+
+    @Test
+    @DisplayName("createUnderAxis_name_blank_예외 — DECK_NAME_BLANK")
+    void createUnderAxis_name_blank_예외() {
+        assertThatThrownBy(() -> Deck.createUnderAxis(user, 100L, "   "))
+                .isInstanceOf(BusinessException.class)
+                .matches(e -> ((BusinessException) e).getErrorCode() == ErrorCode.DECK_NAME_BLANK);
+    }
+
     // ─── markMaterialDeleted ──────────────────────────────────────
 
     @Test

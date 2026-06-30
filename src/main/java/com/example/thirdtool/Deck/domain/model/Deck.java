@@ -159,6 +159,41 @@ public class Deck {
     }
 
     /**
+     * 사용자가 axis 결합 Deck을 명시적으로 신규 생성할 때 사용하는 정적 팩토리 (Fix-Story 2).
+     * {@code LearningFacadeCommandService.createDeckUnderAxis(...)}가 axis 소유권을 검증한 뒤 호출한다.
+     *
+     * <p>{@link #createFromAxis(UserEntity, Long, String)}와 검증 규칙은 동일하지만 호출 의도가 다르다:
+     * <ul>
+     *   <li>{@code createFromAxis} — Axis 생성 이벤트에 반응하는 자동 생성 (멱등 보증 영역)</li>
+     *   <li>{@code createUnderAxis} — 사용자가 카드 에디터 등에서 명시적으로 신규 Deck을 추가</li>
+     * </ul>
+     *
+     * @param user   소유 사용자
+     * @param axisId 연결된 축 ID (필수)
+     * @param name   Deck 이름 (사용자 입력)
+     */
+    public static Deck createUnderAxis(UserEntity user, Long axisId, String name) {
+        validateName(name);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: user는 null일 수 없습니다.");
+        }
+        if (axisId == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: axisId는 null일 수 없습니다.");
+        }
+
+        Deck deck = new Deck();
+        deck.name               = name.trim();
+        deck.user               = user;
+        deck.axisId             = axisId;
+        deck.learningMaterialId = null;
+        deck.parentDeck         = null;
+        deck.depth              = 0;
+        deck.lastAccessed       = LocalDateTime.now();
+        deck.mode               = DeckMode.ON_FIELD;
+        return deck;
+    }
+
+    /**
      * 원천 학습 자료가 삭제되었을 때 호출 (Story-005-1).
      * Deck 자체는 유지하고 {@code learningMaterialId}만 null로 전환 — "자료 미연결 Deck".
      * {@code axisId}는 로드맵 추적성을 위해 보존한다.

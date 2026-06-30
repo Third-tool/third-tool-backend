@@ -45,6 +45,12 @@ public final class LearningFacadeCommand {
             Long axisId
     ) {}
 
+    public record CreateAxisDeck(
+            Long userId,
+            Long axisId,
+            String name
+    ) {}
+
     public record ReorderAxes(
             Long userId,
             List<Long> orderedAxisIds

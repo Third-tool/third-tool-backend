@@ -111,6 +111,7 @@ ON_FIELD ↔ ARCHIVE
 - `recordView()` 호출 시점 = ReviewSession 안에서만 (외부 직접 접근 금지, 캡슐화).
 - maxView / maxDuration은 `UserScheduleConfig.resolveOnFieldBudget()`에서 유저별 매핑.
 - SoftScheduleTemplate 간격 단계는 `LearningMode`(10D/20D/30D)가 결정.
+- **축 스코프 카드 조회는 ReviewSession Layer 1 수집과 별개의 "사용자 표현 흐름"** (fix-deck-axis-visibility 0.0.2v Story 3·4, ADR020). `CardRepository.findByUserIdAndAxisIdsAndStatus`(삭제 제외·상태·`axisId IN`)를 today 집계와 축 카드 뷰(`GET /learning-facade/axes/{axisId}/cards`)가 공유한다. eligibility(최소 간격) 재판정은 이 read-model이 아니라 `SoftScheduleTemplate`가 인메모리로 책임진다 — 따라서 read-model 쿼리는 threshold를 갖지 않는다.
 
 ---
 
@@ -144,8 +145,13 @@ ON_FIELD ↔ ARCHIVE
 13. `recalculateProgressStatus()`는 활성 Card 컬렉션 기준 — 0개 → NOT_STARTED / 전부 ARCHIVE → COMPLETED / 그 외 → IN_PROGRESS.
 
 **팩토리 메서드**:
-- `Deck.of(name, parentDeck, user)` — 사용자가 직접 생성 (기존 흐름).
-- `Deck.createFromAxis(user, axisId, name)` — Axis 등록 이벤트 핸들러가 호출 (Fix-Story 1 / ADR007 Amended). 이름은 `LearningAxis.name`을 그대로 사용.
+- `Deck.of(name, parentDeck, user)` — 사용자가 직접 생성 (기존 흐름, axisId=null 고아 덱).
+- `Deck.createFromAxis(user, axisId, name)` — Axis 등록 이벤트 핸들러가 호출 (Fix-Story 1 / ADR007 Amended). 이름은 `LearningAxis.name`을 그대로 사용. 멱등(`existsByAxisIdAndDeletedFalse`).
+- `Deck.createUnderAxis(user, axisId, name)` — 사용자가 축에 **명시적으로** 신규 덱을 추가 (fix-deck-axis-visibility 0.0.2v Story 2, `POST /learning-facade/axes/{axisId}/decks`). 멱등 검사 없는 단순 신규 생성, 이름 중복은 `DECK_NAME_DUPLICATE`.
+
+**axis 결합 정책 (fix-deck-axis-visibility 0.0.2v / ADR020)**:
+- 한 축당 **자동 생성 1개**(`createFromAxis`, 멱등) + **사용자 명시 추가 N개**(`createUnderAxis`) + **고아 덱 보존**(`Deck.of`, axisId=null)을 모두 허용한다. 축당 단일 덱 제약은 두지 않는다(UX 검증 후 재평가).
+- 응답 DTO(`DeckResponse.Summary`/`Detail`)는 `axisId`/`axisName`을 노출한다. `axisName`은 도메인 연관 승격 없이 `DeckQueryService`가 `LearningFacadeQueryService.findAxisNamesByIds`로 배치 보강한다(read-model 노출, ADR020 — Option B 도메인 연관 승격은 거부). QueryDSL 검색 경로(`DeckSummaryRow`)는 raw `axisId`만 투영한다.
 
 **진행 상태 자동 갱신 트리거 (Story-005-2)**:
 - `CardCommandService.create`가 카드 추가 후 `deck.markInProgress()` 호출 → `NOT_STARTED → IN_PROGRESS`.
@@ -353,3 +359,4 @@ NO_MATERIAL ─ TopicMaterial 연결 → PARTIALLY_COVERED ─ proficiencyLevel�
 | 버전 | 날짜 | 변경 내용 |
 | --- | --- | --- |
 | v0.1 | 2026-05-14 | 신설. `private-docs/domain/{도메인모델,용어사전,BC별 6개}.md`(약 8,000줄)를 단일 파일로 압축. 전역 용어 35개 + BC별 6개 섹션(책임/Aggregate Root/Entity·VO/불변식/상태전이/주의 메모) + v4 결정 12건 + 관련 ADR(003·004·005) 인용. Plan mode + Story 단위 협업 전제로 매트릭스·필드 나열을 모두 제거하고 의도 레이어만 보존 |
+| v0.2 | 2026-06-30 | fix-deck-axis-visibility (0.0.2v) 반영. §2.2 Deck — `createUnderAxis` 팩토리 + axis 결합 정책(자동 1 + 명시 N + 고아 보존) + `axisId`/`axisName` read-model 노출(ADR020). §2.1 Card — 축 스코프 조회는 ReviewSession Layer 1과 별개 사용자 표현 흐름이며 today와 단일 read-model(`findByUserIdAndAxisIdsAndStatus`) 공유 |

@@ -16,9 +16,11 @@ public class DeckResponse {
             boolean onLibrary,
             LocalDateTime publishedAt,
             LocalDateTime lastAccessed,
-            LocalDateTime createdDate
+            LocalDateTime createdDate,
+            Long axisId,
+            String axisName
     ) {
-        public static Create of(Deck deck) {
+        public static Create of(Deck deck, String axisName) {
             return new Create(
                     deck.getId(),
                     deck.getName(),
@@ -27,7 +29,9 @@ public class DeckResponse {
                     deck.isOnLibrary(),
                     deck.getPublishedAt(),
                     deck.getLastAccessed(),
-                    deck.getCreatedDate()
+                    deck.getCreatedDate(),
+                    deck.getAxisId(),
+                    axisName
             );
         }
     }
@@ -44,9 +48,11 @@ public class DeckResponse {
             int cardCount,
             int subDeckCount,
             LocalDateTime createdDate,
-            LocalDateTime updatedDate
+            LocalDateTime updatedDate,
+            Long axisId,
+            String axisName
     ) {
-        public static Detail of(Deck deck) {
+        public static Detail of(Deck deck, String axisName) {
             return new Detail(
                     deck.getId(),
                     deck.getName(),
@@ -58,7 +64,9 @@ public class DeckResponse {
                     deck.getCards().size(),
                     deck.getSubDecks().size(),
                     deck.getCreatedDate(),
-                    deck.getUpdatedDate()
+                    deck.getUpdatedDate(),
+                    deck.getAxisId(),
+                    axisName
             );
         }
     }
@@ -71,9 +79,11 @@ public class DeckResponse {
             boolean onLibrary,
             LocalDateTime lastAccessed,
             int cardCount,
-            int subDeckCount
+            int subDeckCount,
+            Long axisId,
+            String axisName
     ) {
-        public static Summary of(Deck deck) {
+        public static Summary of(Deck deck, String axisName) {
             return new Summary(
                     deck.getId(),
                     deck.getName(),
@@ -81,7 +91,9 @@ public class DeckResponse {
                     deck.isOnLibrary(),
                     deck.getLastAccessed(),
                     deck.getCards().size(),
-                    deck.getSubDecks().size()
+                    deck.getSubDecks().size(),
+                    deck.getAxisId(),
+                    axisName
             );
         }
     }
@@ -141,4 +153,3 @@ public class DeckResponse {
         }
     }
 }
-

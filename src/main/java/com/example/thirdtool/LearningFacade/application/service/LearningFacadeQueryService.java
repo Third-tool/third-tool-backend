@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,15 @@ public class LearningFacadeQueryService {
                         .map(LearningAxis::getId)
                         .toList())
                 .orElseGet(List::of);
+    }
+
+    /**
+     * Cross-BC read — Deck BC가 응답 DTO에 axisName을 동봉할 때 사용한다.
+     * 입력이 null/empty면 빈 Map. 미존재 axisId는 결과에 포함되지 않는다 (= 호출자가 null로 처리).
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, String> findAxisNamesByIds(Collection<Long> axisIds) {
+        return facadeRepository.findAxisNamesByIds(axisIds);
     }
 
     @Transactional(readOnly = true)

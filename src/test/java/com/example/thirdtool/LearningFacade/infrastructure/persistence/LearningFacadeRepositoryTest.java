@@ -11,6 +11,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,6 +64,59 @@ class LearningFacadeRepositoryTest {
         Optional<LearningFacade> result = repository.findByUserId(999_999L);
 
         // then
+        assertThat(result).isEmpty();
+    }
+
+    // ─── findAxisNamesByIds — cross-BC read (Fix-Story 1) ─────────────
+
+    @Test
+    @DisplayName("findAxisNamesByIds — 여러 axisId 입력 시 (id, name) Map 반환")
+    void findAxisNamesByIds_정상() {
+        // given
+        UserEntity user = UserEntity.ofLocal(
+                "axis-name-tester", "encoded-pw", "닉네임", "axis@example.com");
+        em.persist(user);
+
+        LearningFacade facade = LearningFacade.create(user, "백엔드 개발자");
+        facade.addAxis("시스템 설계");
+        facade.addAxis("Spring 내부");
+        em.persist(facade);
+        em.flush();
+
+        List<Long> axisIds = facade.getAxes().stream()
+                .map(axis -> axis.getId())
+                .toList();
+
+        // when
+        Map<Long, String> result = repository.findAxisNamesByIds(axisIds);
+
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(axisIds.get(0))).isEqualTo("시스템 설계");
+        assertThat(result.get(axisIds.get(1))).isEqualTo("Spring 내부");
+    }
+
+    @Test
+    @DisplayName("findAxisNamesByIds — 미존재 axisId는 결과 Map에 포함되지 않음")
+    void findAxisNamesByIds_미존재() {
+        // when
+        Map<Long, String> result = repository.findAxisNamesByIds(List.of(99_999L, 88_888L));
+
+        // then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findAxisNamesByIds — null 입력은 빈 Map (DB 호출 회피)")
+    void findAxisNamesByIds_null() {
+        Map<Long, String> result = repository.findAxisNamesByIds(null);
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findAxisNamesByIds — 빈 입력은 빈 Map (DB 호출 회피)")
+    void findAxisNamesByIds_빈입력() {
+        Map<Long, String> result = repository.findAxisNamesByIds(List.of());
         assertThat(result).isEmpty();
     }
 }

@@ -1,0 +1,53 @@
+{
+  "dbParameterGroupName": "thirdtool-mysql8-utf8mb4-kst",
+  "dbParameterGroupFamily": "mysql8.0",
+  "description": "ThirdTool MySQL 8.0 — utf8mb4 charset + Asia/Seoul timezone + slow query 로깅 + max_connections 100",
+  "parameters": [
+    {
+      "parameterName": "character_set_server",
+      "parameterValue": "utf8mb4",
+      "applyMethod": "pending-reboot",
+      "rationale": "application-prod.yml JDBC URL characterEncoding=UTF-8 정합. emoji + 한글 multi-byte 정확"
+    },
+    {
+      "parameterName": "collation_server",
+      "parameterValue": "utf8mb4_unicode_ci",
+      "applyMethod": "pending-reboot",
+      "rationale": "Flyway V1~V13의 모든 테이블이 COLLATE=utf8mb4_unicode_ci(MySQL 5.7 legacy default) 명시 사용. server-level collation을 utf8mb4_unicode_ci로 맞춰 향후 신규 테이블(V14+) collation drift 차단. MySQL 8.0 default(utf8mb4_0900_ai_ci) 채택 시 기존 테이블과 collation mix 에러 위험"
+    },
+    {
+      "parameterName": "time_zone",
+      "parameterValue": "Asia/Seoul",
+      "applyMethod": "immediate",
+      "rationale": "application-prod.yml JDBC URL serverTimezone=Asia/Seoul 정합. logback Asia/Seoul + Docker TZ 정합"
+    },
+    {
+      "parameterName": "slow_query_log",
+      "parameterValue": "1",
+      "applyMethod": "immediate",
+      "rationale": "1초 초과 쿼리 CloudWatch Logs export — N+1 / 인덱스 누락 조기 발견"
+    },
+    {
+      "parameterName": "long_query_time",
+      "parameterValue": "1.0",
+      "applyMethod": "immediate",
+      "rationale": "1초 임계 — OLTP CRUD는 ms 단위라 1초 초과는 비정상"
+    },
+    {
+      "parameterName": "log_output",
+      "parameterValue": "FILE",
+      "applyMethod": "immediate",
+      "rationale": "FILE → CloudWatch Logs export 가능 (TABLE 옵션은 mysql.slow_log 테이블 부하)"
+    },
+    {
+      "parameterName": "max_connections",
+      "parameterValue": "100",
+      "applyMethod": "immediate",
+      "rationale": "Hikari pool 10 × ECS Task 2(prod desiredCount) = 20 in-use + 운영 여유. db.t4g.micro default ~66 → 100으로 상향"
+    }
+  ],
+  "tags": {
+    "Project": "ThirdTool",
+    "ManagedBy": "Story-051"
+  }
+}

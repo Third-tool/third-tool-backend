@@ -1,0 +1,9 @@
+{
+  "dbSubnetGroupName": "thirdtool-data-subnet-group",
+  "dbSubnetGroupDescription": "ThirdTool RDS data subnet group — data-2a(primary) + data-2c(M2 multi-AZ standby 대비). RDS는 최소 2 AZ subnet 등록 필수.",
+  "subnetIds": ["<DATA_SUBNET_2A>", "<DATA_SUBNET_2C>"],
+  "tags": {
+    "Project": "ThirdTool",
+    "ManagedBy": "Story-051"
+  }
+}

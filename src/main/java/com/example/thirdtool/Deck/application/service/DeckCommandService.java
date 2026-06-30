@@ -25,7 +25,9 @@ public class DeckCommandService {
     private final DeckHierarchyService deckHierarchyService;
 
     /**
-     * 덱 생성
+     * 덱 생성 (고아 덱 경로).
+     * 본 경로는 항상 axisId=null인 고아 Deck을 만든다. axis 결합 Deck 생성은
+     * Fix-Story 2의 신규 경로(POST /api/v1/learning-facade/axes/{axisId}/decks)를 사용한다.
      */
     public DeckResponse.Create create(DeckRequest.Create request, UserEntity user) {
         Deck parentDeck = resolveParent(request.parentDeckId());
@@ -36,7 +38,7 @@ public class DeckCommandService {
                 user);
 
         deckRepository.save(deck);
-        return DeckResponse.Create.of(deck);
+        return DeckResponse.Create.of(deck, null);
     }
 
     /**

@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface LearningFacadeJpaRepository extends JpaRepository<LearningFacade, Long> {
@@ -17,4 +19,16 @@ public interface LearningFacadeJpaRepository extends JpaRepository<LearningFacad
     Optional<LearningFacade> findByUserId(@Param("userId") Long userId);
 
     boolean existsByUserId(Long userId);
+
+    /**
+     * Cross-BC read — axisId 목록에 대응하는 (id, name) 쌍 일괄 조회.
+     * Deck BC가 응답 DTO에 axisName을 동봉할 때 사용. facade 컨텍스트 없이 axisId만으로 조회.
+     */
+    @Query("SELECT a.id AS id, a.name AS name FROM LearningAxis a WHERE a.id IN :axisIds")
+    List<AxisIdNameProjection> findAxisIdNamePairsByIdIn(@Param("axisIds") Collection<Long> axisIds);
+
+    interface AxisIdNameProjection {
+        Long getId();
+        String getName();
+    }
 }

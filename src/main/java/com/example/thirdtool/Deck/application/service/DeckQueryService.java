@@ -6,33 +6,49 @@ import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.infrastructure.repository.DeckRepository;
 import com.example.thirdtool.Deck.presentation.dto.DeckResponse;
-import lombok.RequiredArgsConstructor;
+import com.example.thirdtool.LearningFacade.application.service.LearningFacadeQueryService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class DeckQueryService {
 
     private final DeckRepository deckRepository;
+    private final LearningFacadeQueryService learningFacadeQueryService;
+
+    public DeckQueryService(
+            DeckRepository deckRepository,
+            // Deck ↔ LearningFacade 양방향 read 협력 (PACKAGE.md §6).
+            // LearningFacadeQueryService 또한 DeckQueryService에 의존하므로 @Lazy로 순환을 해소한다.
+            @Lazy LearningFacadeQueryService learningFacadeQueryService
+    ) {
+        this.deckRepository = deckRepository;
+        this.learningFacadeQueryService = learningFacadeQueryService;
+    }
 
     // ─── 외부 API ─────────────────────────────────────────
 
     /**
      * 덱 단건 조회.
      * 삭제된 덱 접근 시 DECK_ALREADY_DELETED 예외.
+     * axisId가 설정되어 있으면 cross-BC read로 axisName도 함께 동봉한다.
      */
     public DeckResponse.Detail findById(Long deckId) {
-        return DeckResponse.Detail.of(getActiveDeck(deckId));
+        Deck deck = getActiveDeck(deckId);
+        String axisName = resolveAxisName(deck.getAxisId());
+        return DeckResponse.Detail.of(deck, axisName);
     }
 
     /**
@@ -42,9 +58,11 @@ public class DeckQueryService {
     public DeckResponse.Page findRootDecks(Long userId, Pageable pageable) {
         Page<Deck> page = deckRepository.findRootDecksByUserId(userId, pageable);
 
+        Map<Long, String> axisNames = resolveAxisNames(page.getContent());
+
         List<DeckResponse.Summary> content = page.getContent()
                                                  .stream()
-                                                 .map(DeckResponse.Summary::of)
+                                                 .map(deck -> DeckResponse.Summary.of(deck, lookupAxisName(axisNames, deck.getAxisId())))
                                                  .toList();
 
         return new DeckResponse.Page(
@@ -75,11 +93,16 @@ public class DeckQueryService {
     public DeckResponse.SubDeckList findSubDecks(Long deckId) {
         Deck parent = getActiveDeck(deckId);
 
-        List<DeckResponse.Summary> subDecks = parent.getSubDecks()
-                                                    .stream()
-                                                    .filter(sub -> !sub.isDeleted())
-                                                    .map(DeckResponse.Summary::of)
-                                                    .toList();
+        List<Deck> activeSubDecks = parent.getSubDecks()
+                                          .stream()
+                                          .filter(sub -> !sub.isDeleted())
+                                          .toList();
+
+        Map<Long, String> axisNames = resolveAxisNames(activeSubDecks);
+
+        List<DeckResponse.Summary> subDecks = activeSubDecks.stream()
+                                                            .map(deck -> DeckResponse.Summary.of(deck, lookupAxisName(axisNames, deck.getAxisId())))
+                                                            .toList();
 
         return new DeckResponse.SubDeckList(deckId, subDecks);
     }
@@ -99,5 +122,34 @@ public class DeckQueryService {
             throw new BusinessException(ErrorCode.DECK_ALREADY_DELETED);
         }
         return deck;
+    }
+
+    /**
+     * Deck 컬렉션이 참조하는 axisId들을 모아 cross-BC read 1회로 axisName Map을 만든다.
+     * 고아 덱(axisId == null)은 lookup 대상이 아니다 — N+1 회피.
+     */
+    private Map<Long, String> resolveAxisNames(Collection<Deck> decks) {
+        Set<Long> axisIds = decks.stream()
+                                  .map(Deck::getAxisId)
+                                  .filter(Objects::nonNull)
+                                  .collect(java.util.stream.Collectors.toCollection(HashSet::new));
+        return learningFacadeQueryService.findAxisNamesByIds(axisIds);
+    }
+
+    /**
+     * 단건 axisId에 대응하는 axisName 조회. null axisId이면 null 반환 — DB 호출 회피.
+     */
+    private String resolveAxisName(Long axisId) {
+        if (axisId == null) {
+            return null;
+        }
+        return learningFacadeQueryService.findAxisNamesByIds(List.of(axisId)).get(axisId);
+    }
+
+    /**
+     * Map.of()로 만든 불변 Map은 get(null)에서 NPE를 던지므로 null axisId 가드가 필요.
+     */
+    private String lookupAxisName(Map<Long, String> axisNames, Long axisId) {
+        return axisId == null ? null : axisNames.get(axisId);
     }
 }

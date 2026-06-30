@@ -4,7 +4,10 @@ import com.example.thirdtool.LearningFacade.domain.model.LearningFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -26,5 +29,17 @@ public class LearningFacadeRepositoryAdapter implements LearningFacadeRepository
     @Override
     public LearningFacade save(LearningFacade facade) {
         return jpa.save(facade);
+    }
+
+    @Override
+    public Map<Long, String> findAxisNamesByIds(Collection<Long> axisIds) {
+        if (axisIds == null || axisIds.isEmpty()) {
+            return Map.of();
+        }
+        return jpa.findAxisIdNamePairsByIdIn(axisIds).stream()
+                .collect(Collectors.toMap(
+                        LearningFacadeJpaRepository.AxisIdNameProjection::getId,
+                        LearningFacadeJpaRepository.AxisIdNameProjection::getName
+                ));
     }
 }

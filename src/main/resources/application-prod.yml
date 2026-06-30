@@ -1,10 +1,29 @@
 # ===========================================
 # prod 프로필 — 운영 환경 (AWS RDS MySQL, HTTPS, Swagger 비활성화)
 # - 모든 secret은 환경변수 필수. default 없음 — Spring Boot가 placeholder 미해석 시 부팅 실패 (의도)
-# - SecretManager 마이그레이션 이후엔 Spring Cloud AWS가 환경변수 대신 fetch
+# - Story-053 (ADR019): Spring Cloud AWS Secrets Manager 보조 경로 활성.
+#   주 경로 = ECS Task Def secrets로 주입된 env var (`DB_HOST`, `JWT_SECRET_KEY` 등).
+#   보조 경로 = 아래 `spring.config.import` — Spring Cloud AWS가 동일 시크릿을 다시 fetch하여
+#   향후 application property 직접 참조(`${HOST}`) 마이그레이션 진입점 마련.
+#   `optional:` prefix로 AWS 미도달(로컬) 시에도 부팅 진행. 로컬에서 prod 시뮬레이션 시 안전.
 # - 로컬에서 prod 시뮬레이션: SPRING_PROFILES_ACTIVE=local,prod + 로컬 MySQL 또는 RDS 환경변수
 # ===========================================
 spring:
+  config:
+    import:
+      - optional:aws-secretsmanager:thirdtool/prod/db-credential
+      - optional:aws-secretsmanager:thirdtool/prod/jwt-secret
+      - optional:aws-secretsmanager:thirdtool/prod/oauth-kakao
+      - optional:aws-secretsmanager:thirdtool/prod/oauth-naver
+      - optional:aws-secretsmanager:thirdtool/prod/gemini-api-key
+
+  # Spring Cloud AWS 3.x region 단일 출처 — Secrets Manager bootstrap에서 사용.
+  # 하단 top-level `cloud.aws.*`는 legacy S3Config @ConfigurationProperties 전용.
+  cloud:
+    aws:
+      region:
+        static: ap-northeast-2
+
   datasource:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: ${DB_USERNAME}
@@ -63,7 +82,8 @@ naver:
   client-secret: ${NAVER_CLIENT_SECRET}
   redirect-uri: https://thirdstool.com/oauth/naver/callback
 
-# AWS S3
+# AWS S3 — 기존 S3Config @ConfigurationProperties용 (Spring Cloud AWS 3.x로 전환 시 폐기).
+# spring.cloud.aws.region.static은 위쪽 spring: 블록에 단일 정의.
 cloud:
   aws:
     credentials:

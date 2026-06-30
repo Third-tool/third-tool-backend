@@ -1,0 +1,8 @@
+{
+  "DomainName": "thirdtool.dev",
+  "SubjectAlternativeNames": [
+    "*.thirdtool.dev"
+  ],
+  "ValidationMethod": "DNS",
+  "IdempotencyToken": "thirdtool-cloudfront-2024"
+}

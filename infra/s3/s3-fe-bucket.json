@@ -1,0 +1,6 @@
+{
+  "Bucket": "thirdtool-fe-prod",
+  "CreateBucketConfiguration": {
+    "LocationConstraint": "ap-northeast-2"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "Bucket": "thirdtool-fe-prod",
+  "PublicAccessBlockConfiguration": {
+    "BlockPublicAcls": true,
+    "IgnorePublicAcls": true,
+    "BlockPublicPolicy": true,
+    "RestrictPublicBuckets": true
+  }
+}

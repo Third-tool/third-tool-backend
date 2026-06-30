@@ -1,0 +1,17 @@
+{
+  "Comment": "api.thirdtool.dev → ALB (A alias)",
+  "Changes": [
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "api.thirdtool.dev",
+        "Type": "A",
+        "AliasTarget": {
+          "HostedZoneId": "<ALB_CANONICAL_HOSTED_ZONE_ID>",
+          "DNSName": "<ALB_DNS_NAME>",
+          "EvaluateTargetHealth": true
+        }
+      }
+    }
+  ]
+}

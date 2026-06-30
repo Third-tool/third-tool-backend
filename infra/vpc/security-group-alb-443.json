@@ -1,0 +1,22 @@
+{
+  "GroupId": "<ALB_SG_ID>",
+  "IpPermissions": [
+    {
+      "IpProtocol": "tcp",
+      "FromPort": 443,
+      "ToPort": 443,
+      "IpRanges": [
+        {
+          "CidrIp": "0.0.0.0/0",
+          "Description": "HTTPS inbound from internet"
+        }
+      ],
+      "Ipv6Ranges": [
+        {
+          "CidrIpv6": "::/0",
+          "Description": "HTTPS inbound from internet (IPv6)"
+        }
+      ]
+    }
+  ]
+}

@@ -56,12 +56,12 @@ springdoc:
 kakao:
   client-id: ${KAKAO_CLIENT_ID}
   client-secret: ${KAKAO_CLIENT_SECRET}
-  redirect-uri: https://thirdstool.com/oauth/kakao/callback
+  redirect-uri: https://api.thirdtool.dev/oauth/kakao/callback
 
 naver:
   client-id: ${NAVER_CLIENT_ID}
   client-secret: ${NAVER_CLIENT_SECRET}
-  redirect-uri: https://thirdstool.com/oauth/naver/callback
+  redirect-uri: https://api.thirdtool.dev/oauth/naver/callback
 
 # AWS S3
 cloud:

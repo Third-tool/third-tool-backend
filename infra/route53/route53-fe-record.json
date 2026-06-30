@@ -1,0 +1,29 @@
+{
+  "Comment": "thirdtool.dev + www.thirdtool.dev → CloudFront (A alias)",
+  "Changes": [
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "thirdtool.dev",
+        "Type": "A",
+        "AliasTarget": {
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "DNSName": "<CLOUDFRONT_DOMAIN>",
+          "EvaluateTargetHealth": false
+        }
+      }
+    },
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "www.thirdtool.dev",
+        "Type": "A",
+        "AliasTarget": {
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "DNSName": "<CLOUDFRONT_DOMAIN>",
+          "EvaluateTargetHealth": false
+        }
+      }
+    }
+  ]
+}

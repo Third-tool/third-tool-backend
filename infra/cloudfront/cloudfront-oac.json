@@ -1,0 +1,9 @@
+{
+  "OriginAccessControlConfig": {
+    "Name": "thirdtool-fe-oac",
+    "Description": "OAC for thirdtool-fe-prod S3 bucket",
+    "OriginAccessControlOriginType": "s3",
+    "SigningBehavior": "always",
+    "SigningProtocol": "sigv4"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "DistributionConfig": {
+    "CallerReference": "thirdtool-fe-prod-2024",
+    "Comment": "thirdtool FE CDN — thirdtool.dev → S3 thirdtool-fe-prod",
+    "Enabled": true,
+    "DefaultRootObject": "index.html",
+    "Aliases": {
+      "Quantity": 2,
+      "Items": [
+        "thirdtool.dev",
+        "www.thirdtool.dev"
+      ]
+    },
+    "Origins": {
+      "Quantity": 1,
+      "Items": [
+        {
+          "Id": "s3-thirdtool-fe-prod",
+          "DomainName": "thirdtool-fe-prod.s3.ap-northeast-2.amazonaws.com",
+          "S3OriginConfig": {
+            "OriginAccessIdentity": ""
+          },
+          "OriginAccessControlId": "<OAC_ID>"
+        }
+      ]
+    },
+    "DefaultCacheBehavior": {
+      "TargetOriginId": "s3-thirdtool-fe-prod",
+      "ViewerProtocolPolicy": "redirect-to-https",
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "Compress": true,
+      "AllowedMethods": {
+        "Quantity": 2,
+        "Items": ["GET", "HEAD"],
+        "CachedMethods": {
+          "Quantity": 2,
+          "Items": ["GET", "HEAD"]
+        }
+      }
+    },
+    "CustomErrorResponses": {
+      "Quantity": 2,
+      "Items": [
+        {
+          "ErrorCode": 404,
+          "ResponsePagePath": "/index.html",
+          "ResponseCode": "200",
+          "ErrorCachingMinTTL": 10
+        },
+        {
+          "ErrorCode": 403,
+          "ResponsePagePath": "/index.html",
+          "ResponseCode": "200",
+          "ErrorCachingMinTTL": 10
+        }
+      ]
+    },
+    "ViewerCertificate": {
+      "ACMCertificateArn": "<ACM_US_EAST_1_ARN>",
+      "SSLSupportMethod": "sni-only",
+      "MinimumProtocolVersion": "TLSv1.2_2021"
+    },
+    "HttpVersion": "http2and3",
+    "PriceClass": "PriceClass_200"
+  }
+}

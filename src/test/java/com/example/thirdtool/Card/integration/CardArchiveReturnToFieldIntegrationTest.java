@@ -62,7 +62,7 @@ class CardArchiveReturnToFieldIntegrationTest {
     void setUp() {
         user = UserEntity.ofLocal("owner", "encoded-pw", "닉네임", "owner@example.com");
         em.persist(user);
-        deck = Deck.of("테스트 덱", null, user);
+        deck = Deck.createFromAxis(user, 1L, "테스트 덱");
         em.persist(deck);
         em.flush();
 

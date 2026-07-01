@@ -86,54 +86,9 @@ class DeckTest {
                 .matches(e -> ((BusinessException) e).getErrorCode() == ErrorCode.DECK_NAME_BLANK);
     }
 
-    // ─── createUnderAxis (Fix-Story 2) ──────────────────────────────
-
-    @Test
-    @DisplayName("createUnderAxis_valid — 모든 필드 정상 매핑")
-    void createUnderAxis_valid() {
-        Deck deck = Deck.createUnderAxis(user, 100L, "백엔드 학습");
-
-        assertThat(deck.getName()).isEqualTo("백엔드 학습");
-        assertThat(deck.getAxisId()).isEqualTo(100L);
-        assertThat(deck.getLearningMaterialId()).isNull();
-        assertThat(deck.getUser()).isEqualTo(user);
-        assertThat(deck.getParentDeck()).isNull();
-        assertThat(deck.getDepth()).isZero();
-        assertThat(deck.getMode()).isEqualTo(DeckMode.ON_FIELD);
-        assertThat(deck.isDeleted()).isFalse();
-    }
-
-    @Test
-    @DisplayName("createUnderAxis_name_trim — 앞뒤 공백 제거")
-    void createUnderAxis_name_trim() {
-        Deck deck = Deck.createUnderAxis(user, 100L, "  Spring 내부  ");
-
-        assertThat(deck.getName()).isEqualTo("Spring 내부");
-    }
-
-    @Test
-    @DisplayName("createUnderAxis_axisId_null_예외 — axisId는 필수")
-    void createUnderAxis_axisId_null_예외() {
-        assertThatThrownBy(() -> Deck.createUnderAxis(user, null, "이름"))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("axisId");
-    }
-
-    @Test
-    @DisplayName("createUnderAxis_user_null_예외")
-    void createUnderAxis_user_null_예외() {
-        assertThatThrownBy(() -> Deck.createUnderAxis(null, 100L, "이름"))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("user");
-    }
-
-    @Test
-    @DisplayName("createUnderAxis_name_blank_예외 — DECK_NAME_BLANK")
-    void createUnderAxis_name_blank_예외() {
-        assertThatThrownBy(() -> Deck.createUnderAxis(user, 100L, "   "))
-                .isInstanceOf(BusinessException.class)
-                .matches(e -> ((BusinessException) e).getErrorCode() == ErrorCode.DECK_NAME_BLANK);
-    }
+    // createUnderAxis 관련 케이스 폐기: Fix — Axis↔Deck 완전 통합 (BE-Story 2, 2026-07-01).
+    // Deck.createUnderAxis 팩토리가 사라지면서 관련 단위 테스트도 제거됨.
+    // 유일 팩토리 createFromAxis에 대한 검증은 위 케이스들이 모두 담당.
 
     // ─── markMaterialDeleted ──────────────────────────────────────
 
@@ -179,14 +134,14 @@ class DeckTest {
     @Test
     @DisplayName("기본 progressStatus — Deck 생성 직후 NOT_STARTED")
     void 기본_progressStatus_NOT_STARTED() {
-        Deck deck = Deck.of("새 Deck", null, user);
+        Deck deck = Deck.createFromAxis(user, 1L, "새 Deck");
         assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.NOT_STARTED);
     }
 
     @Test
     @DisplayName("markInProgress — NOT_STARTED → IN_PROGRESS")
     void markInProgress_NOT_STARTED_전환() {
-        Deck deck = Deck.of("새 Deck", null, user);
+        Deck deck = Deck.createFromAxis(user, 1L, "새 Deck");
 
         deck.markInProgress();
 
@@ -196,7 +151,7 @@ class DeckTest {
     @Test
     @DisplayName("markInProgress_멱등 — 이미 IN_PROGRESS면 무시")
     void markInProgress_이미IN_PROGRESS_무시() {
-        Deck deck = Deck.of("새 Deck", null, user);
+        Deck deck = Deck.createFromAxis(user, 1L, "새 Deck");
         deck.markInProgress();
 
         deck.markInProgress();  // 2회 호출
@@ -207,7 +162,7 @@ class DeckTest {
     @Test
     @DisplayName("markInProgress_COMPLETED_무시 — 회귀는 recalculate가 담당")
     void markInProgress_COMPLETED_무시() {
-        Deck deck = Deck.of("Deck", null, user);
+        Deck deck = Deck.createFromAxis(user, 1L, "Deck");
         injectCards(deck, mockCard(true, false));
         deck.recalculateProgressStatus();
         assertThat(deck.getProgressStatus()).isEqualTo(DeckProgressStatus.COMPLETED);
@@ -220,7 +175,7 @@ class DeckTest {
     @Test
     @DisplayName("recalculate_빈Deck — NOT_STARTED 유지")
     void recalculate_빈Deck_NOT_STARTED() {
-        Deck deck = Deck.of("빈 Deck", null, user);
+        Deck deck = Deck.createFromAxis(user, 1L, "빈 Deck");
 
         deck.recalculateProgressStatus();
 
@@ -230,7 +185,7 @@ class DeckTest {
     @Test
     @DisplayName("recalculate_모두ARCHIVE — COMPLETED")
     void recalculate_모두ARCHIVE_COMPLETED() {
-        Deck deck = Deck.of("Deck", null, user);
+        Deck deck = Deck.createFromAxis(user, 1L, "Deck");
         injectCards(deck, mockCard(true, false), mockCard(true, false));
 
         deck.recalculateProgressStatus();
@@ -241,7 +196,7 @@ class DeckTest {
     @Test
     @DisplayName("recalculate_일부ARCHIVE — IN_PROGRESS")
     void recalculate_일부ARCHIVE_IN_PROGRESS() {
-        Deck deck = Deck.of("Deck", null, user);
+        Deck deck = Deck.createFromAxis(user, 1L, "Deck");
         injectCards(deck, mockCard(true, false), mockCard(false, false));
 
         deck.recalculateProgressStatus();
@@ -252,7 +207,7 @@ class DeckTest {
     @Test
     @DisplayName("recalculate_soft delete된 Card 제외 — 활성만 기준")
     void recalculate_softDelete_제외() {
-        Deck deck = Deck.of("Deck", null, user);
+        Deck deck = Deck.createFromAxis(user, 1L, "Deck");
         // 활성 1개(ARCHIVE) + soft delete 1개(ON_FIELD) — 활성만 보면 모두 ARCHIVE → COMPLETED
         injectCards(deck, mockCard(true, false), mockCard(false, true));
 
@@ -264,7 +219,7 @@ class DeckTest {
     @Test
     @DisplayName("recalculate_모두 soft delete — NOT_STARTED")
     void recalculate_모두soft_delete_NOT_STARTED() {
-        Deck deck = Deck.of("Deck", null, user);
+        Deck deck = Deck.createFromAxis(user, 1L, "Deck");
         injectCards(deck, mockCard(true, true), mockCard(false, true));
 
         deck.recalculateProgressStatus();
@@ -275,7 +230,7 @@ class DeckTest {
     @Test
     @DisplayName("recalculate_COMPLETED→returnToField로 회귀 시 IN_PROGRESS")
     void recalculate_COMPLETED_회귀() {
-        Deck deck = Deck.of("Deck", null, user);
+        Deck deck = Deck.createFromAxis(user, 1L, "Deck");
         Card a = mockCard(true, false);
         Card b = mockCard(true, false);
         injectCards(deck, a, b);

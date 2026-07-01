@@ -50,8 +50,8 @@ class CardRepositoryTodayCandidatesSliceTest {
         em.persist(owner);
         em.persist(other);
 
-        deckOwner = Deck.of("o", null, owner);
-        deckOther = Deck.of("x", null, other);
+        deckOwner = Deck.createFromAxis(owner, 1L, "o");
+        deckOther = Deck.createFromAxis(other, 2L, "x");
         em.persist(deckOwner);
         em.persist(deckOther);
         em.flush();

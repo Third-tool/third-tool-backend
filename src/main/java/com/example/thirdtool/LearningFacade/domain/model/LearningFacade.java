@@ -38,10 +38,16 @@ public class LearningFacade {
     private String concept;
 
     // ─── 세부 축 목록 ─────────────────────────────────────
+    // ⚠️ orphanRemoval=false (Fix — Axis↔Deck 완전 통합, SDD §12 Q1 결정):
+    //   LearningAxis는 Soft Delete 정책 (deleted_at). removeAxis()는 axes.remove()가 아닌
+    //   target.softDelete()만 호출한다. orphanRemoval=true를 유지하면 미래의 리팩토링에서
+    //   axes.removeIf(LearningAxis::isDeleted) 같은 코드가 조용히 hard delete를 발동시켜
+    //   Soft Delete 데이터를 손실할 위험이 있다 (Reviewer Sceptical 지적).
+    //   → axes 컬렉션에서 element를 remove하는 코드를 넣지 말 것. 삭제는 오직 softDelete()로.
     @OneToMany(
             mappedBy      = "facade",
             cascade       = CascadeType.ALL,
-            orphanRemoval = true,
+            orphanRemoval = false,
             fetch         = FetchType.LAZY
     )
     @OrderBy("displayOrder ASC")

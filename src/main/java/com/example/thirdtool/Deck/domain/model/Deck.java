@@ -75,8 +75,12 @@ public class Deck {
     // Long ID 참조 — BC 간 직접 객체 참조 회피 (docs/PACKAGE.md §6).
     // 자료 삭제 시 learning_material_id만 NULL로 전환 → "자료 미연결 Deck"으로 유지.
     // axis_id는 자료 삭제와 무관하게 영구 보존 (로드맵 추적성).
-
-    @Column(name = "axis_id", nullable = true)
+    //
+    // Fix — Axis↔Deck 완전 통합 (BE-Story 2, 2026-07-01):
+    //   nullable=false 승격. Deck 생성은 LearningAxisCreatedEventHandler를 통한
+    //   Deck.createFromAxis()만 가능해졌으므로 "축 없는 Deck"은 스키마 레벨에서 불가.
+    //   V15 마이그레이션이 기존 고아 Deck을 soft delete로 아카이브 후 컬럼을 NOT NULL 승격.
+    @Column(name = "axis_id", nullable = false)
     private Long axisId;
 
     @Column(name = "learning_material_id", nullable = true)
@@ -113,66 +117,20 @@ public class Deck {
         this.depth = (parentDeck == null) ? 0 : parentDeck.getDepth() + 1;
     }
 
-    public static Deck of(String name, Deck parentDeck, UserEntity user) {
-        validateName(name);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: user는 null일 수 없습니다.");
-        }
-
-        Deck deck = new Deck();
-        deck.name         = name.trim();
-        deck.parentDeck   = parentDeck;
-        deck.user         = user;
-        deck.depth        = (parentDeck == null) ? 0 : parentDeck.getDepth() + 1;
-        deck.lastAccessed = LocalDateTime.now();
-        deck.mode         = DeckMode.ON_FIELD;
-        return deck;
-    }
-
     /**
-     * Axis 생성 흐름에서 호출되는 정적 팩토리.
-     * {@code LearningAxisCreatedEventHandler}가 사용한다.
+     * Axis 생성 흐름에서 호출되는 정적 팩토리 — Deck 생성의 유일 진입점.
+     * (Fix — Axis↔Deck 완전 통합, BE-Story 2, 2026-07-01)
+     *
+     * <p>이전 팩토리 {@code Deck.of(name, parentDeck, user)}(고아 Deck)과
+     * {@code Deck.createUnderAxis(user, axisId, name)}(사용자 명시 축 스코프 생성)은
+     * 축=덱 정책에 따라 폐기되었다. Deck은 {@code LearningAxisCreatedEventHandler}가
+     * Axis 생성 이벤트에 반응해 자동으로 생성하는 경로만 남는다.
      *
      * @param user   소유 사용자
      * @param axisId 연결된 축 ID (필수)
      * @param name   Deck 이름 (= Axis.name)
      */
     public static Deck createFromAxis(UserEntity user, Long axisId, String name) {
-        validateName(name);
-        if (user == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: user는 null일 수 없습니다.");
-        }
-        if (axisId == null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: axisId는 null일 수 없습니다.");
-        }
-
-        Deck deck = new Deck();
-        deck.name               = name.trim();
-        deck.user               = user;
-        deck.axisId             = axisId;
-        deck.learningMaterialId = null;
-        deck.parentDeck         = null;
-        deck.depth              = 0;
-        deck.lastAccessed       = LocalDateTime.now();
-        deck.mode               = DeckMode.ON_FIELD;
-        return deck;
-    }
-
-    /**
-     * 사용자가 axis 결합 Deck을 명시적으로 신규 생성할 때 사용하는 정적 팩토리 (Fix-Story 2).
-     * {@code LearningFacadeCommandService.createDeckUnderAxis(...)}가 axis 소유권을 검증한 뒤 호출한다.
-     *
-     * <p>{@link #createFromAxis(UserEntity, Long, String)}와 검증 규칙은 동일하지만 호출 의도가 다르다:
-     * <ul>
-     *   <li>{@code createFromAxis} — Axis 생성 이벤트에 반응하는 자동 생성 (멱등 보증 영역)</li>
-     *   <li>{@code createUnderAxis} — 사용자가 카드 에디터 등에서 명시적으로 신규 Deck을 추가</li>
-     * </ul>
-     *
-     * @param user   소유 사용자
-     * @param axisId 연결된 축 ID (필수)
-     * @param name   Deck 이름 (사용자 입력)
-     */
-    public static Deck createUnderAxis(UserEntity user, Long axisId, String name) {
         validateName(name);
         if (user == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "Deck: user는 null일 수 없습니다.");

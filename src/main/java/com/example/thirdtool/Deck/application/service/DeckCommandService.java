@@ -90,6 +90,21 @@ public class DeckCommandService {
     }
 
     /**
+     * 축(Axis)에 속한 모든 활성 Deck을 연쇄 소프트 삭제한다.
+     * (Fix — Axis↔Deck 완전 통합, 2026-07-01)
+     *
+     * <p>{@code LearningFacadeCommandService.removeAxis}가 축을 소프트 삭제한 직후 호출한다.
+     * 축=덱 정책에 따라 축이 사라지면 그 축의 Deck·Card도 함께 사라져야 하며,
+     * 각 Deck의 {@code softDelete()}는 소속 Card를 연쇄 소프트 삭제한다.
+     *
+     * <p>대상이 0건이면 no-op. 이미 삭제된 Deck은 조회 필터로 제외되므로 재삭제 예외를 만나지 않는다.
+     */
+    public void softDeleteByAxisId(Long axisId) {
+        deckRepository.findByAxisIdInAndDeletedFalse(List.of(axisId))
+                      .forEach(Deck::softDelete);
+    }
+
+    /**
      * 최근 접근 시각 갱신
      * 덱 학습 화면 진입 시 호출
      */

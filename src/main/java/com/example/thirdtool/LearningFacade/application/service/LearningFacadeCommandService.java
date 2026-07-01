@@ -112,6 +112,10 @@ public class LearningFacadeCommandService {
     public void removeAxis(LearningFacadeCommand.RemoveAxis command) {
         LearningFacade facade = loadFacade(command.userId());
         facade.removeAxis(command.axisId());
+        // Fix — Axis↔Deck 완전 통합: 축이 소프트 삭제되면 소속 Deck도 연쇄 소프트 삭제한다.
+        // Deck.softDelete()가 소속 Card까지 연쇄 처리하므로 카드 별도 순회 불필요.
+        // 동일 트랜잭션 내에서 처리되어 원자성 보장.
+        deckCommandService.softDeleteByAxisId(command.axisId());
         facadeRepository.save(facade);
     }
 

@@ -1,6 +1,5 @@
 package com.example.thirdtool.LearningFacade.presentation;
 
-import com.example.thirdtool.Deck.presentation.dto.DeckResponse;
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand;
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery;
 import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialCommand;
@@ -105,17 +104,9 @@ public class LearningFacadeController {
                 new LearningFacadeCommand.ReorderAxes(user.getId(), request.orderedAxisIds()));
     }
 
-    // 7-bis. POST /learning-facade/axes/{axisId}/decks  (Fix-Story 2: 축 스코프 Deck 명시 생성)
-    @PostMapping("/axes/{axisId}/decks")
-    @ResponseStatus(HttpStatus.CREATED)
-    public DeckResponse.Create createAxisDeck(
-            @AuthenticationPrincipal UserEntity user,
-            @PathVariable Long axisId,
-            @Valid @RequestBody LearningFacadeRequest.CreateAxisDeck request
-    ) {
-        return facadeCommandService.createDeckUnderAxis(
-                new LearningFacadeCommand.CreateAxisDeck(user.getId(), axisId, request.name()));
-    }
+    // POST /learning-facade/axes/{axisId}/decks (Fix-Story 2에서 신설)는 폐기되었다.
+    // (Fix — Axis↔Deck 완전 통합, BE-Story 2, 2026-07-01)
+    // 축 생성 시 이벤트로 자동 Deck을 만들도록 통일 — 사용자가 명시적으로 덱을 만들 진입점은 없다.
 
     // 8. POST /learning-facade/axes/{axisId}/topics
     @PostMapping("/axes/{axisId}/topics")

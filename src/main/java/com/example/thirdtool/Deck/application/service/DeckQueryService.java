@@ -18,7 +18,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -126,30 +125,28 @@ public class DeckQueryService {
 
     /**
      * Deck 컬렉션이 참조하는 axisId들을 모아 cross-BC read 1회로 axisName Map을 만든다.
-     * 고아 덱(axisId == null)은 lookup 대상이 아니다 — N+1 회피.
+     *
+     * <p>Fix — Axis↔Deck 완전 통합 (BE-Story 2, 2026-07-01): {@code deck.axis_id}가
+     * NOT NULL로 승격돼 고아 Deck 자체가 존재하지 않는다. null 필터 로직 제거.
      */
     private Map<Long, String> resolveAxisNames(Collection<Deck> decks) {
         Set<Long> axisIds = decks.stream()
                                   .map(Deck::getAxisId)
-                                  .filter(Objects::nonNull)
                                   .collect(java.util.stream.Collectors.toCollection(HashSet::new));
         return learningFacadeQueryService.findAxisNamesByIds(axisIds);
     }
 
     /**
-     * 단건 axisId에 대응하는 axisName 조회. null axisId이면 null 반환 — DB 호출 회피.
+     * 단건 axisId에 대응하는 axisName 조회.
+     *
+     * <p>Fix — Axis↔Deck 완전 통합 (BE-Story 2, 2026-07-01): {@code deck.axis_id}가
+     * NOT NULL이므로 null 가드 불필요.
      */
     private String resolveAxisName(Long axisId) {
-        if (axisId == null) {
-            return null;
-        }
         return learningFacadeQueryService.findAxisNamesByIds(List.of(axisId)).get(axisId);
     }
 
-    /**
-     * Map.of()로 만든 불변 Map은 get(null)에서 NPE를 던지므로 null axisId 가드가 필요.
-     */
     private String lookupAxisName(Map<Long, String> axisNames, Long axisId) {
-        return axisId == null ? null : axisNames.get(axisId);
+        return axisNames.get(axisId);
     }
 }

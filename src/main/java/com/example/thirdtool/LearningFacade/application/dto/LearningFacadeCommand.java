@@ -45,11 +45,8 @@ public final class LearningFacadeCommand {
             Long axisId
     ) {}
 
-    public record CreateAxisDeck(
-            Long userId,
-            Long axisId,
-            String name
-    ) {}
+    // CreateAxisDeck 폐기: Fix — Axis↔Deck 완전 통합 (BE-Story 2, 2026-07-01).
+    // 수동 축 스코프 Deck 생성 경로가 사라지면서 관련 Command record도 제거됨.
 
     public record ReorderAxes(
             Long userId,

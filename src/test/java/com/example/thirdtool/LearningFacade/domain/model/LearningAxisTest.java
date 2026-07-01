@@ -34,6 +34,46 @@ class LearningAxisTest {
         return topic;
     }
 
+    // ─── Soft Delete (Fix — Axis↔Deck 완전 통합, 2026-07-01) ────────
+
+    @Nested
+    @DisplayName("Soft Delete")
+    class SoftDelete {
+
+        @Test
+        @DisplayName("softDelete 호출 시 deletedAt이 현재 시각으로 설정되고 isDeleted=true")
+        void softDelete_해피_deletedAt_설정() {
+            LearningAxis axis = createAxis();
+            java.time.LocalDateTime before = java.time.LocalDateTime.now();
+
+            axis.softDelete();
+
+            assertThat(axis.isDeleted()).isTrue();
+            assertThat(axis.getDeletedAt()).isNotNull();
+            assertThat(axis.getDeletedAt()).isAfterOrEqualTo(before);
+        }
+
+        @Test
+        @DisplayName("초기 상태에서 isDeleted는 false, deletedAt은 null")
+        void 초기상태_활성() {
+            LearningAxis axis = createAxis();
+
+            assertThat(axis.isDeleted()).isFalse();
+            assertThat(axis.getDeletedAt()).isNull();
+        }
+
+        @Test
+        @DisplayName("이미 삭제된 축을 재삭제하면 LEARNING_AXIS_ALREADY_DELETED 예외")
+        void softDelete_이미삭제_예외() {
+            LearningAxis axis = createAxis();
+            axis.softDelete();
+
+            assertThatThrownBy(axis::softDelete)
+                    .isInstanceOf(LearningFacadeDomainException.class)
+                    .hasMessageContaining("이미 삭제된 축입니다.");
+        }
+    }
+
     @Nested
     @DisplayName("이름 수정")
     class UpdateName {

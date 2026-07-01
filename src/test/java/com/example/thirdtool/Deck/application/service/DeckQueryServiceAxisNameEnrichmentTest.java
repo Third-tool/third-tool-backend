@@ -62,11 +62,8 @@ class DeckQueryServiceAxisNameEnrichmentTest {
         return deck;
     }
 
-    private Deck orphanDeck(Long deckId, String name) {
-        Deck deck = Deck.of(name, null, user);
-        ReflectionTestUtils.setField(deck, "id", deckId);
-        return deck;
-    }
+    // orphanDeck 헬퍼 폐기: Fix — Axis↔Deck 완전 통합 (BE-Story 2, 2026-07-01).
+    // Deck.axis_id NOT NULL 승격과 Deck.of 팩토리 제거로 axisId=null Deck 자체가 불가능해짐.
 
     // ─── findById ────────────────────────────────────────────
 
@@ -89,18 +86,7 @@ class DeckQueryServiceAxisNameEnrichmentTest {
             assertThat(result.axisName()).isEqualTo("백엔드");
         }
 
-        @Test
-        @DisplayName("고아 덱 → axisId / axisName 모두 null (LearningFacade 호출 회피)")
-        void 고아덱_axisName_null() {
-            Deck deck = orphanDeck(100L, "고아 덱");
-            given(deckRepository.findById(100L)).willReturn(Optional.of(deck));
-
-            DeckResponse.Detail result = sut.findById(100L);
-
-            assertThat(result.axisId()).isNull();
-            assertThat(result.axisName()).isNull();
-            verify(learningFacadeQueryService, never()).findAxisNamesByIds(anyCollection());
-        }
+        // 고아덱_axisName_null 케이스 폐기: BE-Story 2 이후 axisId=null Deck 자체가 불가능해짐.
     }
 
     // ─── findRootDecks ───────────────────────────────────────
@@ -109,25 +95,7 @@ class DeckQueryServiceAxisNameEnrichmentTest {
     @DisplayName("findRootDecks")
     class FindRootDecks {
 
-        @Test
-        @DisplayName("axis 결합 덱과 고아 덱 혼재 — 결합 덱만 lookup 대상 (N+1 회피)")
-        void 혼재시_고아덱_lookup제외() {
-            Deck axisD = axisDeck(101L, 10L, "축 결합 덱");
-            Deck orphan = orphanDeck(102L, "고아 덱");
-            Pageable pageable = PageRequest.of(0, 20);
-            given(deckRepository.findRootDecksByUserId(1L, pageable))
-                    .willReturn(new PageImpl<>(List.of(axisD, orphan), pageable, 2));
-            given(learningFacadeQueryService.findAxisNamesByIds(Set.of(10L)))
-                    .willReturn(Map.of(10L, "백엔드"));
-
-            DeckResponse.Page result = sut.findRootDecks(1L, pageable);
-
-            assertThat(result.content()).hasSize(2);
-            assertThat(result.content().get(0).axisId()).isEqualTo(10L);
-            assertThat(result.content().get(0).axisName()).isEqualTo("백엔드");
-            assertThat(result.content().get(1).axisId()).isNull();
-            assertThat(result.content().get(1).axisName()).isNull();
-        }
+        // 혼재시_고아덱_lookup제외 케이스 폐기: BE-Story 2 이후 axisId=null Deck 자체가 불가능해짐.
 
         @Test
         @DisplayName("동일 axis 다중 덱 — lookup 1회 (Set으로 중복 제거)")

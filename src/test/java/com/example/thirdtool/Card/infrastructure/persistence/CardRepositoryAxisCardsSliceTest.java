@@ -15,7 +15,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
@@ -26,9 +25,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>축 카드 뷰와 today 집계가 공유하는 단일 read-model의 필터 규칙 검증:
  *   - 본인 axis 결합 Deck의 해당 status 카드만 포함
- *   - 고아 덱(axisId=null)·다른 유저·다른 status·soft delete 제외
+ *   - 다른 유저·다른 status·soft delete 제외
  *   - 다중 axisIds 모두 수집
  *   - threshold(최소 간격) 필터를 갖지 않음 — eligibility 재판정은 상위(Review) 인메모리 책임
+ *
+ * <p>BE-Story 2(2026-07-01) 이후 axisId=null Deck 자체가 스키마 레벨에서 불가능해져
+ * 고아 덱 관련 필터 케이스는 제거되었다.
  */
 @DataJpaTest
 @ActiveProfiles("test")
@@ -46,7 +48,6 @@ class CardRepositoryAxisCardsSliceTest {
     private UserEntity other;
     private Deck ownerAxisADeck;   // axisId = 10, owner
     private Deck ownerAxisBDeck;   // axisId = 20, owner
-    private Deck ownerOrphanDeck;  // axisId = null, owner
     private Deck otherAxisADeck;   // axisId = 10, other user
 
     @BeforeEach
@@ -56,22 +57,13 @@ class CardRepositoryAxisCardsSliceTest {
         em.persist(owner);
         em.persist(other);
 
-        ownerAxisADeck = deckUnderAxis(owner, AXIS_A, "owner-axisA");
-        ownerAxisBDeck = deckUnderAxis(owner, AXIS_B, "owner-axisB");
-        ownerOrphanDeck = Deck.of("owner-orphan", null, owner);
-        otherAxisADeck = deckUnderAxis(other, AXIS_A, "other-axisA");
+        ownerAxisADeck = Deck.createFromAxis(owner, AXIS_A, "owner-axisA");
+        ownerAxisBDeck = Deck.createFromAxis(owner, AXIS_B, "owner-axisB");
+        otherAxisADeck = Deck.createFromAxis(other, AXIS_A, "other-axisA");
         em.persist(ownerAxisADeck);
         em.persist(ownerAxisBDeck);
-        em.persist(ownerOrphanDeck);
         em.persist(otherAxisADeck);
         em.flush();
-    }
-
-    // axisId 결합 덱 — Story 2의 Deck.createUnderAxis에 의존하지 않도록 raw 컬럼만 세팅.
-    private Deck deckUnderAxis(UserEntity user, Long axisId, String name) {
-        Deck deck = Deck.of(name, null, user);
-        ReflectionTestUtils.setField(deck, "axisId", axisId);
-        return deck;
     }
 
     private Card persistCard(Deck deck, boolean archived) {
@@ -83,11 +75,10 @@ class CardRepositoryAxisCardsSliceTest {
     }
 
     @Test
-    @DisplayName("정상: 본인 axis 결합 덱의 ON_FIELD 카드만 — 고아 덱·다른 유저·ARCHIVE 제외")
+    @DisplayName("정상: 본인 axis 결합 덱의 ON_FIELD 카드만 — 다른 유저·ARCHIVE 제외")
     void onField_axisScoped_ownerOnly() {
         Card included = persistCard(ownerAxisADeck, false);  // 포함
         persistCard(ownerAxisADeck, true);                   // ARCHIVE — 제외
-        persistCard(ownerOrphanDeck, false);                 // 고아 덱 — 제외
         persistCard(otherAxisADeck, false);                  // 다른 유저 — 제외
         em.clear();
 

@@ -51,7 +51,7 @@ class CardRepositorySliceTest {
     void setUp() {
         user = UserEntity.ofLocal("tester-1", "encoded-pw", "닉네임", "tester1@example.com");
         em.persist(user);
-        deck = Deck.of("테스트 덱", null, user);
+        deck = Deck.createFromAxis(user, 1L, "테스트 덱");
         em.persist(deck);
         em.flush();
     }

@@ -8,7 +8,6 @@ import com.example.thirdtool.User.domain.model.UserEntity;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -21,17 +20,12 @@ public class DeckController {
     private final DeckCommandService deckCommandService;
     private final DeckQueryService deckQueryService;
 
-    // ─── 1. 덱 생성 ──────────────────────────────────────
-    @PostMapping
-    public ResponseEntity<DeckResponse.Create> create(
-            @Valid @RequestBody DeckRequest.Create request,
-            @AuthenticationPrincipal UserEntity user
-                                                     ) {
-        DeckResponse.Create response = deckCommandService.create(request, user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    // Deck 생성 엔드포인트(POST /api/v1/decks)는 폐기됨.
+    // (Fix — Axis↔Deck 완전 통합, BE-Story 2, 2026-07-01)
+    // Deck 생성은 이제 POST /api/v1/learning-facade/axes를 통한 Axis 생성 이벤트가
+    // 유일한 트리거이며, 해당 이벤트가 LearningAxisCreatedEventHandler에서 Deck을 자동 생성한다.
 
-    // ─── 2. 덱 단건 조회 ─────────────────────────────────
+    // ─── 1. 덱 단건 조회 ─────────────────────────────────
     @GetMapping("/{deckId}")
     public ResponseEntity<DeckResponse.Detail> findById(
             @PathVariable Long deckId

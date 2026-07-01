@@ -138,26 +138,12 @@ public class LearningFacadeCommandService {
     }
 
     // ──────────────────────────────────────────────────────
-    // 7-bis. 축 스코프 Deck 생성 (Fix-Story 2)
+    // 사용자가 명시적으로 Deck을 생성하는 경로는 폐기되었다.
+    // (Fix — Axis↔Deck 완전 통합, BE-Story 2, 2026-07-01)
+    // Deck은 이제 LearningAxisCreatedEventHandler가 Axis 생성 이벤트에 반응해 자동으로만 생성한다.
+    // 이전 createDeckUnderAxis()는 축=덱 정책에 따라 제거됨. deckCommandService 필드는
+    // softDeleteByAxisId 조율(removeAxis 흐름) 목적으로만 유지된다.
     // ──────────────────────────────────────────────────────
-
-    /**
-     * 사용자가 axis에 명시적으로 신규 Deck을 추가한다.
-     *
-     * <p>Cross-BC write — Deck BC의 {@link DeckCommandService#createUnderAxis} 위임. 본 메서드는
-     * facade/axis 소유권만 검증하고 Deck 생성·중복 검증은 Deck BC가 담당한다.
-     *
-     * <p>응답 DTO에 axisName이 동봉되도록 검증된 axis.name을 그대로 전달 — 추가 lookup 없음.
-     */
-    public DeckResponse.Create createDeckUnderAxis(LearningFacadeCommand.CreateAxisDeck command) {
-        LearningFacade facade = loadFacade(command.userId());
-        LearningAxis axis = findAxis(facade, command.axisId());
-        return deckCommandService.createUnderAxis(
-                facade.getUser(),
-                axis.getId(),
-                command.name(),
-                axis.getName());
-    }
 
     // ──────────────────────────────────────────────────────
     // 8. 주제 추가

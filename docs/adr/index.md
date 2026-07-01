@@ -22,3 +22,4 @@
 | [ADR018](ADR018-rds-mysql-single-az-prod.md) | RDS MySQL prod single-AZ + db.t4g.micro + utf8mb4 + Asia/Seoul (Story-051) | Accepted | 2026-06-29 |
 | [ADR019](ADR019-secrets-manager-naming-and-task-role-scope.md) | Secrets Manager 5종 비밀 명명 + env-prefix 격리 + Task Role Resource scope (Story-052) | Accepted | 2026-06-30 |
 | [ADR020](ADR020-deck-axis-visibility.md) | Deck↔Axis 가시화는 read-model 노출로 한정, 도메인 연관 승격 거부 (fix-deck-axis-visibility 0.0.2v) | Accepted | 2026-06-30 |
+| [ADR021](ADR021-axis-deck-full-integration.md) | Deck 생성은 Axis 이벤트 자동 경로로 유일화 + LearningAxis Soft Delete 승격 (fix-axis-deck-full-integration 0.0.2v) | Accepted | 2026-07-01 |

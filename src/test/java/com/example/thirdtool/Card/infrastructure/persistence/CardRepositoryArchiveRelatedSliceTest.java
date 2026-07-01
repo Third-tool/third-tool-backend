@@ -56,8 +56,8 @@ class CardRepositoryArchiveRelatedSliceTest {
         em.persist(owner);
         em.persist(other);
 
-        deckOwner = Deck.of("owner 덱", null, owner);
-        deckOther = Deck.of("other 덱", null, other);
+        deckOwner = Deck.createFromAxis(owner, 1L, "owner 덱");
+        deckOther = Deck.createFromAxis(other, 2L, "other 덱");
         em.persist(deckOwner);
         em.persist(deckOther);
 

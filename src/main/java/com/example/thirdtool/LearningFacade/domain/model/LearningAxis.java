@@ -23,9 +23,14 @@ import java.util.stream.IntStream;
 @Entity
 @Table(
         name = "learning_axis",
+        // (facade_id, name, deleted_at) 3-column composite unique — Fix Axis↔Deck 완전 통합, 2026-07-01.
+        // MySQL은 NULL 조합을 unique 검사에서 서로 다른 값으로 취급하므로:
+        //   - 활성 축(deleted_at IS NULL)끼리는 (facade_id, name) 유일 보장
+        //   - 소프트 삭제된 축(deleted_at != NULL)의 name을 재사용해도 삽입 성공
+        // V14 마이그레이션과 동기화 유지.
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_learning_axis_facade_name",
-                columnNames = {"learning_facade_id", "name"}
+                columnNames = {"learning_facade_id", "name", "deleted_at"}
         )
 )
 @SQLRestriction("deleted_at IS NULL")

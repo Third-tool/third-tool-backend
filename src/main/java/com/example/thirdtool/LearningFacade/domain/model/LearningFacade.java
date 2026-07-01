@@ -38,10 +38,16 @@ public class LearningFacade {
     private String concept;
 
     // ─── 세부 축 목록 ─────────────────────────────────────
+    // ⚠️ orphanRemoval=false (Fix — Axis↔Deck 완전 통합, SDD §12 Q1 결정):
+    //   LearningAxis는 Soft Delete 정책 (deleted_at). removeAxis()는 axes.remove()가 아닌
+    //   target.softDelete()만 호출한다. orphanRemoval=true를 유지하면 미래의 리팩토링에서
+    //   axes.removeIf(LearningAxis::isDeleted) 같은 코드가 조용히 hard delete를 발동시켜
+    //   Soft Delete 데이터를 손실할 위험이 있다 (Reviewer Sceptical 지적).
+    //   → axes 컬렉션에서 element를 remove하는 코드를 넣지 말 것. 삭제는 오직 softDelete()로.
     @OneToMany(
             mappedBy      = "facade",
             cascade       = CascadeType.ALL,
-            orphanRemoval = true,
+            orphanRemoval = false,
             fetch         = FetchType.LAZY
     )
     @OrderBy("displayOrder ASC")
@@ -87,15 +93,29 @@ public class LearningFacade {
     public LearningAxis addAxis(String name) {
         validateAxisNameDuplicate(name);
 
-        int nextOrder = axes.size() + 1;
+        // Fix — Axis↔Deck 완전 통합: displayOrder는 활성 축 기준으로 부여한다.
+        // 소프트 삭제된 축은 in-memory 컬렉션에 남아 있으나 사용자 관점의 "N번째 축"에서는 제외.
+        int nextOrder = (int) axes.stream().filter(a -> !a.isDeleted()).count() + 1;
         LearningAxis axis = LearningAxis.create(this, name, nextOrder);
         axes.add(axis);
         return axis;
     }
 
+    /**
+     * 축 소프트 삭제.
+     * (Fix — Axis↔Deck 완전 통합, 2026-07-01)
+     *
+     * <p>기존에는 {@code axes.remove(target)} + {@code orphanRemoval=true}로 hard delete했으나,
+     * 이 경로가 "카드 만들 때 축이 인식 안 되고 화면 나가면 사라진다" 이슈의 최유력 원인이었다.
+     * 이제 {@code target.softDelete()}만 호출하고 컬렉션에서는 제거하지 않는다 —
+     * {@code orphanRemoval}은 유지되지만 명시 remove가 없으므로 발동하지 않는다.
+     *
+     * <p>축에 속한 Deck 연쇄 소프트 삭제는 Application Service가 조율한다
+     * ({@code LearningFacadeCommandService.removeAxis}가 {@code DeckCommandService.softDeleteByAxisId} 호출).
+     */
     public void removeAxis(Long axisId) {
         LearningAxis target = findAxis(axisId);
-        axes.remove(target);
+        target.softDelete();
     }
 
     public void reorderAxes(List<Long> orderedAxisIds) {
@@ -117,7 +137,8 @@ public class LearningFacade {
     // ─── 보조 조회 ────────────────────────────────────────
 
     public boolean isAxisCountExceedsRecommended() {
-        return axes.size() > RECOMMENDED_AXIS_LIMIT;
+        // 활성 축만 권장 한도 카운트에 포함. 소프트 삭제된 축은 제외.
+        return getAxes().size() > RECOMMENDED_AXIS_LIMIT;
     }
 
     /**
@@ -129,7 +150,7 @@ public class LearningFacade {
         int uncovered = 0;
         int partial   = 0;
         int covered   = 0;
-        for (LearningAxis axis : axes) {
+        for (LearningAxis axis : getAxes()) {
             for (AxisTopic topic : axis.getTopics()) {
                 switch (topic.getCoverageStatus()) {
                     case NO_MATERIAL -> uncovered++;
@@ -146,17 +167,28 @@ public class LearningFacade {
      * getCoverageSummary().hasGap()과 동치지만 존재 여부 판단용 단축 경로.
      */
     public boolean hasUncoveredTopics() {
-        return axes.stream().anyMatch(LearningAxis::hasUncoveredTopics);
+        return getAxes().stream().anyMatch(LearningAxis::hasUncoveredTopics);
     }
 
+    /**
+     * 활성 축만 반환. 소프트 삭제된 축은 제외한다.
+     * (Fix — Axis↔Deck 완전 통합: 소프트 삭제된 축은 in-memory 컬렉션에 남아있으므로 접근자에서 필터링)
+     */
     public List<LearningAxis> getAxes() {
-        return Collections.unmodifiableList(axes);
+        return axes.stream()
+                   .filter(a -> !a.isDeleted())
+                   .toList();
     }
 
     // ─── 내부 유틸 ────────────────────────────────────────
 
+    /**
+     * 활성 축 단건 조회. 이미 소프트 삭제된 축은 조회 대상에서 제외된다 — 재삭제 시도는
+     * {@link ErrorCode#LEARNING_AXIS_NOT_FOUND}가 우선. Domain 검증 순서: findAxis → softDelete.
+     */
     LearningAxis findAxis(Long axisId) {
         return axes.stream()
+                   .filter(a -> !a.isDeleted())
                    .filter(a -> a.getId().equals(axisId))
                    .findFirst()
                    .orElseThrow(() -> LearningFacadeDomainException.of(
@@ -171,7 +203,9 @@ public class LearningFacade {
         if (name == null) return; // null 방어는 LearningAxis.create() 내부 validateName()이 처리
 
         String trimmed = name.trim();
+        // 활성 축만 중복 대상. 소프트 삭제된 축의 이름은 재사용 가능(단, DB UNIQUE 제약이 별도로 걸릴 수 있음 — Story 2에서 확인).
         boolean duplicated = axes.stream()
+                                 .filter(a -> !a.isDeleted())
                                  .anyMatch(a -> a.getName().equals(trimmed));
         if (duplicated) {
             throw LearningFacadeDomainException.of(
@@ -182,7 +216,9 @@ public class LearningFacade {
     }
 
     private void validateReorderIds(List<Long> orderedAxisIds) {
+        // 활성 축 기준 id 집합. 소프트 삭제된 축은 순서 변경 대상 아님.
         Set<Long> currentIds = axes.stream()
+                                   .filter(a -> !a.isDeleted())
                                    .map(LearningAxis::getId)
                                    .collect(Collectors.toSet());
 

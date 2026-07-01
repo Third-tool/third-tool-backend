@@ -82,6 +82,7 @@ public enum ErrorCode {
     LEARNING_AXIS_NAME_BLANK("LA002",             "축 이름은 비어 있을 수 없습니다.",                        HttpStatus.BAD_REQUEST),
     LEARNING_AXIS_DUPLICATE_NAME("LA003",         "동일한 이름의 축이 이미 존재합니다.",                     HttpStatus.CONFLICT),
     LEARNING_AXIS_REORDER_MISMATCH("LA004",       "순서 변경 id 목록이 현재 축 id 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+    LEARNING_AXIS_ALREADY_DELETED("LA005",        "이미 삭제된 축입니다.",                                   HttpStatus.BAD_REQUEST),
 
     // ─── AxisTopic (v2) ────────────────────────────────────
     LEARNING_AXIS_TOPIC_NOT_FOUND("LT001",        "주제를 찾을 수 없습니다.",                                HttpStatus.NOT_FOUND),

@@ -112,7 +112,18 @@ public class LearningFacadeCommandService {
     public void removeAxis(LearningFacadeCommand.RemoveAxis command) {
         LearningFacade facade = loadFacade(command.userId());
         facade.removeAxis(command.axisId());
+        // Fix — Axis↔Deck 완전 통합: 축 소프트 삭제 → flush → Deck 연쇄 소프트 삭제 순서.
+        //
+        // 순서 재배치 근거 (Reviewer Sceptical Major 지적):
+        //   Deck 연쇄를 axis flush 이전에 실행하면 관측 순서(deck 삭제 → axis 삭제)와
+        //   코드 순서(axis softDelete → deck 연쇄)가 뒤바뀐다. 현재는 무해하지만,
+        //   향후 softDeleteByAxisId가 "삭제된 축의 Deck만 삭제한다"는 방어 로직을
+        //   추가할 경우 flush 이전 조회가 0건을 반환해 연쇄 삭제가 누락된다.
+        //   → facadeRepository.save로 axis softDelete 먼저 flush → Deck 연쇄.
+        // Deck.softDelete()가 소속 Card까지 연쇄 처리하므로 카드 별도 순회 불필요.
+        // 세 호출 모두 동일 @Transactional 경계 내에서 원자성 보장.
         facadeRepository.save(facade);
+        deckCommandService.softDeleteByAxisId(command.axisId());
     }
 
     // ──────────────────────────────────────────────────────

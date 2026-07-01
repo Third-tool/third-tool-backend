@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,11 +23,17 @@ import java.util.stream.IntStream;
 @Entity
 @Table(
         name = "learning_axis",
+        // (facade_id, name, deleted_at) 3-column composite unique — Fix Axis↔Deck 완전 통합, 2026-07-01.
+        // MySQL은 NULL 조합을 unique 검사에서 서로 다른 값으로 취급하므로:
+        //   - 활성 축(deleted_at IS NULL)끼리는 (facade_id, name) 유일 보장
+        //   - 소프트 삭제된 축(deleted_at != NULL)의 name을 재사용해도 삽입 성공
+        // V14 마이그레이션과 동기화 유지.
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_learning_axis_facade_name",
-                columnNames = {"learning_facade_id", "name"}
+                columnNames = {"learning_facade_id", "name", "deleted_at"}
         )
 )
+@SQLRestriction("deleted_at IS NULL")
 public class LearningAxis {
 
     private static final int RECOMMENDED_TOPIC_LIMIT = 10;
@@ -66,6 +73,14 @@ public class LearningAxis {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /**
+     * Soft Delete 시각. null이면 활성 상태.
+     * 클래스 상단 {@code @SQLRestriction("deleted_at IS NULL")}로 모든 read에서 자동 필터된다.
+     * (Fix — Axis↔Deck 완전 통합, 2026-07-01)
+     */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     private LearningAxis(LearningFacade facade, String name, int displayOrder) {
         this.facade       = facade;
         this.name         = name;
@@ -88,6 +103,28 @@ public class LearningAxis {
     public void updateName(String newName) {
         validateName(newName);
         this.name = newName.trim();
+    }
+
+    /**
+     * 축 논리 삭제.
+     * {@code deleted_at}을 현재 시각으로 설정한다. 클래스 상단 {@code @SQLRestriction}으로
+     * 이후 모든 read 쿼리에서 자동 제외된다.
+     *
+     * <p>이미 삭제된 축을 재삭제하면 {@link ErrorCode#LEARNING_AXIS_ALREADY_DELETED} 예외.
+     * (Deck.softDelete()의 DECK_ALREADY_DELETED와 동일 패턴)
+     *
+     * <p>본 메서드는 자기 자신의 상태만 변경한다. 축에 속한 Deck 연쇄 소프트 삭제는
+     * Application Service(LearningFacadeCommandService.removeAxis)가 조율한다.
+     */
+    public void softDelete() {
+        if (this.deletedAt != null) {
+            throw LearningFacadeDomainException.of(ErrorCode.LEARNING_AXIS_ALREADY_DELETED);
+        }
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public boolean isDeleted() {
+        return this.deletedAt != null;
     }
 
     void updateDisplayOrder(int newOrder) {

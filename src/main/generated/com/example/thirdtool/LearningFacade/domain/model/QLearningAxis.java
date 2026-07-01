@@ -24,6 +24,8 @@ public class QLearningAxis extends EntityPathBase<LearningAxis> {
 
     public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
 
+    public final DateTimePath<java.time.LocalDateTime> deletedAt = createDateTime("deletedAt", java.time.LocalDateTime.class);
+
     public final NumberPath<Integer> displayOrder = createNumber("displayOrder", Integer.class);
 
     public final QLearningFacade facade;

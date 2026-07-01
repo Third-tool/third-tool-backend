@@ -286,12 +286,12 @@ class LearningFacadeTest {
     // ─── 4. 축 삭제 ─────────────────────────────────────────────────────
 
     @Nested
-    @DisplayName("축 삭제")
+    @DisplayName("축 삭제 (Soft Delete — Fix Axis↔Deck 완전 통합)")
     class RemoveAxis {
 
         @Test
-        @DisplayName("존재하는 axisId로 삭제하면 axes 컬렉션에서 제거된다")
-        void removeAxis_valid() {
+        @DisplayName("존재하는 axisId로 삭제하면 축은 soft delete되고 getAxes()에서 필터된다")
+        void removeAxis_softDelete_getAxes에서_필터() {
             //given
             LearningFacade facade = createFacade();
             LearningAxis axis = addAxisWithId(facade, "API 설계", 10L);
@@ -300,8 +300,24 @@ class LearningFacadeTest {
             //when
             facade.removeAxis(axisId);
 
-            //then
+            //then — axis 자체는 소프트 삭제 상태로 in-memory에 유지되지만, getAxes()는 필터
+            assertThat(axis.isDeleted()).isTrue();
+            assertThat(axis.getDeletedAt()).isNotNull();
             assertThat(facade.getAxes()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("소프트 삭제된 축은 findAxis 대상에서 제외되어 재삭제 시 NOT_FOUND")
+        void removeAxis_재삭제_NOT_FOUND() {
+            //given
+            LearningFacade facade = createFacade();
+            LearningAxis axis = addAxisWithId(facade, "API 설계", 10L);
+            facade.removeAxis(axis.getId());
+
+            //when & then — findAxis가 소프트 삭제된 축을 반환하지 않으므로 NOT_FOUND
+            assertThatThrownBy(() -> facade.removeAxis(axis.getId()))
+                    .isInstanceOf(LearningFacadeDomainException.class)
+                    .hasMessageContaining("세부 축을 찾을 수 없습니다.");
         }
 
         @Test
@@ -313,6 +329,39 @@ class LearningFacadeTest {
             //when & then
             assertThatThrownBy(() -> facade.removeAxis(999L))
                     .isInstanceOf(LearningFacadeDomainException.class);
+        }
+
+        @Test
+        @DisplayName("여러 축 중 하나만 삭제하면 나머지 축은 getAxes()에 유지된다")
+        void removeAxis_일부만_삭제() {
+            //given
+            LearningFacade facade = createFacade();
+            LearningAxis axis1 = addAxisWithId(facade, "API 설계", 10L);
+            LearningAxis axis2 = addAxisWithId(facade, "데이터 모델링", 11L);
+            LearningAxis axis3 = addAxisWithId(facade, "성능 최적화", 12L);
+
+            //when
+            facade.removeAxis(axis2.getId());
+
+            //then
+            assertThat(facade.getAxes()).containsExactly(axis1, axis3);
+            assertThat(axis2.isDeleted()).isTrue();
+        }
+
+        @Test
+        @DisplayName("축 삭제 후 신규 축 addAxis 시 displayOrder는 활성 축 기준으로 부여된다")
+        void removeAxis_후_addAxis_displayOrder_활성기준() {
+            //given
+            LearningFacade facade = createFacade();
+            LearningAxis axis1 = addAxisWithId(facade, "API 설계", 10L);
+            LearningAxis axis2 = addAxisWithId(facade, "데이터 모델링", 11L);
+            facade.removeAxis(axis1.getId());
+
+            //when — axis1(order=1)이 소프트 삭제된 상태에서 신규 추가
+            LearningAxis added = facade.addAxis("성능 최적화");
+
+            //then — 활성 axis 개수(1) + 1 = 2
+            assertThat(added.getDisplayOrder()).isEqualTo(2);
         }
     }
 

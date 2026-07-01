@@ -4,6 +4,8 @@ import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeComman
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeQuery;
 import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialCommand;
 import com.example.thirdtool.LearningFacade.application.dto.LearningMaterialQuery;
+import com.example.thirdtool.Card.domain.model.CardStatus;
+import com.example.thirdtool.Card.presentation.dto.CardResponse;
 import com.example.thirdtool.LearningFacade.application.service.LearningFacadeCommandService;
 import com.example.thirdtool.LearningFacade.application.service.LearningFacadeQueryService;
 import com.example.thirdtool.LearningFacade.application.service.LearningMaterialCommandService;
@@ -286,5 +288,18 @@ public class LearningFacadeController {
     ) {
         return topicRevisionQueryService.getDeletions(
                 new LearningFacadeQuery.GetTopicDeletions(axisId));
+    }
+
+    // 22. GET /learning-facade/axes/{axisId}/cards  (fix-deck-axis-visibility 0.0.2v Fix-Story 4)
+    // 축 스코프 카드 조회 — LearningFacadeQueryService가 소유권 검증 후 Card BC로 위임.
+    // status 기본값 ON_FIELD. status=ARCHIVE로 아카이브 카드 조회 가능.
+    @GetMapping("/axes/{axisId}/cards")
+    public List<CardResponse.Summary> findAxisCards(
+            @AuthenticationPrincipal UserEntity user,
+            @PathVariable Long axisId,
+            @RequestParam(name = "status", required = false, defaultValue = "ON_FIELD") CardStatus status
+    ) {
+        return facadeQueryService.findAxisCards(
+                new LearningFacadeQuery.FindAxisCards(user.getId(), axisId, status));
     }
 }

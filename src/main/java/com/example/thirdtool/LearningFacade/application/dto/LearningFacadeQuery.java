@@ -26,4 +26,15 @@ public final class LearningFacadeQuery {
      * 활성 수정 이유 선택지 목록 조회. 인자가 없지만 시그니처 통일을 위해 빈 record로 둔다.
      */
     public record GetActiveReasonOptions() {}
+
+    /**
+     * 축 스코프 카드 조회 — fix-deck-axis-visibility (0.0.2v) Fix-Story 4.
+     * 소유권 검증(userId가 axisId의 축을 보유하는가) 후 CardQueryService.findByAxisIds에 위임.
+     * status 기본값은 컨트롤러/서비스에서 ON_FIELD로 처리.
+     */
+    public record FindAxisCards(
+            Long userId,
+            Long axisId,
+            com.example.thirdtool.Card.domain.model.CardStatus status
+    ) {}
 }

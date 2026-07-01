@@ -1,5 +1,8 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
+import com.example.thirdtool.Card.application.service.CardQueryService;
+import com.example.thirdtool.Card.domain.model.CardStatus;
+import com.example.thirdtool.Card.presentation.dto.CardResponse;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.application.service.DeckQueryService;
 import com.example.thirdtool.Deck.domain.model.Deck;
@@ -31,6 +34,7 @@ public class LearningFacadeQueryService {
     private final LearningFacadeRepository facadeRepository;
     private final TopicMaterialRepository topicMaterialRepository;
     private final DeckQueryService deckQueryService;
+    private final CardQueryService cardQueryService;
 
     /**
      * Cross-BC inbound (Story 6-1 Layer 1 한정) — 사용자 LearningFacade가 보유한 모든 axis ID를 반환.
@@ -79,6 +83,36 @@ public class LearningFacadeQueryService {
                 .collect(Collectors.groupingBy(Deck::getAxisId));
 
         return FacadeDetail.of(facade, breakdownByTopic, linkedDecksByAxis);
+    }
+
+    /**
+     * 축 스코프 카드 조회 — fix-deck-axis-visibility (0.0.2v) Fix-Story 4.
+     *
+     * <p>흐름: (1) userId의 LearningFacade 로드 → (2) axisId가 그 사용자의 축 목록에 포함되는지
+     * 소유권 검증 → (3) CardQueryService.findByAxisIds로 위임. today 집계와 동일 read-model 공유.
+     *
+     * <p>실패 응답:
+     * <ul>
+     *   <li>userId가 LearningFacade 미보유 → {@link ErrorCode#LEARNING_FACADE_NOT_FOUND} (404)
+     *   <li>axisId가 다른 사용자 소유 또는 존재하지 않음 → {@link ErrorCode#LEARNING_FACADE_FORBIDDEN} (403)
+     * </ul>
+     *
+     * <p>status가 null이면 호출자 책임으로 ON_FIELD를 기본값으로 넘긴다 (컨트롤러가 처리).
+     */
+    @Transactional(readOnly = true)
+    public List<CardResponse.Summary> findAxisCards(LearningFacadeQuery.FindAxisCards query) {
+        LearningFacade facade = facadeRepository.findByUserId(query.userId())
+                .orElseThrow(() -> LearningFacadeDomainException.of(ErrorCode.LEARNING_FACADE_NOT_FOUND));
+
+        boolean owned = facade.getAxes().stream()
+                .map(LearningAxis::getId)
+                .anyMatch(id -> id.equals(query.axisId()));
+        if (!owned) {
+            throw LearningFacadeDomainException.of(ErrorCode.LEARNING_FACADE_FORBIDDEN);
+        }
+
+        CardStatus status = query.status() != null ? query.status() : CardStatus.ON_FIELD;
+        return cardQueryService.findByAxisIds(query.userId(), List.of(query.axisId()), status);
     }
 
     // table-spec §3-1 (4): 저장하지 않고 인메모리 그룹핑. 주제당 자료 수가 수십 건 수준이라 한 번의 IN 쿼리로 충분.

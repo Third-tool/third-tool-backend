@@ -56,7 +56,7 @@ class LearningFacadeQueryServiceTest {
         topicMaterialRepository = mock(TopicMaterialRepository.class);
         deckQueryService = mock(DeckQueryService.class);
         when(deckQueryService.findByAxisIds(anyCollection())).thenReturn(List.of());
-        service = new LearningFacadeQueryService(facadeRepository, topicMaterialRepository, deckQueryService);
+        service = new LearningFacadeQueryService(facadeRepository, topicMaterialRepository, deckQueryService, mock(com.example.thirdtool.Card.application.service.CardQueryService.class));
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);

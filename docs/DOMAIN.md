@@ -117,13 +117,13 @@ ON_FIELD ↔ ARCHIVE
 
 ### 2.2 Deck — 카드 분류 컨테이너
 
-**한 줄 책임**: 카드를 주제 단위로 계층 구조화하고, depth 일관성을 강제하며 공개 상태와 학습 진행 상태를 관리한다. **LearningAxis 추가 시 1:1로 자동 생성**된다 (Fix-Story 1~4 / ADR007 Amended 2026-06-30).
+**한 줄 책임**: 카드를 주제 단위로 계층 구조화하고, depth 일관성을 강제하며 공개 상태와 학습 진행 상태를 관리한다. **LearningAxis 생성 이벤트가 Deck의 유일 생성 진입점**이며 축당 1:1로 자동 생성된다 (fix-axis-deck-full-integration 0.0.2v / ADR021, 2026-07-01).
 
 **Aggregate Root**: `Deck` — 카드 목록과 하위 덱을 계층 일관성 하에 관리.
 
 **Entity / VO**:
 - 속성 — `name`, `lastAccessed`, `onLibrary`, `publishedAt`, `parentDeck`, `depth`, `subDecks`, `cards`, `user`
-- `axisId` (Long, nullable) — LearningFacade 축 연결. Axis 추가 시 자동 생성된 Deck은 채워진 상태로 시작 (Fix-Story 1).
+- `axisId` (Long, **NOT NULL** — fix-axis-deck-full-integration 0.0.2v / ADR021) — LearningFacade 축 연결. 모든 Deck은 Axis 생성 이벤트로 만들어지므로 axisId 없이 존재할 수 없다.
 - `learningMaterialId` (Long, nullable) — 원천 학습 자료 ID (Story-005-1 잔존 컬럼). **Fix-Story 1 이후 새 흐름에서는 항상 null로 시작** — 후속 Story에서 컬럼 제거 검토 예정.
 - `progressStatus` (`DeckProgressStatus`, NOT NULL) — 학습 진행 상태 (Story-005-2). 기본값 `NOT_STARTED`.
 - `DeckProgressStatus` (Enum) — `NOT_STARTED` / `IN_PROGRESS` / `COMPLETED`
@@ -138,20 +138,21 @@ ON_FIELD ↔ ARCHIVE
 6. 부모 변경 시 순환 구조 방지 검증 필요.
 7. 이름 변경 시 revisionCount 증가 없음 (revisionCount는 AxisTopic만 추적).
 8. 하위 덱 및 카드 구조 삭제 시 연쇄 삭제 — depth 재계산 불필요.
-9. `axisId`/`learningMaterialId`는 nullable — 사용자가 직접 만든 Deck은 둘 다 null. **Axis 등록 흐름에서 만들어진 Deck은 `axisId`만 채워진 채로 시작** (Fix-Story 1, 2026-06-30). `learningMaterialId`는 새 흐름에서 채워지지 않는다.
+9. `axisId`는 **NOT NULL** (fix-axis-deck-full-integration 0.0.2v / ADR021). Deck은 반드시 Axis 생성 이벤트를 통해서만 만들어지므로 축 없이 존재할 수 없다. `learningMaterialId`는 nullable 유지 (자료 참조는 항상 선택적).
 10. 자료 삭제 시 `markMaterialDeleted()`로 `learningMaterialId`만 null 전환 (멱등). `axisId`는 로드맵 추적성을 위해 보존.
 11. `progressStatus`는 외부 주입 금지 — `markInProgress()` / `recalculateProgressStatus()`로만 변경 (Story-005-2).
 12. `markInProgress()`는 **`NOT_STARTED → IN_PROGRESS` 전용 마커** (멱등 — 이미 IN_PROGRESS / COMPLETED면 무시). 회귀는 책임 아님.
 13. `recalculateProgressStatus()`는 활성 Card 컬렉션 기준 — 0개 → NOT_STARTED / 전부 ARCHIVE → COMPLETED / 그 외 → IN_PROGRESS.
 
 **팩토리 메서드**:
-- `Deck.of(name, parentDeck, user)` — 사용자가 직접 생성 (기존 흐름, axisId=null 고아 덱).
-- `Deck.createFromAxis(user, axisId, name)` — Axis 등록 이벤트 핸들러가 호출 (Fix-Story 1 / ADR007 Amended). 이름은 `LearningAxis.name`을 그대로 사용. 멱등(`existsByAxisIdAndDeletedFalse`).
-- `Deck.createUnderAxis(user, axisId, name)` — 사용자가 축에 **명시적으로** 신규 덱을 추가 (fix-deck-axis-visibility 0.0.2v Story 2, `POST /learning-facade/axes/{axisId}/decks`). 멱등 검사 없는 단순 신규 생성, 이름 중복은 `DECK_NAME_DUPLICATE`.
+- `Deck.createFromAxis(user, axisId, name)` — **Deck 생성의 유일 진입점**. `LearningAxisCreatedEventHandler`가 호출한다. 이름은 `LearningAxis.name`을 그대로 사용. 멱등(`existsByAxisIdAndDeletedFalse`). (fix-axis-deck-full-integration 0.0.2v / ADR021)
+- ~~`Deck.of(name, parentDeck, user)`~~ — 폐기 (BE-Story 2). 고아 Deck 생성 팩토리.
+- ~~`Deck.createUnderAxis(user, axisId, name)`~~ — 폐기 (BE-Story 2). 사용자 명시 축스코프 생성 팩토리 (fix-deck-axis-visibility 0.0.2v Story 2에서 신설된 것을 되돌림).
 
-**axis 결합 정책 (fix-deck-axis-visibility 0.0.2v / ADR020)**:
-- 한 축당 **자동 생성 1개**(`createFromAxis`, 멱등) + **사용자 명시 추가 N개**(`createUnderAxis`) + **고아 덱 보존**(`Deck.of`, axisId=null)을 모두 허용한다. 축당 단일 덱 제약은 두지 않는다(UX 검증 후 재평가).
+**axis 결합 정책 (fix-axis-deck-full-integration 0.0.2v / ADR021)**:
+- **한 축당 자동 생성 1개**만 허용. 사용자 명시 진입점(`POST /api/v1/decks`, `POST /learning-facade/axes/{axisId}/decks`) 및 관련 팩토리는 모두 폐기. 축=덱 1:1 정책.
 - 응답 DTO(`DeckResponse.Summary`/`Detail`)는 `axisId`/`axisName`을 노출한다. `axisName`은 도메인 연관 승격 없이 `DeckQueryService`가 `LearningFacadeQueryService.findAxisNamesByIds`로 배치 보강한다(read-model 노출, ADR020 — Option B 도메인 연관 승격은 거부). QueryDSL 검색 경로(`DeckSummaryRow`)는 raw `axisId`만 투영한다.
+- `deck.axis_id`는 `NOT NULL`이므로 `DeckQueryService`의 null axisId 방어 코드도 함께 제거됨.
 
 **진행 상태 자동 갱신 트리거 (Story-005-2)**:
 - `CardCommandService.create`가 카드 추가 후 `deck.markInProgress()` 호출 → `NOT_STARTED → IN_PROGRESS`.
@@ -172,9 +173,10 @@ ON_FIELD ↔ ARCHIVE
 
 **주의·결정 메모**:
 - 동일 사용자 내 이름 중복 불가는 DB `uk_deck_user_name` UNIQUE 제약 + 도메인 검증 이중 방어.
-- ~~자료 등록 흐름의 자동 생성 시 동명 Deck 존재 시 핸들러가 `forceCreateDeck`로 분기~~ — **Fix-Story 1~4로 폐기**. 새 흐름은 Axis 단위 멱등(`existsByAxisIdAndDeletedFalse`)으로 처리하며, Axis 이름이 `learning_axis (facade_id, name)` UNIQUE로 이미 facade 내 유일하므로 동명 Deck collision은 발생하지 않는다.
-- Deck `axisId`·`learningMaterialId` FK는 `ON DELETE SET NULL` (Flyway V7) — 축·자료 삭제 시 Deck 자체는 보존.
+- ~~자료 등록 흐름의 자동 생성 시 동명 Deck 존재 시 핸들러가 `forceCreateDeck`로 분기~~ — **Fix-Story 1~4로 폐기**. 새 흐름은 Axis 단위 멱등(`existsByAxisIdAndDeletedFalse`)으로 처리하며, Axis 이름이 `learning_axis (facade_id, name, deleted_at)` composite UNIQUE로 이미 facade 내 유일하므로 동명 Deck collision은 발생하지 않는다.
+- Deck `axisId` FK `fk_deck_axis`는 `ON DELETE SET NULL` (Flyway V7). `learningMaterialId` FK는 `ON DELETE SET NULL` (동일). **fix-axis-deck-full-integration 0.0.2v(ADR021) 이후 Axis Hard Delete 자체가 발생하지 않으므로 axis FK CASCADE 규칙은 안전망으로만 유지** — Axis softDelete 시 Application Service가 Deck을 연쇄 softDelete 처리한다.
 - `progressStatus` DB 컬럼은 `VARCHAR(20) NOT NULL DEFAULT 'NOT_STARTED'` + CHECK 제약 + 인덱스 (Flyway V8). 도메인 + DB 이중 방어.
+- `axis_id` DB 컬럼은 `BIGINT NOT NULL` (Flyway V15, fix-axis-deck-full-integration 0.0.2v). V15가 기존 고아 Deck을 soft delete 아카이브 → 남은 NULL row hard delete → NOT NULL 승격 순으로 처리.
 - 빈 Deck(활성 Card 0)에서 `markInProgress()` 호출은 NOT_STARTED → IN_PROGRESS로 전환되지만 직후 `recalculateProgressStatus()`가 호출되면 다시 NOT_STARTED로 회귀 — 둘 다 정상 흐름.
 
 ---
@@ -241,8 +243,8 @@ ON_FIELD ↔ ARCHIVE
 **핵심 불변식**:
 1. v1 유저당 LearningFacade 1개만 (중복 생성은 Application Service에서 차단).
 2. Concept 비어 있으면 안 됨.
-3. 축 이름 중복 불가 (동일 Facade 내).
-4. 축 삭제 시 AxisTopic 연쇄 삭제 (orphanRemoval). LearningMaterial은 보존.
+3. 축 이름 중복 불가 (활성 축끼리, 동일 Facade 내). 소프트 삭제된 축의 이름은 재사용 가능 — `(facade_id, name, deleted_at)` composite UNIQUE 제약이 활성 축끼리만 유일 보장 (fix-axis-deck-full-integration 0.0.2v / ADR021, Flyway V14).
+4. **축 삭제는 Soft Delete** (fix-axis-deck-full-integration 0.0.2v / ADR021). `LearningFacade.removeAxis()`가 `target.softDelete()`를 호출하고 컬렉션에서는 제거하지 않는다 (`axes` OneToMany는 `orphanRemoval=false`로 낮춤 — 회귀 트랩 차단). AxisTopic은 여전히 archive 패턴(ADR003 — soft delete 미적용) 유지. 소속 Deck은 Application Service가 `DeckCommandService.softDeleteByAxisId`로 연쇄 소프트 삭제.
 5. AxisTopic 생성 시 `coverageStatus = NO_MATERIAL`.
 6. 주제 명 변경 시 `revisionCount` 증가 (동일 값 재입력은 증가 안 함).
 7. 주제 설명 변경 시 `revisionCount` 미증가 — 명 수정만 추적.
@@ -267,7 +269,9 @@ NO_MATERIAL ─ TopicMaterial 연결 → PARTIALLY_COVERED ─ proficiencyLevel�
 - `revisionCount >= 3` 시 "단련 중" 안내 (강제 제한 아님).
 - 신규 주제 저장 후 "기존 자료 연결" 옵션은 Repository 조합으로 처리 (`linkableMaterials` 응답 필드, Story-004-2).
 - 주제 삭제 시 archive 패턴 — `TopicDeletionRecord` 스냅샷 보존 (ADR003: AxisTopic은 soft delete 미적용).
-- **Axis 등록 시 Deck 자동 생성** — `LearningFacadeCommandService.addAxis`가 Axis 저장 직후 `LearningAxisCreatedEvent`(동기 immutable record, ADR007 Amended) 발행. Deck BC 핸들러가 같은 트랜잭션에서 Axis와 같은 이름의 Deck을 생성 (Fix-Story 1~4, 2026-06-30). 동일 axis에 활성 Deck이 이미 있으면 no-op (멱등).
+- **LearningAxis Soft Delete 정책** (fix-axis-deck-full-integration 0.0.2v / ADR021, 2026-07-01) — `learning_axis` 테이블에 `deleted_at DATETIME(6) NULL` 컬럼 (Flyway V14). 도메인 클래스에 `@SQLRestriction("deleted_at IS NULL")` + `softDelete()` + `isDeleted()`. `LearningFacade.getAxes/findAxis/addAxis/validateAxisNameDuplicate/reorderAxes/isAxisCountExceedsRecommended/getCoverageSummary/hasUncoveredTopics` 8개 지점이 활성 축만 필터. 이 결정으로 이슈 "카드 만들 때 축이 인식 안 되고 화면 나가면 사라진다"의 근본 원인(`orphanRemoval` hard delete)이 원천 봉쇄됨.
+- **Axis 등록 시 Deck 자동 생성 — 유일 진입점** (fix-axis-deck-full-integration 0.0.2v / ADR021 강화) — `LearningFacadeCommandService.addAxis`가 Axis 저장 직후 `LearningAxisCreatedEvent`(동기 immutable record, ADR007 Amended) 발행. Deck BC 핸들러가 같은 트랜잭션에서 Axis와 같은 이름의 Deck을 생성. 동일 axis에 활성 Deck이 이미 있으면 no-op (멱등). 사용자 명시 Deck 생성 경로는 폐기됨 — 축=덱 1:1 정책.
+- **Axis 삭제 시 Deck 연쇄 소프트 삭제** (fix-axis-deck-full-integration 0.0.2v / ADR021) — `LearningFacadeCommandService.removeAxis`가 `facade.removeAxis(axisId)` → `facadeRepository.save(facade)` → `deckCommandService.softDeleteByAxisId(axisId)` 순서로 조율. Axis softDelete flush 후 Deck 연쇄가 실행되도록 관측 순서와 코드 순서 일치. 동일 `@Transactional` 경계로 원자성 보장. Deck의 `softDelete()`가 소속 Card까지 연쇄 처리.
 - 자료 등록 응답에서 `deckCreated`/`deckId`/`deckName` 필드 **제거** — Material은 더 이상 Deck 생성 진입점이 아니다 (Fix-Story 3).
 - **자료 삭제 시 Deck 자료 참조 끊기** — `LearningMaterialCommandService.deleteMaterial`이 자료 물리 삭제 **직전**에 `LearningMaterialDeletedEvent`(immutable record, ADR007) 발행. Deck BC 핸들러가 영향 Deck들의 `learningMaterialId`만 null로 끊고 Deck 자체는 보존(`axisId`는 로드맵 추적성을 위해 유지). 호출자 트랜잭션 안에서 dirty checking → DB FK 안전 (Story-005-2).
 - **getFacade 응답에 축별 linkedDecks 노출** — `LearningFacadeQueryService.getFacade`가 facade의 axis ID 목록을 한 번에 `DeckQueryService.findByAxisIds(...)`로 조회한 뒤 axisId 기준 그룹핑해 `FacadeDetail.axes[].linkedDecks`로 매핑. N+1 회피. 자료 미연결 Deck은 `isMaterialUnlinked=true` 뱃지로 식별 (Story-005-2).

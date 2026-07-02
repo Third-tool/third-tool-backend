@@ -1,0 +1,45 @@
+{
+  "role": "backend-developer",
+  "layers": [
+    { "name": "웹 API",       "rationale": "HTTP 요청·응답·라우팅 처리 계층" },
+    { "name": "도메인 로직",  "rationale": "비즈니스 규칙과 불변식이 응집되는 핵심 계층" },
+    { "name": "데이터 접근",  "rationale": "영속화 · 트랜잭션 · 쿼리 최적화 계층" },
+    { "name": "인프라 · 운영", "rationale": "배포 · 모니터링 · 로깅 · 보안 계층" },
+    { "name": "테스트 · 품질", "rationale": "단위 · 슬라이스 · 통합 테스트 전략과 자동화 계층" }
+  ],
+  "axes": {
+    "웹 API": [
+      { "description": "REST 원칙",       "rationale": "리소스 · 상태 · HTTP 매핑" },
+      { "description": "인증 · 인가",     "rationale": "JWT / OAuth / RBAC" },
+      { "description": "예외 · 응답 형식", "rationale": "ErrorCode · GlobalExceptionHandler" }
+    ],
+    "도메인 로직": [
+      { "description": "Aggregate 설계",   "rationale": "경계 · 불변식 · 정적 팩토리" },
+      { "description": "Value Object",     "rationale": "불변 · 캡슐화 · 정규화" }
+    ],
+    "데이터 접근": [
+      { "description": "JPA · QueryDSL",   "rationale": "매핑 · fetch 전략 · N+1" },
+      { "description": "Flyway 마이그레이션", "rationale": "스키마 진화 · 롤백 · 백필" }
+    ]
+  },
+  "roadmaps": {
+    "REST 원칙": {
+      "outline": ["REST 개요", "리소스 모델링", "상태 전이", "버전 관리 · 문서화"],
+      "rationale": "HTTP 위 API 설계의 기본 골격을 순차 학습"
+    },
+    "Aggregate 설계": {
+      "outline": ["Aggregate 경계", "불변식 강제", "정적 팩토리 · 캡슐화", "다건 입력 처리"],
+      "rationale": "DDD 관점의 도메인 응집도 확보"
+    }
+  },
+  "selections": {
+    "REST 원칙": {
+      "selections": ["Github API 사례", "Stripe API 사례", "Slack API 사례"],
+      "rationale": "실무 잘 알려진 REST 설계 예"
+    },
+    "Aggregate 설계": {
+      "selections": ["결제 도메인 사례", "주문 · 배송 사례", "학습 카드 사례"],
+      "rationale": "도메인별 Aggregate 경계 정하기 실전 예"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "role": "generic",
+  "layers": [
+    { "name": "핵심 개념", "rationale": "학습 주제의 근본 개념 계층" },
+    { "name": "실무 적용", "rationale": "개념을 실제 상황에 적용하는 계층" },
+    { "name": "심화 · 응용", "rationale": "예외 · 최적화 · 확장 계층" }
+  ],
+  "axes": {
+    "핵심 개념": [
+      { "description": "기본 원칙", "rationale": "필수로 알아야 할 원칙 · 정의" }
+    ],
+    "실무 적용": [
+      { "description": "표준 패턴", "rationale": "널리 쓰이는 표준 · 관행" }
+    ]
+  },
+  "roadmaps": {
+    "기본 원칙": {
+      "outline": ["개요", "심화", "실전"],
+      "rationale": "일반적 학습 흐름 fallback"
+    }
+  },
+  "selections": {
+    "기본 원칙": {
+      "selections": ["사례 A", "사례 B", "사례 C"],
+      "rationale": "일반 사례 fallback"
+    }
+  }
+}

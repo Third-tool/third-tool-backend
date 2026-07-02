@@ -94,6 +94,20 @@ public class LearningAxis {
     @OrderBy("displayOrder ASC")
     private final List<AxisRoadmapNode> roadmapNodes = new ArrayList<>();
 
+    /**
+     * Selection 컨테이너 (Story-LT-E3-S3-9, 이슈 #16 · 이슈 #11 정책 계승).
+     * 컨테이너 정책: name UNIQUE per axis, created_at DESC 정렬, hard delete.
+     * {@code orphanRemoval=true} — 컨테이너 컬렉션에서 제거 시 hard delete.
+     */
+    @OneToMany(
+            mappedBy      = "axis",
+            cascade       = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch         = FetchType.LAZY
+    )
+    @OrderBy("createdAt DESC")
+    private final List<AxisSelection> selections = new ArrayList<>();
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -393,5 +407,69 @@ public class LearningAxis {
                     ErrorCode.ROADMAP_NODE_ORDER_MISMATCH,
                     "전달된 노드 id 목록이 현재 노드 id 집합과 일치하지 않습니다.");
         }
+    }
+
+    // ─── Selection 컨테이너 도메인 API (Story-LT-E3-S3-9, 이슈 #16) ─────────
+    //
+    // 이슈 #11 정책 계승:
+    //   · name UNIQUE per axis (활성 컨테이너)
+    //   · created_at DESC 정렬 (@OrderBy로 컬렉션 로딩 시 자동)
+    //   · hard delete (removeSelection 시 즉시 삭제)
+    //
+    // 자식 노드 CRUD는 {@link AxisSelection#addNode/reorderNodes/removeNode}가 직접 담당.
+
+    /**
+     * Selection 컨테이너 추가. 동일 이름 중복 시 예외.
+     */
+    public AxisSelection addSelection(String name) {
+        String trimmed = name == null ? null : name.trim();
+        boolean duplicate = selections.stream()
+                .anyMatch(s -> s.getName().equals(trimmed));
+        if (duplicate) {
+            throw LearningFacadeDomainException.of(ErrorCode.AXIS_SELECTION_NAME_ALREADY_EXISTS);
+        }
+        AxisSelection selection = AxisSelection.create(this, name);
+        selections.add(selection);
+        return selection;
+    }
+
+    /**
+     * Selection 컨테이너 이름 변경 (in-place, 이슈 #11 계승).
+     * 다른 활성 컨테이너와 중복 시 예외.
+     */
+    public void renameSelection(Long selectionId, String newName) {
+        AxisSelection target = findSelection(selectionId);
+        String trimmed = newName == null ? null : newName.trim();
+        boolean duplicate = selections.stream()
+                .filter(s -> !s.getId().equals(selectionId))
+                .anyMatch(s -> s.getName().equals(trimmed));
+        if (duplicate) {
+            throw LearningFacadeDomainException.of(ErrorCode.AXIS_SELECTION_NAME_ALREADY_EXISTS);
+        }
+        target.updateName(newName);
+    }
+
+    /**
+     * Selection 컨테이너 hard delete. orphanRemoval=true로 자식 노드 CASCADE 삭제.
+     */
+    public void removeSelection(Long selectionId) {
+        AxisSelection target = findSelection(selectionId);
+        selections.remove(target);
+    }
+
+    public AxisSelection findSelection(Long selectionId) {
+        return selections.stream()
+                .filter(s -> s.getId() != null && s.getId().equals(selectionId))
+                .findFirst()
+                .orElseThrow(() -> LearningFacadeDomainException.of(
+                        ErrorCode.AXIS_SELECTION_NOT_FOUND,
+                        "selectionId=" + selectionId));
+    }
+
+    /**
+     * 활성 Selection 컨테이너 목록 (created_at DESC).
+     */
+    public List<AxisSelection> getSelections() {
+        return Collections.unmodifiableList(selections);
     }
 }

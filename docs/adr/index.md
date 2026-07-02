@@ -23,3 +23,4 @@
 | [ADR019](ADR019-secrets-manager-naming-and-task-role-scope.md) | Secrets Manager 5종 비밀 명명 + env-prefix 격리 + Task Role Resource scope (Story-052) | Accepted | 2026-06-30 |
 | [ADR020](ADR020-deck-axis-visibility.md) | Deck↔Axis 가시화는 read-model 노출로 한정, 도메인 연관 승격 거부 (fix-deck-axis-visibility 0.0.2v) | Accepted | 2026-06-30 |
 | [ADR021](ADR021-axis-deck-full-integration.md) | Deck 생성은 Axis 이벤트 자동 경로로 유일화 + LearningAxis Soft Delete 승격 (fix-axis-deck-full-integration 0.0.2v) | Accepted | 2026-07-01 |
+| [ADR023](ADR023-terminology-roadmap-selections.md) | Roadmap = 헌법(축 순서 청사진), Selection = 판례(구체 사례) — SDD 용어 재정의 (LT Epic 1·2 착지 후) | Accepted | 2026-07-02 |

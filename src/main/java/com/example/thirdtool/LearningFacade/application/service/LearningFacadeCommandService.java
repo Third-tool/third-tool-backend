@@ -138,6 +138,44 @@ public class LearningFacadeCommandService {
     }
 
     // ──────────────────────────────────────────────────────
+    // Layer (Story-LT-E2-S4·S5)
+    // ──────────────────────────────────────────────────────
+
+    public AddLayer addLayer(LearningFacadeCommand.AddLayer command) {
+        LearningFacade facade = loadFacade(command.userId());
+        LearningLayer layer = facade.addLayer(command.name());
+        facadeRepository.save(facade);
+        if (layer.getId() == null) {
+            throw new IllegalStateException(
+                    "LearningLayer id가 cascade save 후에도 null입니다. JPA 설정 회귀 가능성.");
+        }
+        return AddLayer.of(layer, facade.isLayerCountExceedsRecommended());
+    }
+
+    public RenameLayer renameLayer(LearningFacadeCommand.RenameLayer command) {
+        LearningFacade facade = loadFacade(command.userId());
+        boolean changed = facade.renameLayer(command.layerId(), command.name());
+        if (changed) {
+            facadeRepository.save(facade);
+        }
+        LearningLayer layer = facade.findLayer(command.layerId());
+        return RenameLayer.of(layer, changed);
+    }
+
+    public void removeLayer(LearningFacadeCommand.RemoveLayer command) {
+        LearningFacade facade = loadFacade(command.userId());
+        facade.removeLayer(command.layerId());
+        facadeRepository.save(facade);
+    }
+
+    public ReorderLayers reorderLayers(LearningFacadeCommand.ReorderLayers command) {
+        LearningFacade facade = loadFacade(command.userId());
+        facade.reorderLayers(command.orderedLayerIds());
+        facadeRepository.save(facade);
+        return ReorderLayers.of(facade.getLayers());
+    }
+
+    // ──────────────────────────────────────────────────────
     // 사용자가 명시적으로 Deck을 생성하는 경로는 폐기되었다.
     // (Fix — Axis↔Deck 완전 통합, BE-Story 2, 2026-07-01)
     // Deck은 이제 LearningAxisCreatedEventHandler가 Axis 생성 이벤트에 반응해 자동으로만 생성한다.

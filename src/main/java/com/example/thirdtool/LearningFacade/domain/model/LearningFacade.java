@@ -29,6 +29,9 @@ public class LearningFacade {
     public static final int MAX_CONCEPT_COUNT        = 5;
     public static final int MAX_CONCEPT_VALUE_LENGTH = 100;
 
+    // ─── Layer 정책 상수 (Story-LT-E2-S5) ───────────────────
+    public static final int RECOMMENDED_LAYER_COUNT_LIMIT = 5;
+
     // ─── 식별자 ───────────────────────────────────────────
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,6 +62,17 @@ public class LearningFacade {
     )
     @OrderBy("displayOrder ASC")
     private final List<LearningFacadeConcept> concepts = new ArrayList<>();
+
+    // ─── Layer 목록 (Story-LT-E2-S1/S2) ────────────────────
+    // learning_layer 자식 테이블 매핑. 소프트 삭제된 layer는 @SQLRestriction으로 자동 제외.
+    @OneToMany(
+            mappedBy      = "facade",
+            cascade       = CascadeType.ALL,
+            orphanRemoval = false,
+            fetch         = FetchType.LAZY
+    )
+    @OrderBy("displayOrder ASC")
+    private final List<LearningLayer> layers = new ArrayList<>();
 
     // ─── 세부 축 목록 ─────────────────────────────────────
     // ⚠️ orphanRemoval=false (Fix — Axis↔Deck 완전 통합, SDD §12 Q1 결정):
@@ -100,6 +114,8 @@ public class LearningFacade {
         // 도메인은 concepts를 진실 소스로 사용하므로 생성 시점에 collection과 legacy 필드가
         // 언제나 일관된 상태여야 한다.
         facade.concepts.add(LearningFacadeConcept.of(facade, concept, 1));
+        // Story-LT-E2-S3: 신규 Facade에 default Uncategorized Layer 1건 자동 생성.
+        facade.layers.add(LearningLayer.of(facade, LearningLayer.DEFAULT_LAYER_NAME, 1));
         return facade;
     }
 
@@ -136,6 +152,8 @@ public class LearningFacade {
         for (int i = 0; i < normalized.size(); i++) {
             facade.concepts.add(LearningFacadeConcept.of(facade, normalized.get(i), i + 1));
         }
+        // Story-LT-E2-S3: 신규 Facade에 default Uncategorized Layer 1건 자동 생성.
+        facade.layers.add(LearningLayer.of(facade, LearningLayer.DEFAULT_LAYER_NAME, 1));
         return facade;
     }
 
@@ -330,12 +348,142 @@ public class LearningFacade {
     public LearningAxis addAxis(String name) {
         validateAxisNameDuplicate(name);
 
-        // Fix — Axis↔Deck 완전 통합: displayOrder는 활성 축 기준으로 부여한다.
-        // 소프트 삭제된 축은 in-memory 컬렉션에 남아 있으나 사용자 관점의 "N번째 축"에서는 제외.
-        int nextOrder = (int) axes.stream().filter(a -> !a.isDeleted()).count() + 1;
-        LearningAxis axis = LearningAxis.create(this, name, nextOrder);
+        // Story-LT-E2-S3: axis는 default Uncategorized Layer 소속으로 자동 라우팅.
+        // Layer 도메인 승격 이전 코드 경로(레거시 addAxis)는 여전히 사용되므로,
+        // 사용자가 명시적 layer를 지정하지 않으면 default로 흡수한다.
+        LearningLayer target = getDefaultLayer();
+        LearningAxis axis = target.addAxis(name);
+        // facade-level bidirectional 동기화 — @OneToMany(mappedBy) 매핑 상 조회 편의.
         axes.add(axis);
         return axis;
+    }
+
+    /**
+     * 지정된 Layer 하위에 axis 추가 (Story-LT-E2-S5 blessed 경로).
+     * facade-level 이름 중복 검사 후 layer에 위임.
+     */
+    public LearningAxis addAxisInLayer(Long layerId, String name) {
+        validateAxisNameDuplicate(name);
+        LearningLayer target = findLayer(layerId);
+        LearningAxis axis = target.addAxis(name);
+        axes.add(axis);
+        return axis;
+    }
+
+    /**
+     * default Uncategorized Layer를 반환. 없으면 도메인 예외 (백필 누락 시그널).
+     */
+    public LearningLayer getDefaultLayer() {
+        return layers.stream()
+                .filter(l -> !l.isDeleted())
+                .filter(LearningLayer::isDefault)
+                .findFirst()
+                .orElseThrow(() -> LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_LAYER_NOT_FOUND,
+                        "default Uncategorized layer가 없습니다. facadeId=" + this.id
+                ));
+    }
+
+    public LearningLayer findLayer(Long layerId) {
+        return layers.stream()
+                .filter(l -> !l.isDeleted())
+                .filter(l -> l.getId() != null && l.getId().equals(layerId))
+                .findFirst()
+                .orElseThrow(() -> LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_LAYER_NOT_FOUND,
+                        "layerId=" + layerId
+                ));
+    }
+
+    /** 활성 Layer 목록 반환 (soft-deleted 제외, displayOrder 정렬은 @OrderBy로 로드 시점 처리). */
+    public List<LearningLayer> getLayers() {
+        return layers.stream()
+                .filter(l -> !l.isDeleted())
+                .toList();
+    }
+
+    /**
+     * Facade에 신규 Layer 추가 (Story-LT-E2-S5).
+     * 이름은 trim/blank/길이 검증(팩토리)에 이어 facade 내 활성 layer 이름 중복 거부.
+     * displayOrder는 활성 layer 기준 max + 1 (1-based).
+     */
+    public LearningLayer addLayer(String name) {
+        String normalized = LearningLayer.normalizeName(name);
+        validateLayerNameDuplicate(normalized, /*excludeId*/ null);
+        int nextOrder = (int) layers.stream().filter(l -> !l.isDeleted()).count() + 1;
+        LearningLayer layer = LearningLayer.of(this, normalized, nextOrder);
+        layers.add(layer);
+        return layer;
+    }
+
+    /**
+     * Layer 이름 변경 (Story-LT-E2-S5).
+     * 동일 layer id를 제외한 나머지 활성 layer의 이름과 중복 여부 검사.
+     *
+     * @return 실제 변경이 발생했는지 여부
+     */
+    public boolean renameLayer(Long layerId, String newName) {
+        LearningLayer target = findLayer(layerId);
+        String normalized = LearningLayer.normalizeName(newName);
+        if (target.getName().equals(normalized)) {
+            return false;
+        }
+        validateLayerNameDuplicate(normalized, layerId);
+        return target.updateName(newName);
+    }
+
+    /**
+     * Layer 순서 재배치 (Story-LT-E2-S5). 전달 id 목록이 활성 layer id 집합과 정확히 일치해야 함.
+     */
+    public void reorderLayers(List<Long> orderedLayerIds) {
+        if (orderedLayerIds == null) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "orderedLayerIds는 null일 수 없습니다."
+            );
+        }
+        Set<Long> currentIds = layers.stream()
+                                      .filter(l -> !l.isDeleted())
+                                      .map(LearningLayer::getId)
+                                      .collect(Collectors.toSet());
+        Set<Long> incoming = new HashSet<>(orderedLayerIds);
+        if (currentIds.size() != orderedLayerIds.size() || !currentIds.equals(incoming)) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_LAYER_REORDER_MISMATCH,
+                    "전달 id 수=" + orderedLayerIds.size() + " · 활성 layer 수=" + currentIds.size()
+            );
+        }
+        IntStream.range(0, orderedLayerIds.size()).forEach(i -> {
+            Long id = orderedLayerIds.get(i);
+            LearningLayer target = layers.stream()
+                    .filter(l -> id.equals(l.getId()))
+                    .findFirst()
+                    .orElseThrow();
+            target.updateDisplayOrder(i + 1);
+        });
+        // in-memory 정렬 일관성 유지 (@OrderBy는 DB load 시점만 적용).
+        layers.sort(java.util.Comparator.comparingInt(LearningLayer::getDisplayOrder));
+    }
+
+    /** 활성 Layer 개수가 권장 상한을 초과하는지. */
+    public boolean isLayerCountExceedsRecommended() {
+        return getLayers().size() > RECOMMENDED_LAYER_COUNT_LIMIT;
+    }
+
+    /**
+     * Layer softDelete 진입점 (Story-LT-E2-S4).
+     * default Uncategorized Layer는 삭제 금지 — 백필/자동 라우팅의 필수 앵커.
+     * 활성 axis 존재·재삭제 가드는 {@link LearningLayer#softDelete()}가 처리.
+     */
+    public void removeLayer(Long layerId) {
+        LearningLayer target = findLayer(layerId);
+        if (target.isDefault()) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_LAYER_HAS_ACTIVE_AXES,
+                    "default Uncategorized Layer는 삭제할 수 없습니다."
+            );
+        }
+        target.softDelete();
     }
 
     /**
@@ -444,6 +592,23 @@ public class LearningFacade {
             throw LearningFacadeDomainException.of(
                     ErrorCode.LEARNING_FACADE_CONCEPT_DUPLICATE,
                     "value=" + normalizedValue
+            );
+        }
+    }
+
+    /**
+     * 활성 Layer 이름 중복 검증.
+     * excludeId가 있으면 그 layer는 검증 대상에서 제외 (rename 시나리오).
+     */
+    void validateLayerNameDuplicate(String normalizedName, Long excludeId) {
+        boolean duplicated = layers.stream()
+                .filter(l -> !l.isDeleted())
+                .filter(l -> excludeId == null || !excludeId.equals(l.getId()))
+                .anyMatch(l -> l.getName().equals(normalizedName));
+        if (duplicated) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_LAYER_DUPLICATE_NAME,
+                    "name=" + normalizedName
             );
         }
     }

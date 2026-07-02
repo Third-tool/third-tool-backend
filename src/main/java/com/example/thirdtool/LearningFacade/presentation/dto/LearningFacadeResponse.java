@@ -328,6 +328,64 @@ public class LearningFacadeResponse {
     }
 
     // ──────────────────────────────────────────────────────
+    // Layer (Story-LT-E2-S4·S5)
+    // ──────────────────────────────────────────────────────
+
+    public record LayerItem(
+            Long layerId,
+            String name,
+            int displayOrder,
+            boolean isDefault,
+            int axisCount
+    ) {
+        public static LayerItem of(LearningLayer layer) {
+            return new LayerItem(
+                    layer.getId(),
+                    layer.getName(),
+                    layer.getDisplayOrder(),
+                    layer.isDefault(),
+                    layer.getAxes().size()
+            );
+        }
+    }
+
+    public record AddLayer(
+            Long layerId,
+            String name,
+            int displayOrder,
+            boolean isLayerCountExceedsRecommended
+    ) {
+        public static AddLayer of(LearningLayer layer, boolean isLayerCountExceedsRecommended) {
+            return new AddLayer(
+                    layer.getId(),
+                    layer.getName(),
+                    layer.getDisplayOrder(),
+                    isLayerCountExceedsRecommended
+            );
+        }
+    }
+
+    public record RenameLayer(
+            Long layerId,
+            String name,
+            boolean isChanged
+    ) {
+        public static RenameLayer of(LearningLayer layer, boolean isChanged) {
+            return new RenameLayer(layer.getId(), layer.getName(), isChanged);
+        }
+    }
+
+    public record ReorderLayers(
+            List<LayerItem> layers
+    ) {
+        public static ReorderLayers of(List<LearningLayer> layers) {
+            return new ReorderLayers(
+                    layers.stream().map(LayerItem::of).collect(Collectors.toList())
+            );
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
     // 8. AddTopic (Story-004-2: 자료 추가 유도 + 기존 자료 연결 후보)
     // ──────────────────────────────────────────────────────
 

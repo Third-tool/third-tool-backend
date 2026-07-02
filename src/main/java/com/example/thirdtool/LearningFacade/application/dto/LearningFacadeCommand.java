@@ -53,6 +53,29 @@ public final class LearningFacadeCommand {
             List<Long> orderedAxisIds
     ) {}
 
+    // ─── Layer (Story-LT-E2-S4·S5) ────────────────────────
+
+    public record AddLayer(
+            Long userId,
+            String name
+    ) {}
+
+    public record RenameLayer(
+            Long userId,
+            Long layerId,
+            String name
+    ) {}
+
+    public record RemoveLayer(
+            Long userId,
+            Long layerId
+    ) {}
+
+    public record ReorderLayers(
+            Long userId,
+            List<Long> orderedLayerIds
+    ) {}
+
     public record AddTopic(
             Long userId,
             Long axisId,

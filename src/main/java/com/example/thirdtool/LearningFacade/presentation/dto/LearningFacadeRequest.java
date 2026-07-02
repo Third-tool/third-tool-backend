@@ -59,6 +59,23 @@ public class LearningFacadeRequest {
             List<Long> orderedAxisIds
     ) {}
 
+    // ─── Layer (Story-LT-E2-S5) ──────────────────────────
+
+    public record AddLayer(
+            @NotBlank
+            String name
+    ) {}
+
+    public record RenameLayer(
+            @NotBlank
+            String name
+    ) {}
+
+    public record ReorderLayers(
+            @NotNull
+            List<Long> orderedLayerIds
+    ) {}
+
     // CreateAxisDeck 폐기: Fix — Axis↔Deck 완전 통합 (BE-Story 2, 2026-07-01).
     // 수동 축 스코프 Deck 생성 경로가 사라지면서 관련 Request record도 제거됨.
 

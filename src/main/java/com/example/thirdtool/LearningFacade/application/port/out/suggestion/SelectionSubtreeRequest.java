@@ -42,6 +42,7 @@ public record SelectionSubtreeRequest(
             throw new IllegalArgumentException("selectionName은 blank일 수 없습니다.");
         }
         selectionName = selectionName.trim();
+        // Note: selectionSiblings null → 빈 리스트, 존재 시 List.copyOf 불변 복사.
         selectionSiblings = selectionSiblings == null ? List.of() : List.copyOf(selectionSiblings);
     }
 }

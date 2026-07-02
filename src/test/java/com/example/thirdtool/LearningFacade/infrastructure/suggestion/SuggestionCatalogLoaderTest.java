@@ -21,13 +21,14 @@ class SuggestionCatalogLoaderTest {
     }
 
     @Test
-    @DisplayName("load_backend_developer_layers_5건_반환")
-    void load_backend_developer_layers_5건_반환() {
+    @DisplayName("load_backend_developer_layers_6건_반환 (M3: 기능의 구현 추가)")
+    void load_backend_developer_layers_6건_반환() {
         SuggestionCatalog catalog = loader.load("backend-developer");
 
         assertThat(catalog.role()).isEqualTo("backend-developer");
-        assertThat(catalog.layers()).hasSize(5);
+        assertThat(catalog.layers()).hasSize(6);
         assertThat(catalog.layers().get(0).name()).isEqualTo("웹 API");
+        assertThat(catalog.layers()).extracting("name").contains("기능의 구현");
     }
 
     @Test

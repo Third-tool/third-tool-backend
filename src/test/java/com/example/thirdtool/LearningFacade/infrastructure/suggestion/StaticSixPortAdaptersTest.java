@@ -100,13 +100,13 @@ class StaticSixPortAdaptersTest {
     // ─── SelectionOutlineAdapter ─────────────────────────────
 
     @Test
-    @DisplayName("[해피] variantHint='능 아키텍처' → nameCandidate 매칭")
+    @DisplayName("[해피] variantHint='기능 아키텍처' → nameCandidate 매칭")
     void selectionOutline_variantHintMatched() {
         SelectionOutlineResponse res = selectionOutlineAdapter.suggest(new SelectionOutlineRequest(
-                List.of("백엔드"), "웹 API", "REST 원칙", null, "능 아키텍처", null));
+                List.of("백엔드"), "웹 API", "REST 원칙", null, "기능 아키텍처", null));
 
         assertThat(res.suggestionsAvailable()).isTrue();
-        assertThat(res.nameCandidate()).contains("능 아키텍처");
+        assertThat(res.nameCandidate()).contains("기능 아키텍처");
         assertThat(res.chapters()).isNotEmpty();
     }
 
@@ -128,7 +128,7 @@ class StaticSixPortAdaptersTest {
         ChapterSubtreeResponse res = selectionSubtreeAdapter.suggest(new SelectionSubtreeRequest(
                 List.of("백엔드"), "웹 API", "REST 원칙",
                 new ChapterOutlineItem("1. 큰 조직의 API-First 사례", null),
-                "능 아키텍처 REST selections v1",
+                "기능 아키텍처 REST selections v1",
                 List.of()));
 
         assertThat(res.suggestionsAvailable()).isTrue();

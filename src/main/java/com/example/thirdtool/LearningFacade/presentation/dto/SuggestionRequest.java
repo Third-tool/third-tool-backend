@@ -36,7 +36,8 @@ public final class SuggestionRequest {
     ) {}
 
     public record ChapterSubtreeRequest(
-            @NotEmpty @Size(max = 5) List<@NotBlank String> concepts,
+            @NotEmpty(message = "concepts는 최소 1개 이상이어야 합니다.")
+            @Size(max = 5) List<@NotBlank String> concepts,
             @NotBlank String layerName,
             @NotBlank String axisName,
             @NotNull @Valid ChapterOutlineItemDto chapter,
@@ -44,7 +45,8 @@ public final class SuggestionRequest {
     ) {}
 
     public record SelectionOutlineRequest(
-            @NotEmpty @Size(max = 5) List<@NotBlank String> concepts,
+            @NotEmpty(message = "concepts는 최소 1개 이상이어야 합니다.")
+            @Size(max = 5) List<@NotBlank String> concepts,
             @NotBlank String layerName,
             @NotBlank String axisName,
             String roadmapContent,
@@ -53,7 +55,8 @@ public final class SuggestionRequest {
     ) {}
 
     public record SelectionSubtreeRequest(
-            @NotEmpty @Size(max = 5) List<@NotBlank String> concepts,
+            @NotEmpty(message = "concepts는 최소 1개 이상이어야 합니다.")
+            @Size(max = 5) List<@NotBlank String> concepts,
             @NotBlank String layerName,
             @NotBlank String axisName,
             @NotNull @Valid ChapterOutlineItemDto chapter,

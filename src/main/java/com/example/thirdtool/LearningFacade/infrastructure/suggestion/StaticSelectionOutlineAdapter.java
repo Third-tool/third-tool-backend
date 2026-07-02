@@ -73,7 +73,8 @@ public class StaticSelectionOutlineAdapter implements SelectionOutlinePort {
 
         int limit = request.chapterCountHint() != null && request.chapterCountHint() > 0
                 ? Math.min(chapters.size(), request.chapterCountHint()) : chapters.size();
-        List<ChapterOutlineItem> limited = chapters.subList(0, limit);
+        // subList는 원본 view — 불변 복사로 감싼다.
+        List<ChapterOutlineItem> limited = List.copyOf(chapters.subList(0, limit));
 
         return new SelectionOutlineResponse(chosen.nameCandidate(), limited, providerContext, true);
     }

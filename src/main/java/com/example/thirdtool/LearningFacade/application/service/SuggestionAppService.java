@@ -1,9 +1,10 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
+import com.example.thirdtool.LearningFacade.application.dto.SuggestionCommand;
+import com.example.thirdtool.LearningFacade.application.dto.SuggestionResult;
 import com.example.thirdtool.LearningFacade.application.port.out.suggestion.*;
-import com.example.thirdtool.LearningFacade.presentation.dto.SuggestionRequest;
-import com.example.thirdtool.LearningFacade.presentation.dto.SuggestionResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,14 +13,19 @@ import java.util.List;
 /**
  * 6-Port Suggestion Application Service (Story-AS-E5-S5-3 부분, M3 최소 형태).
  *
- * <p>무상태 조율 서비스. 4개 신규 Port(Chapters/Chapter/Selection outline/subtree)를 REST 계층에서
- * 호출한다. Layer/Axis Port는 SuggestionConceptContext 요구가 REST DTO에 반영되지 않아 별도 브랜치.
+ * <p>무상태 조율 서비스. 4개 신규 Port를 REST 계층에서 호출한다.
+ * 입출력은 application-layer Command/Result records — presentation dto와 의존 분리.
  *
- * <p>도메인 저장 없음 (Read-only transaction).
+ * <p>@ConditionalOnBean: 4개 Port 구현체(Static Adapter 등) 없이는 활성화되지 않음.
+ * LLM Adapter 구현 전(provider=llm 미배선 상태)엔 자동으로 로드 스킵.
  */
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@ConditionalOnBean({
+        ChaptersOutlinePort.class, ChapterSubtreePort.class,
+        SelectionOutlinePort.class, SelectionSubtreePort.class
+})
 public class SuggestionAppService {
 
     private final ChaptersOutlinePort chaptersOutlinePort;
@@ -27,67 +33,45 @@ public class SuggestionAppService {
     private final SelectionOutlinePort selectionOutlinePort;
     private final SelectionSubtreePort selectionSubtreePort;
 
-    public SuggestionResponse.ChaptersOutlineResponseBody chaptersOutline(
-            SuggestionRequest.ChaptersOutlineRequest req) {
+    public SuggestionResult.ChaptersOutline chaptersOutline(SuggestionCommand.ChaptersOutline cmd) {
         ChaptersOutlineResponse response = chaptersOutlinePort.suggest(new ChaptersOutlineRequest(
-                req.concepts(), req.layerName(), req.axisName(), req.axisReason(),
-                req.chapterCountHint(), req.freeformHint()));
+                cmd.concepts(), cmd.layerName(), cmd.axisName(), cmd.axisReason(),
+                cmd.chapterCountHint(), cmd.freeformHint()));
 
-        return new SuggestionResponse.ChaptersOutlineResponseBody(
-                response.chapters().stream()
-                        .map(SuggestionResponse.ChapterOutlineItemResponse::of)
-                        .toList(),
-                response.providerContext(),
-                response.suggestionsAvailable());
+        return new SuggestionResult.ChaptersOutline(
+                response.chapters(), response.providerContext(), response.suggestionsAvailable());
     }
 
-    public SuggestionResponse.ChapterSubtreeResponseBody chapterSubtree(
-            SuggestionRequest.ChapterSubtreeRequest req) {
-        ChapterOutlineItem chapter = toChapterOutlineItem(req.chapter());
-        List<ChapterOutlineItem> siblings = req.siblingChapters() == null ? List.of()
-                : req.siblingChapters().stream().map(this::toChapterOutlineItem).toList();
+    public SuggestionResult.ChapterSubtree chapterSubtree(SuggestionCommand.ChapterSubtree cmd) {
+        List<ChapterOutlineItem> siblings = cmd.siblingChapters() == null ? List.of()
+                : cmd.siblingChapters();
 
         ChapterSubtreeResponse response = chapterSubtreePort.suggest(new ChapterSubtreeRequest(
-                req.concepts(), req.layerName(), req.axisName(), chapter, siblings));
+                cmd.concepts(), cmd.layerName(), cmd.axisName(), cmd.chapter(), siblings));
 
-        return new SuggestionResponse.ChapterSubtreeResponseBody(
-                response.bodyAsciiTree(),
-                response.providerContext(),
-                response.suggestionsAvailable());
+        return new SuggestionResult.ChapterSubtree(
+                response.bodyAsciiTree(), response.providerContext(), response.suggestionsAvailable());
     }
 
-    public SuggestionResponse.SelectionOutlineResponseBody selectionOutline(
-            SuggestionRequest.SelectionOutlineRequest req) {
+    public SuggestionResult.SelectionOutline selectionOutline(SuggestionCommand.SelectionOutline cmd) {
         SelectionOutlineResponse response = selectionOutlinePort.suggest(new SelectionOutlineRequest(
-                req.concepts(), req.layerName(), req.axisName(),
-                req.roadmapContent(), req.variantHint(), req.chapterCountHint()));
+                cmd.concepts(), cmd.layerName(), cmd.axisName(),
+                cmd.roadmapContent(), cmd.variantHint(), cmd.chapterCountHint()));
 
-        return new SuggestionResponse.SelectionOutlineResponseBody(
-                response.nameCandidate(),
-                response.chapters().stream()
-                        .map(SuggestionResponse.ChapterOutlineItemResponse::of)
-                        .toList(),
-                response.providerContext(),
-                response.suggestionsAvailable());
+        return new SuggestionResult.SelectionOutline(
+                response.nameCandidate(), response.chapters(),
+                response.providerContext(), response.suggestionsAvailable());
     }
 
-    public SuggestionResponse.ChapterSubtreeResponseBody selectionSubtree(
-            SuggestionRequest.SelectionSubtreeRequest req) {
-        ChapterOutlineItem chapter = toChapterOutlineItem(req.chapter());
-        List<ChapterOutlineItem> siblings = req.selectionSiblings() == null ? List.of()
-                : req.selectionSiblings().stream().map(this::toChapterOutlineItem).toList();
+    public SuggestionResult.ChapterSubtree selectionSubtree(SuggestionCommand.SelectionSubtree cmd) {
+        List<ChapterOutlineItem> siblings = cmd.selectionSiblings() == null ? List.of()
+                : cmd.selectionSiblings();
 
         ChapterSubtreeResponse response = selectionSubtreePort.suggest(new SelectionSubtreeRequest(
-                req.concepts(), req.layerName(), req.axisName(), chapter,
-                req.selectionName(), siblings));
+                cmd.concepts(), cmd.layerName(), cmd.axisName(), cmd.chapter(),
+                cmd.selectionName(), siblings));
 
-        return new SuggestionResponse.ChapterSubtreeResponseBody(
-                response.bodyAsciiTree(),
-                response.providerContext(),
-                response.suggestionsAvailable());
-    }
-
-    private ChapterOutlineItem toChapterOutlineItem(SuggestionRequest.ChapterOutlineItemDto dto) {
-        return new ChapterOutlineItem(dto.title(), dto.rationale());
+        return new SuggestionResult.ChapterSubtree(
+                response.bodyAsciiTree(), response.providerContext(), response.suggestionsAvailable());
     }
 }

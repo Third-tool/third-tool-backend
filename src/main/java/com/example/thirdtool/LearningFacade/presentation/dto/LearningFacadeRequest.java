@@ -14,11 +14,16 @@ public class LearningFacadeRequest {
 
     /**
      * LearningFacade 생성 요청.
-     * concepts 배열은 필수 · 1~5개 · 각 값은 도메인에서 trim/blank/길이/중복 검증.
+     * concepts 배열은 필수 · 도메인 상수 MIN_CONCEPT_COUNT~MAX_CONCEPT_COUNT 개 ·
+     * 각 값은 도메인에서 trim/blank/길이/중복 검증.
+     * Story-LT-E1-S5: 상수는 도메인({@link com.example.thirdtool.LearningFacade.domain.model.LearningFacade})에서만 정의 —
+     * 여기서 재정의하지 않고 참조.
      */
     public record CreateFacade(
             @NotNull
-            @jakarta.validation.constraints.Size(min = 1, max = 5,
+            @jakarta.validation.constraints.Size(
+                    min = com.example.thirdtool.LearningFacade.domain.model.LearningFacade.MIN_CONCEPT_COUNT,
+                    max = com.example.thirdtool.LearningFacade.domain.model.LearningFacade.MAX_CONCEPT_COUNT,
                     message = "컨셉은 1~5개 이내여야 합니다.")
             List<String> concepts
     ) {}
@@ -26,10 +31,13 @@ public class LearningFacadeRequest {
     /**
      * LearningFacade.concepts 통째 교체 요청.
      * 도메인 {@code updateConcepts()}가 부분성공 불허 · size/blank/중복 검증.
+     * Story-LT-E1-S5: 도메인 상수 참조.
      */
     public record UpdateConcepts(
             @NotNull
-            @jakarta.validation.constraints.Size(min = 1, max = 5,
+            @jakarta.validation.constraints.Size(
+                    min = com.example.thirdtool.LearningFacade.domain.model.LearningFacade.MIN_CONCEPT_COUNT,
+                    max = com.example.thirdtool.LearningFacade.domain.model.LearningFacade.MAX_CONCEPT_COUNT,
                     message = "컨셉은 1~5개 이내여야 합니다.")
             List<String> concepts
     ) {}

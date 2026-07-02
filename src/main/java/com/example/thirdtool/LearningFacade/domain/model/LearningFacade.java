@@ -60,6 +60,17 @@ public class LearningFacade {
     @OrderBy("displayOrder ASC")
     private final List<LearningFacadeConcept> concepts = new ArrayList<>();
 
+    // ─── Layer 목록 (Story-LT-E2-S1/S2) ────────────────────
+    // learning_layer 자식 테이블 매핑. 소프트 삭제된 layer는 @SQLRestriction으로 자동 제외.
+    @OneToMany(
+            mappedBy      = "facade",
+            cascade       = CascadeType.ALL,
+            orphanRemoval = false,
+            fetch         = FetchType.LAZY
+    )
+    @OrderBy("displayOrder ASC")
+    private final List<LearningLayer> layers = new ArrayList<>();
+
     // ─── 세부 축 목록 ─────────────────────────────────────
     // ⚠️ orphanRemoval=false (Fix — Axis↔Deck 완전 통합, SDD §12 Q1 결정):
     //   LearningAxis는 Soft Delete 정책 (deleted_at). removeAxis()는 axes.remove()가 아닌
@@ -100,6 +111,8 @@ public class LearningFacade {
         // 도메인은 concepts를 진실 소스로 사용하므로 생성 시점에 collection과 legacy 필드가
         // 언제나 일관된 상태여야 한다.
         facade.concepts.add(LearningFacadeConcept.of(facade, concept, 1));
+        // Story-LT-E2-S3: 신규 Facade에 default Uncategorized Layer 1건 자동 생성.
+        facade.layers.add(LearningLayer.of(facade, LearningLayer.DEFAULT_LAYER_NAME, 1));
         return facade;
     }
 
@@ -136,6 +149,8 @@ public class LearningFacade {
         for (int i = 0; i < normalized.size(); i++) {
             facade.concepts.add(LearningFacadeConcept.of(facade, normalized.get(i), i + 1));
         }
+        // Story-LT-E2-S3: 신규 Facade에 default Uncategorized Layer 1건 자동 생성.
+        facade.layers.add(LearningLayer.of(facade, LearningLayer.DEFAULT_LAYER_NAME, 1));
         return facade;
     }
 
@@ -330,12 +345,58 @@ public class LearningFacade {
     public LearningAxis addAxis(String name) {
         validateAxisNameDuplicate(name);
 
-        // Fix — Axis↔Deck 완전 통합: displayOrder는 활성 축 기준으로 부여한다.
-        // 소프트 삭제된 축은 in-memory 컬렉션에 남아 있으나 사용자 관점의 "N번째 축"에서는 제외.
-        int nextOrder = (int) axes.stream().filter(a -> !a.isDeleted()).count() + 1;
-        LearningAxis axis = LearningAxis.create(this, name, nextOrder);
+        // Story-LT-E2-S3: axis는 default Uncategorized Layer 소속으로 자동 라우팅.
+        // Layer 도메인 승격 이전 코드 경로(레거시 addAxis)는 여전히 사용되므로,
+        // 사용자가 명시적 layer를 지정하지 않으면 default로 흡수한다.
+        LearningLayer target = getDefaultLayer();
+        LearningAxis axis = target.addAxis(name);
+        // facade-level bidirectional 동기화 — @OneToMany(mappedBy) 매핑 상 조회 편의.
         axes.add(axis);
         return axis;
+    }
+
+    /**
+     * 지정된 Layer 하위에 axis 추가 (Story-LT-E2-S5 blessed 경로).
+     * facade-level 이름 중복 검사 후 layer에 위임.
+     */
+    public LearningAxis addAxisInLayer(Long layerId, String name) {
+        validateAxisNameDuplicate(name);
+        LearningLayer target = findLayer(layerId);
+        LearningAxis axis = target.addAxis(name);
+        axes.add(axis);
+        return axis;
+    }
+
+    /**
+     * default Uncategorized Layer를 반환. 없으면 도메인 예외 (백필 누락 시그널).
+     */
+    public LearningLayer getDefaultLayer() {
+        return layers.stream()
+                .filter(l -> !l.isDeleted())
+                .filter(LearningLayer::isDefault)
+                .findFirst()
+                .orElseThrow(() -> LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_LAYER_NOT_FOUND,
+                        "default Uncategorized layer가 없습니다. facadeId=" + this.id
+                ));
+    }
+
+    LearningLayer findLayer(Long layerId) {
+        return layers.stream()
+                .filter(l -> !l.isDeleted())
+                .filter(l -> l.getId() != null && l.getId().equals(layerId))
+                .findFirst()
+                .orElseThrow(() -> LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_LAYER_NOT_FOUND,
+                        "layerId=" + layerId
+                ));
+    }
+
+    /** 활성 Layer 목록 반환 (soft-deleted 제외, displayOrder 정렬은 @OrderBy로 로드 시점 처리). */
+    public List<LearningLayer> getLayers() {
+        return layers.stream()
+                .filter(l -> !l.isDeleted())
+                .toList();
     }
 
     /**

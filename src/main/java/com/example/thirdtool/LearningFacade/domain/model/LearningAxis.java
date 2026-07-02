@@ -54,6 +54,17 @@ public class LearningAxis {
     @JoinColumn(name = "learning_facade_id", nullable = false, updatable = false)
     private LearningFacade facade;
 
+    // ─── Layer FK (Story-LT-E2-S2) ────────────────────────
+    //
+    // Layer 도입에 따른 상위 그룹핑 참조. 3-phase 마이그레이션 (V19)의 안전한 전이 기간 동안
+    // nullable로 유지되며 Story-LT-E2-S3 백필 완료 후 이관 릴리스에서 NOT NULL로 전환된다.
+    //
+    // <p>도메인 진입점: {@link LearningLayer#addAxis} (blessed) 또는
+    // {@link LearningFacade#addAxis(String)} (legacy — 내부적으로 default layer 라우팅)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "learning_layer_id", nullable = true, updatable = true)
+    private LearningLayer layer;
+
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
@@ -81,12 +92,18 @@ public class LearningAxis {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    private LearningAxis(LearningFacade facade, String name, int displayOrder) {
+    private LearningAxis(LearningFacade facade, LearningLayer layer, String name, int displayOrder) {
         this.facade       = facade;
+        this.layer        = layer;
         this.name         = name;
         this.displayOrder = displayOrder;
     }
 
+    /**
+     * Legacy 팩토리 (Layer 없이 생성) — {@link LearningFacade#addAxis(String)} 경로용.
+     * <p>Layer는 {@code null}로 두고, LearningFacade가 default Uncategorized layer를 확보한 뒤
+     * {@link #assignLayer(LearningLayer)}로 주입한다. 3-phase 마이그레이션 종료 후 제거 예정.
+     */
     static LearningAxis create(LearningFacade facade, String name, int displayOrder) {
         requireNonNull(facade, "facade");
         validateName(name);
@@ -97,7 +114,34 @@ public class LearningAxis {
                     "displayOrder는 1 이상이어야 합니다. displayOrder=" + displayOrder
             );
         }
-        return new LearningAxis(facade, name.trim(), displayOrder);
+        return new LearningAxis(facade, null, name.trim(), displayOrder);
+    }
+
+    /**
+     * Layer 소속 axis 생성 (Story-LT-E2-S2 blessed 경로).
+     * {@link LearningLayer#addAxis(String)}가 호출한다.
+     */
+    static LearningAxis createInLayer(LearningFacade facade, LearningLayer layer, String name, int displayOrder) {
+        requireNonNull(facade, "facade");
+        requireNonNull(layer, "layer");
+        validateName(name);
+        if (displayOrder < 1) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "displayOrder는 1 이상이어야 합니다. displayOrder=" + displayOrder
+            );
+        }
+        return new LearningAxis(facade, layer, name.trim(), displayOrder);
+    }
+
+    /**
+     * Layer 소속을 사후 주입 (Story-LT-E2-S3 default layer 라우팅).
+     * 기존에 layer가 없던 axis에만 사용 — 이미 layer가 지정됐다면 no-op.
+     */
+    void assignLayer(LearningLayer layer) {
+        if (this.layer == null) {
+            this.layer = layer;
+        }
     }
 
     public void updateName(String newName) {

@@ -84,6 +84,15 @@ public enum ErrorCode {
     LEARNING_FACADE_CONCEPTS_REORDER_MISMATCH("LF008",
             "전달된 concept id 목록이 현재 컨셉 집합과 일치하지 않습니다.",       HttpStatus.BAD_REQUEST),
 
+    // ─── LearningLayer (Story-LT-E2-S1~S5) ────────────────
+    LEARNING_LAYER_NOT_FOUND("LL001",           "Layer를 찾을 수 없습니다.",                                        HttpStatus.NOT_FOUND),
+    LEARNING_LAYER_NAME_BLANK("LL002",          "Layer 이름은 비어 있을 수 없습니다.",                              HttpStatus.BAD_REQUEST),
+    LEARNING_LAYER_DUPLICATE_NAME("LL003",      "동일한 이름의 Layer가 이미 존재합니다.",                          HttpStatus.CONFLICT),
+    LEARNING_LAYER_ALREADY_DELETED("LL004",     "이미 삭제된 Layer입니다.",                                        HttpStatus.BAD_REQUEST),
+    LEARNING_LAYER_HAS_ACTIVE_AXES("LL005",     "활성 축이 있는 Layer는 삭제할 수 없습니다.",                      HttpStatus.CONFLICT),
+    LEARNING_LAYER_REORDER_MISMATCH("LL006",    "전달된 Layer id 목록이 현재 Layer id 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+    LEARNING_LAYER_NAME_TOO_LONG("LL007",       "Layer 이름은 100자 이내여야 합니다.",                              HttpStatus.BAD_REQUEST),
+
     // ─── LearningAxis ─────────────────────────────────────
     LEARNING_AXIS_NOT_FOUND("LA001",              "세부 축을 찾을 수 없습니다.",                             HttpStatus.NOT_FOUND),
     LEARNING_AXIS_NAME_BLANK("LA002",             "축 이름은 비어 있을 수 없습니다.",                        HttpStatus.BAD_REQUEST),

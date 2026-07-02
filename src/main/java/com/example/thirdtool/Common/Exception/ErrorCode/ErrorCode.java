@@ -105,6 +105,13 @@ public enum ErrorCode {
     LEARNING_AXIS_TOPIC_NAME_BLANK("LT002",       "주제 이름은 비어 있을 수 없습니다.",                      HttpStatus.BAD_REQUEST),
     LEARNING_AXIS_TOPIC_REORDER_MISMATCH("LT003", "전달된 주제 id 목록이 현재 주제 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
 
+    // ─── AxisRoadmapNode (Story-LT-E3-S3-6~S3-8, 이슈 #15) ─
+    // 이슈 #6의 axis_roadmap.content TEXT 통짜 SUPERSEDED — 챕터 노드 first-class로 재편.
+    ROADMAP_NODE_NOT_FOUND("RN001",       "Roadmap 노드를 찾을 수 없습니다.",                              HttpStatus.NOT_FOUND),
+    ROADMAP_NODE_TITLE_BLANK("RN002",     "Roadmap 노드 title은 비어 있을 수 없습니다.",                    HttpStatus.BAD_REQUEST),
+    ROADMAP_NODE_BODY_BLANK("RN003",      "Roadmap 노드 body는 비어 있을 수 없습니다.",                     HttpStatus.BAD_REQUEST),
+    ROADMAP_NODE_ORDER_MISMATCH("RN004",  "전달된 Roadmap 노드 id 목록이 현재 노드 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+
     // ─── LearningMaterial ─────────────────────────────────
     LEARNING_MATERIAL_NOT_FOUND("LM001",                          "학습 자료를 찾을 수 없습니다.",                                  HttpStatus.NOT_FOUND),
     LEARNING_MATERIAL_PROFICIENCY_UNRATED_NOT_ALLOWED("LM002",    "숙련도는 UNRATED로 되돌릴 수 없습니다.",                         HttpStatus.BAD_REQUEST),

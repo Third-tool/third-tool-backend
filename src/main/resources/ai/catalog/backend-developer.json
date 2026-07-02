@@ -41,5 +41,57 @@
       "selections": ["결제 도메인 사례", "주문 · 배송 사례", "학습 카드 사례"],
       "rationale": "도메인별 Aggregate 경계 정하기 실전 예"
     }
-  }
+  },
+  "chapters": [
+    {
+      "axisName": "REST 원칙",
+      "title": "1. REST 아키텍처 개요",
+      "rationale": "리소스·상태·HTTP 매핑의 최상위 판단 프레임",
+      "subtree": "├── 1-1. 리소스 지향 사고\n│       도메인 명사를 URL로 → 상태를 명확화\n├── 1-2. 무상태성 원칙\n│       요청 단위 완결성 · 캐시 가능성\n└── 1-3. HAL/HATEOAS의 실제 적용\n        서버 주도 상태 전이 vs 클라이언트 지식"
+    },
+    {
+      "axisName": "REST 원칙",
+      "title": "2. 리소스 모델링과 URI 설계",
+      "rationale": "명명·계층·필터 표현의 오랜 판단 기준",
+      "subtree": "├── 2-1. 명사 vs 동사\n│       리소스 = 명사 · 컬렉션 vs 단일\n├── 2-2. 계층 표현\n│       parent/child 중첩과 그 임계값\n└── 2-3. 쿼리 파라미터 원칙\n        필터·정렬·페이징의 분리"
+    },
+    {
+      "axisName": "REST 원칙",
+      "title": "3. 메서드와 상태 코드 표준",
+      "rationale": "HTTP 표준을 어긴 API가 만드는 장기 부채",
+      "subtree": "├── 3-1. 안전 vs 멱등\n│       GET/PUT/DELETE의 계약\n├── 3-2. 200 vs 201 vs 204\n│       응답 형식과 시맨틱\n└── 3-3. 4xx/5xx 분류 기준\n        client 오류 vs server 오류의 결정 트리"
+    },
+    {
+      "axisName": "REST 원칙",
+      "title": "4. 버전 관리와 진화",
+      "rationale": "breaking change 최소화 · 후행 클라이언트와 공존",
+      "subtree": "├── 4-1. URL vs Header vs Media Type\n│       버전 표현 3안 트레이드오프\n├── 4-2. 필드 추가/제거의 안전 범위\n│       하위 호환 유지 규칙\n└── 4-3. deprecation 정책\n        관측·통보·회수 프로세스"
+    },
+    {
+      "axisName": "Aggregate 설계",
+      "title": "1. Aggregate 경계 판정",
+      "rationale": "트랜잭션·불변식·성능의 3중 판단",
+      "subtree": "├── 1-1. 트랜잭션 경계와의 관계\n│       한 aggregate = 한 트랜잭션 원칙\n├── 1-2. 불변식이 응집되는 지점\n│       엔티티 간 규칙이 얽히는 곳\n└── 1-3. 크기의 임계값\n        Small Aggregate 원칙 · 참조는 id로"
+    }
+  ],
+  "selectionOutlines": [
+    {
+      "axisName": "REST 원칙",
+      "variantHint": "능 아키텍처",
+      "nameCandidate": "능 아키텍처 REST selections v1",
+      "chapters": [
+        { "axisName": "REST 원칙", "title": "1. 큰 조직의 API-First 사례", "rationale": "Stripe/Github 대규모 REST 채택 근거", "subtree": "├── 1-1. Stripe: idempotency-key 표준화\n│       중복 요청 방지 프로토콜\n└── 1-2. Github: hypermedia 최소화\n        pragmatic REST 채택 이유" },
+        { "axisName": "REST 원칙", "title": "2. gRPC로 넘어간 케이스", "rationale": "REST 한계 판정 후 대안 선택", "subtree": "├── 2-1. 스트리밍 요구\n│       양방향 · 서버 push\n└── 2-2. 다국어 SDK 자동 생성\n        proto → 코드 흐름" }
+      ]
+    },
+    {
+      "axisName": "Aggregate 설계",
+      "variantHint": "실전 사례",
+      "nameCandidate": "실전 도메인 Aggregate selections v1",
+      "chapters": [
+        { "axisName": "Aggregate 설계", "title": "1. 결제 도메인 사례", "rationale": "돈이 관련된 강한 불변식의 응집", "subtree": "├── 1-1. Payment - Approval - Cancel\n│       상태 머신 · 재시도\n└── 1-2. 금액 · 통화 · 수수료\n        VO 활용 · 불변 보장" },
+        { "axisName": "Aggregate 설계", "title": "2. 주문 · 배송 사례", "rationale": "Aggregate 분리와 협력 이벤트", "subtree": "├── 2-1. Order Aggregate\n│       라인 아이템 · 상태\n└── 2-2. Delivery Aggregate\n        Order와의 이벤트 협력" }
+      ]
+    }
+  ]
 }

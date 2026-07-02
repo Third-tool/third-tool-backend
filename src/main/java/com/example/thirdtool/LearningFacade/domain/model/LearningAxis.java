@@ -80,6 +80,20 @@ public class LearningAxis {
     @OrderBy("displayOrder ASC")
     private final List<AxisTopic> topics = new ArrayList<>();
 
+    /**
+     * Roadmap 챕터 노드 (Story-LT-E3-S3-6, 이슈 #15).
+     * 각 노드가 챕터 하나 (title + rationale + body ASCII 통짜).
+     * {@code orphanRemoval=false} — 노드 자체가 {@code @SQLDelete}로 소프트 삭제되므로 hard delete 발생하지 않는다.
+     */
+    @OneToMany(
+            mappedBy      = "axis",
+            cascade       = CascadeType.ALL,
+            orphanRemoval = false,
+            fetch         = FetchType.LAZY
+    )
+    @OrderBy("displayOrder ASC")
+    private final List<AxisRoadmapNode> roadmapNodes = new ArrayList<>();
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -304,6 +318,80 @@ public class LearningAxis {
     public record TopicCommand(String name, String description) {
         public static TopicCommand of(String name, String description) {
             return new TopicCommand(name, description);
+        }
+    }
+
+    // ─── Roadmap 노드 도메인 API (Story-LT-E3-S3-6, 이슈 #15) ─────────
+
+    /**
+     * Roadmap 챕터 노드 추가. display_order는 (활성 노드 max) + 1.
+     *
+     * @return 신규 노드 (id는 flush 후 부여)
+     */
+    public AxisRoadmapNode addRoadmapNode(String title, String rationale, String body) {
+        int nextOrder = roadmapNodes.size() + 1;
+        AxisRoadmapNode node = AxisRoadmapNode.create(this, nextOrder, title, rationale, body);
+        roadmapNodes.add(node);
+        return node;
+    }
+
+    /**
+     * Roadmap 노드 순서 재부여. 전달된 id 순서대로 displayOrder를 1-based로 재부여한다.
+     * 전달된 id 집합이 현재 활성 roadmapNodes와 불일치하면 예외.
+     */
+    public void reorderRoadmapNodes(List<Long> orderedNodeIds) {
+        validateRoadmapNodeReorderIds(orderedNodeIds);
+        IntStream.range(0, orderedNodeIds.size()).forEach(i -> {
+            AxisRoadmapNode node = findRoadmapNode(orderedNodeIds.get(i));
+            node.updateDisplayOrder(i + 1);
+        });
+    }
+
+    /**
+     * Roadmap 노드 소프트 삭제. 노드 자체 {@link AxisRoadmapNode#softDelete()} 호출.
+     * 재삭제는 no-op (멱등).
+     */
+    public void removeRoadmapNode(Long nodeId) {
+        AxisRoadmapNode target = findRoadmapNode(nodeId);
+        target.softDelete();
+    }
+
+    public AxisRoadmapNode findRoadmapNode(Long nodeId) {
+        return roadmapNodes.stream()
+                .filter(n -> n.getId() != null && n.getId().equals(nodeId))
+                .findFirst()
+                .orElseThrow(() -> LearningFacadeDomainException.of(
+                        ErrorCode.ROADMAP_NODE_NOT_FOUND,
+                        "nodeId=" + nodeId));
+    }
+
+    /**
+     * 활성 Roadmap 노드 목록 (soft delete된 노드는 {@code @SQLRestriction}에 의해 자동 제외).
+     */
+    public List<AxisRoadmapNode> getRoadmapNodes() {
+        return Collections.unmodifiableList(roadmapNodes);
+    }
+
+    private void validateRoadmapNodeReorderIds(List<Long> orderedNodeIds) {
+        if (orderedNodeIds == null) {
+            throw LearningFacadeDomainException.of(ErrorCode.ROADMAP_NODE_ORDER_MISMATCH);
+        }
+        Set<Long> currentIds = roadmapNodes.stream()
+                .map(AxisRoadmapNode::getId)
+                .collect(Collectors.toSet());
+
+        if (orderedNodeIds.size() != currentIds.size()) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.ROADMAP_NODE_ORDER_MISMATCH,
+                    "전달된 노드 id 수(" + orderedNodeIds.size()
+                            + ")가 현재 노드 수(" + currentIds.size() + ")와 다릅니다.");
+        }
+
+        Set<Long> incomingIds = new HashSet<>(orderedNodeIds);
+        if (!currentIds.equals(incomingIds)) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.ROADMAP_NODE_ORDER_MISMATCH,
+                    "전달된 노드 id 목록이 현재 노드 id 집합과 일치하지 않습니다.");
         }
     }
 }

@@ -8,7 +8,7 @@
 
 ## 목차
 
-- [1. Ubiquitous Language — 전역 용어 (35)](#1-ubiquitous-language--전역-용어-35)
+- [1. Ubiquitous Language — 전역 용어 (38)](#1-ubiquitous-language--전역-용어-35)
 - [2. Bounded Context별 도메인 의도](#2-bounded-context별-도메인-의도)
   - [2.1 Card — 회상 가능한 학습 단위](#21-card--회상-가능한-학습-단위)
   - [2.2 Deck — 카드 분류 컨테이너](#22-deck--카드-분류-컨테이너)
@@ -21,7 +21,7 @@
 
 ---
 
-## 1. Ubiquitous Language — 전역 용어 (35)
+## 1. Ubiquitous Language — 전역 용어 (38)
 
 BC 횡단으로 사용되는 핵심 용어. BC 내부 미세 용어는 해당 BC 섹션에서 다룬다.
 
@@ -44,8 +44,11 @@ BC 횡단으로 사용되는 핵심 용어. BC 내부 미세 용어는 해당 BC
 | **viewCount** | 현 ON_FIELD 구간 노출 횟수 (복귀 시 0 초기화) |
 | **SoftSchedule** | 카드 재노출 최소 간격 정책 (1/3/7/14/21일 단계) |
 | **SoftScheduleState** | 카드 현재 간격 단계 상태 (FRESH / INTERVAL_* / NOT_YET) |
-| **LearningFacade** | 직업적 컨셉 정의 (v1당 1개) |
-| **LearningAxis** | 컨셉 아래 세부 축 (예: 데이터 모델링) |
+| **LearningFacade** | 직업적 컨셉 정의 (v1당 1개). `concepts[]` 다중 컨셉 (1~5개, Story-LT-E1) 지원 |
+| **LearningLayer** | Facade 하위 · Axis 상위 그룹핑 계층 ("계층"·"묶음"). default "Uncategorized" 자동 발행 (Story-LT-E2) |
+| **LearningAxis** | 컨셉 아래 세부 축 (예: 데이터 모델링). Layer 소속 (Story-LT-E2-S2 이후) |
+| **Roadmap** | 축의 학습 순서 청사진("헌법", ADR023). 챕터 title 순서(outline) + 각 챕터 subtree로 구성 |
+| **Selection** | 축 안의 구체 사례·응용("판례", ADR023). Roadmap 챕터에 대응되는 응용 예제 리스트 |
 | **AxisTopic** | 축 아래 학습 주제 (명사구, 이전 AxisAction 대체) |
 | **LearningMaterial** | 학습 자료 (BOOK / COURSE / AI_CONVERSATION / WEB_RESOURCE) |
 | **MaterialType** | 자료 타입. 정적(BOOK/COURSE) vs 동적(AI_CONVERSATION/WEB_RESOURCE) |

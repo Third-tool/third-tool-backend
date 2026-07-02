@@ -24,7 +24,7 @@ CREATE TABLE axis_roadmap_node
     display_order  INT          NOT NULL,
     title          VARCHAR(200) NOT NULL,
     rationale      VARCHAR(500) NULL,
-    body           TEXT         NOT NULL,
+    body           MEDIUMTEXT   NOT NULL,       -- ASCII subtree 통짜 저장. TEXT 64KB 상한 회피 (up to 16MB)
     created_at     DATETIME(6)  NOT NULL,
     updated_at     DATETIME(6)  NOT NULL,
     deleted_at     DATETIME(6)  NULL,

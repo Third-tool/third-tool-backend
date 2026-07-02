@@ -51,7 +51,7 @@ public class AxisRoadmapNode {
     @Column(name = "rationale", length = RATIONALE_MAX_LENGTH)
     private String rationale;
 
-    @Column(name = "body", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "body", nullable = false, columnDefinition = "MEDIUMTEXT")
     private String body;
 
     @CreationTimestamp

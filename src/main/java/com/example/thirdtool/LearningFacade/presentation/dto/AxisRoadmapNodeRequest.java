@@ -1,5 +1,6 @@
 package com.example.thirdtool.LearningFacade.presentation.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -15,14 +16,14 @@ public final class AxisRoadmapNodeRequest {
     private AxisRoadmapNodeRequest() {}
 
     public record Add(
-            @NotNull
+            @NotBlank(message = "title은 비어 있을 수 없습니다.")
             @Size(max = 200, message = "title은 200자 이내여야 합니다.")
             String title,
 
             @Size(max = 500, message = "rationale은 500자 이내여야 합니다.")
             String rationale,
 
-            @NotNull
+            @NotBlank(message = "body는 비어 있을 수 없습니다.")
             String body
     ) {}
 

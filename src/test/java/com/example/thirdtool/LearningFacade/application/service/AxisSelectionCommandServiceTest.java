@@ -127,9 +127,22 @@ class AxisSelectionCommandServiceTest {
         ReflectionTestUtils.setField(s, "id", 500L);
         when(selectionRepository.findById(500L)).thenReturn(Optional.of(s));
 
-        service.removeSelection(new AxisSelectionCommand.RemoveSelection(1L, 500L));
+        service.removeSelection(new AxisSelectionCommand.RemoveSelection(1L, 10L, 500L));
 
         assertThat(axis.getSelections()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[예외] removeSelection: path axisId가 실제 selection의 axis와 다를 때 → NOT_FOUND")
+    void removeSelection_axisIdMismatch_notFound() {
+        AxisSelection s = axis.addSelection("v1");
+        ReflectionTestUtils.setField(s, "id", 500L);
+        when(selectionRepository.findById(500L)).thenReturn(Optional.of(s));
+
+        assertThatThrownBy(() -> service.removeSelection(
+                new AxisSelectionCommand.RemoveSelection(1L, 999L, 500L)))
+                .isInstanceOf(LearningFacadeDomainException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.AXIS_SELECTION_NOT_FOUND);
     }
 
     @Test

@@ -66,7 +66,7 @@ public class AxisSelectionController {
     }
 
     // DELETE /api/v1/axes/{axisId}/selections/{selectionId}
-    // NOTE: SDD Story 3-11는 이 URL(axisId 포함)로 컨테이너 hard delete 명세. axisId는 검증에만 사용.
+    // SDD Story 3-11 URL 명세. axisId는 selection이 실제로 그 axis 소유인지 검증.
     @DeleteMapping("/axes/{axisId}/selections/{selectionId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeSelection(
@@ -74,9 +74,8 @@ public class AxisSelectionController {
             @PathVariable Long axisId,
             @PathVariable Long selectionId
     ) {
-        // axisId는 client convenience — 소유권 검증은 selectionId → axis → facade 체인으로 이미 처리됨.
         commandService.removeSelection(
-                new AxisSelectionCommand.RemoveSelection(user.getId(), selectionId));
+                new AxisSelectionCommand.RemoveSelection(user.getId(), axisId, selectionId));
     }
 
     // ─── 자식 노드 CRUD ────────────────────────────

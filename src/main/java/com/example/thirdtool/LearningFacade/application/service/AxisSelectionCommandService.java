@@ -57,6 +57,11 @@ public class AxisSelectionCommandService {
         LearningFacade facade = loadFacade(command.userId());
         AxisSelection selection = loadSelectionOwnedBy(facade, command.selectionId());
 
+        // Path axisId와 실제 selection.axis.id 정합 검증 — 소유권 노출 방지 위해 NOT_FOUND로 통일.
+        if (!selection.getAxis().getId().equals(command.axisId())) {
+            throw LearningFacadeDomainException.of(ErrorCode.AXIS_SELECTION_NOT_FOUND);
+        }
+
         selection.getAxis().removeSelection(command.selectionId());
         facadeRepository.save(facade);
     }

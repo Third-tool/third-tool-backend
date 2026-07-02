@@ -28,6 +28,8 @@ public class AxisSelectionNode {
 
     public static final int TITLE_MAX_LENGTH = 200;
     public static final int RATIONALE_MAX_LENGTH = 500;
+    // MEDIUMTEXT 상한 근사치 (16MB). 실질 사용자 입력은 훨씬 작지만 조기 감지 용.
+    public static final int BODY_MAX_LENGTH = 65_535;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -122,7 +124,13 @@ public class AxisSelectionNode {
         if (body == null || body.isBlank()) {
             throw LearningFacadeDomainException.of(ErrorCode.SELECTION_NODE_BODY_BLANK);
         }
-        return body.trim();
+        String trimmed = body.trim();
+        if (trimmed.length() > BODY_MAX_LENGTH) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "body는 " + BODY_MAX_LENGTH + "자 이내여야 합니다. length=" + trimmed.length());
+        }
+        return trimmed;
     }
 
     private static String normalizeRationale(String rationale) {

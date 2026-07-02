@@ -12,7 +12,7 @@ public final class AxisSelectionCommand {
     // ─── 컨테이너 ───────────────────────────
     public record AddSelection(Long userId, Long axisId, String name) {}
     public record RenameSelection(Long userId, Long selectionId, String name) {}
-    public record RemoveSelection(Long userId, Long selectionId) {}
+    public record RemoveSelection(Long userId, Long axisId, Long selectionId) {}
 
     // ─── 자식 노드 ──────────────────────────
     public record AddNode(

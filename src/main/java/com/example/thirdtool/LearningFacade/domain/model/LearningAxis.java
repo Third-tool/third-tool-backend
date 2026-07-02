@@ -420,15 +420,22 @@ public class LearningAxis {
 
     /**
      * Selection 컨테이너 추가. 동일 이름 중복 시 예외.
+     *
+     * <p>이슈 #11 정책 계승: name UNIQUE per axis (활성 컨테이너 대상).
+     * name blank 검증은 {@link AxisSelection#create}에서 최종 담당하지만, 중복 감지 정확도를
+     * 위해 여기서 미리 trim 한 상태로 비교한다.
      */
     public AxisSelection addSelection(String name) {
-        String trimmed = name == null ? null : name.trim();
+        if (name == null || name.isBlank()) {
+            throw LearningFacadeDomainException.of(ErrorCode.AXIS_SELECTION_NAME_BLANK);
+        }
+        String trimmed = name.trim();
         boolean duplicate = selections.stream()
                 .anyMatch(s -> s.getName().equals(trimmed));
         if (duplicate) {
             throw LearningFacadeDomainException.of(ErrorCode.AXIS_SELECTION_NAME_ALREADY_EXISTS);
         }
-        AxisSelection selection = AxisSelection.create(this, name);
+        AxisSelection selection = AxisSelection.create(this, trimmed);
         selections.add(selection);
         return selection;
     }

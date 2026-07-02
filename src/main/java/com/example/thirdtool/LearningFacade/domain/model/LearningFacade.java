@@ -212,6 +212,68 @@ public class LearningFacade {
     }
 
     /**
+     * concepts를 전달된 리스트로 통째 교체한다 (다건 부분성공 불허).
+     *
+     * <p>규칙:
+     * <ul>
+     *   <li>null 리스트 → {@code INVALID_INPUT}</li>
+     *   <li>size가 {@link #MIN_CONCEPT_COUNT}~{@link #MAX_CONCEPT_COUNT} 범위 밖 → {@code LEARNING_FACADE_CONCEPTS_SIZE_INVALID}</li>
+     *   <li>각 값은 trim + blank 거부 + 길이 검증</li>
+     *   <li>정규화 후 리스트 내 중복 → {@code LEARNING_FACADE_CONCEPT_DUPLICATE}</li>
+     *   <li>기존 concepts 전체를 제거 후 신규 리스트 순서대로 1-based displayOrder 부여</li>
+     *   <li>legacy {@code concept} 컬럼은 첫 항목과 동기화</li>
+     * </ul>
+     *
+     * @return {@link ConceptsChangeRecord} — previous / current / added / removed / kept
+     */
+    public ConceptsChangeRecord updateConcepts(List<String> newValues) {
+        if (newValues == null) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "concepts는 null일 수 없습니다."
+            );
+        }
+        if (newValues.size() < MIN_CONCEPT_COUNT || newValues.size() > MAX_CONCEPT_COUNT) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_FACADE_CONCEPTS_SIZE_INVALID,
+                    "size=" + newValues.size()
+            );
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String v : newValues) {
+            String n = LearningFacadeConcept.normalizeValue(v);
+            if (normalized.contains(n)) {
+                throw LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_FACADE_CONCEPT_DUPLICATE,
+                        "value=" + n
+                );
+            }
+            normalized.add(n);
+        }
+
+        List<String> previous = getConceptValues();
+        List<String> added    = normalized.stream()
+                                          .filter(n -> !previous.contains(n))
+                                          .toList();
+        List<String> removed  = previous.stream()
+                                        .filter(p -> !normalized.contains(p))
+                                        .toList();
+        List<String> kept     = normalized.stream()
+                                          .filter(previous::contains)
+                                          .toList();
+
+        // 통째 교체 — orphanRemoval=true 로 detach된 자식은 flush 시 삭제된다.
+        concepts.clear();
+        for (int i = 0; i < normalized.size(); i++) {
+            concepts.add(LearningFacadeConcept.of(this, normalized.get(i), i + 1));
+        }
+        // legacy 단수 concept 필드 동기화 (컬럼 DROP 전까지 유지)
+        this.concept = normalized.get(0);
+
+        return ConceptsChangeRecord.of(previous, normalized, added, removed, kept);
+    }
+
+    /**
      * 현재 concepts를 displayOrder ASC 순으로 반환. 반환된 리스트는 unmodifiable.
      */
     public List<LearningFacadeConcept> getConcepts() {

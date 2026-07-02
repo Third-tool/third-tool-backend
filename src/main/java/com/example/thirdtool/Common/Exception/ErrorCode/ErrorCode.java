@@ -112,6 +112,19 @@ public enum ErrorCode {
     ROADMAP_NODE_BODY_BLANK("RN003",      "Roadmap 노드 body는 비어 있을 수 없습니다.",                     HttpStatus.BAD_REQUEST),
     ROADMAP_NODE_ORDER_MISMATCH("RN004",  "전달된 Roadmap 노드 id 목록이 현재 노드 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
 
+    // ─── AxisSelection (Story-LT-E3-S3-9~S3-11, 이슈 #16 · 이슈 #11 계승) ─
+    // 컨테이너 정책: name UNIQUE per axis, created_at DESC, hard delete.
+    AXIS_SELECTION_NOT_FOUND("AS001",           "Selection을 찾을 수 없습니다.",                                    HttpStatus.NOT_FOUND),
+    AXIS_SELECTION_NAME_BLANK("AS002",          "Selection 이름은 비어 있을 수 없습니다.",                          HttpStatus.BAD_REQUEST),
+    AXIS_SELECTION_NAME_ALREADY_EXISTS("AS003", "동일한 이름의 Selection이 이미 존재합니다.",                        HttpStatus.CONFLICT),
+
+    // ─── AxisSelectionNode (Story-LT-E3-S3-9~S3-11, 이슈 #16) ─
+    // 컨테이너 hard delete 정책 계승 — 자식 노드 soft delete 없음.
+    SELECTION_NODE_NOT_FOUND("SN001",       "Selection 노드를 찾을 수 없습니다.",                              HttpStatus.NOT_FOUND),
+    SELECTION_NODE_TITLE_BLANK("SN002",     "Selection 노드 title은 비어 있을 수 없습니다.",                    HttpStatus.BAD_REQUEST),
+    SELECTION_NODE_BODY_BLANK("SN003",      "Selection 노드 body는 비어 있을 수 없습니다.",                     HttpStatus.BAD_REQUEST),
+    SELECTION_NODE_ORDER_MISMATCH("SN004",  "전달된 Selection 노드 id 목록이 현재 노드 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+
     // ─── LearningMaterial ─────────────────────────────────
     LEARNING_MATERIAL_NOT_FOUND("LM001",                          "학습 자료를 찾을 수 없습니다.",                                  HttpStatus.NOT_FOUND),
     LEARNING_MATERIAL_PROFICIENCY_UNRATED_NOT_ALLOWED("LM002",    "숙련도는 UNRATED로 되돌릴 수 없습니다.",                         HttpStatus.BAD_REQUEST),

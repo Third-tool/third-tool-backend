@@ -23,6 +23,12 @@ public class LearningFacade {
 
     private static final int RECOMMENDED_AXIS_LIMIT = 5;
 
+    // ─── concepts[] 정책 상수 (Story-LT-E1-S2 / S5) ────────
+    // Application Service · Controller · FE 어디도 재정의 금지 — 도메인 단일 진실 소스.
+    public static final int MIN_CONCEPT_COUNT        = 1;
+    public static final int MAX_CONCEPT_COUNT        = 5;
+    public static final int MAX_CONCEPT_VALUE_LENGTH = 100;
+
     // ─── 식별자 ───────────────────────────────────────────
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,8 +40,25 @@ public class LearningFacade {
     @JoinColumn(name = "user_id", nullable = false, updatable = false)
     private UserEntity user;
 
-    @Column(name = "concept", nullable = false, length = 100)
+    /**
+     * 단일 concept 컬럼 (Legacy, Story-LT-E1-S1 이후 deprecated).
+     * <p>NOT NULL 유지 상태이며 컬럼 DROP은 별도 릴리스에서 처리한다.
+     * 도메인은 {@link #concepts} 컬렉션을 진실 소스로 사용하고,
+     * 이 필드는 backfill/backward-compat 용으로 첫 concept 값과 동기화된다.
+     */
+    @Column(name = "concept", nullable = false, length = MAX_CONCEPT_VALUE_LENGTH)
     private String concept;
+
+    // ─── concepts[] 컬렉션 (Story-LT-E1-S2) ────────────────
+    // learning_facade_concept 자식 테이블 매핑. 노출은 getConcepts()의 unmodifiableList로만.
+    @OneToMany(
+            mappedBy      = "facade",
+            cascade       = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch         = FetchType.LAZY
+    )
+    @OrderBy("displayOrder ASC")
+    private final List<LearningFacadeConcept> concepts = new ArrayList<>();
 
     // ─── 세부 축 목록 ─────────────────────────────────────
     // ⚠️ orphanRemoval=false (Fix — Axis↔Deck 완전 통합, SDD §12 Q1 결정):
@@ -72,7 +95,48 @@ public class LearningFacade {
     public static LearningFacade create(UserEntity user, String concept) {
         requireNonNull(user, "user");
         validateConcept(concept);
-        return new LearningFacade(user, concept.trim());
+        LearningFacade facade = new LearningFacade(user, concept.trim());
+        // Story-LT-E1-S2: 단수 concept 생성 시 concepts 컬렉션에도 첫 항목으로 동기 추가한다.
+        // 도메인은 concepts를 진실 소스로 사용하므로 생성 시점에 collection과 legacy 필드가
+        // 언제나 일관된 상태여야 한다.
+        facade.concepts.add(LearningFacadeConcept.of(facade, concept, 1));
+        return facade;
+    }
+
+    /**
+     * concepts 다건 진입점 (Story-LT-E1-S4).
+     * size/blank/중복 검증 후 legacy {@code concept}은 첫 값으로 초기화되고 컬렉션은 1..N 순서로 채워진다.
+     */
+    public static LearningFacade create(UserEntity user, List<String> newConcepts) {
+        requireNonNull(user, "user");
+        if (newConcepts == null) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "concepts는 null일 수 없습니다."
+            );
+        }
+        if (newConcepts.size() < MIN_CONCEPT_COUNT || newConcepts.size() > MAX_CONCEPT_COUNT) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_FACADE_CONCEPTS_SIZE_INVALID,
+                    "size=" + newConcepts.size()
+            );
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String v : newConcepts) {
+            String n = LearningFacadeConcept.normalizeValue(v);
+            if (normalized.contains(n)) {
+                throw LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_FACADE_CONCEPT_DUPLICATE,
+                        "value=" + n
+                );
+            }
+            normalized.add(n);
+        }
+        LearningFacade facade = new LearningFacade(user, normalized.get(0));
+        for (int i = 0; i < normalized.size(); i++) {
+            facade.concepts.add(LearningFacadeConcept.of(facade, normalized.get(i), i + 1));
+        }
+        return facade;
     }
 
     // ─── 행위 ─────────────────────────────────────────────
@@ -89,6 +153,179 @@ public class LearningFacade {
         this.concept = trimmed;
         return ConceptChangeRecord.changed(previous, this.concept);
     }
+
+    // ─── concepts[] 컬렉션 API (Story-LT-E1-S2) ───────────
+
+    /**
+     * 컨셉 1건을 컬렉션 끝에 추가한다.
+     *
+     * <p>규칙:
+     * <ul>
+     *   <li>value는 trim + blank 거부 + 길이 검증 ({@link LearningFacadeConcept#normalizeValue})</li>
+     *   <li>trim 후 값 기준 중복 거부 → {@link ErrorCode#LEARNING_FACADE_CONCEPT_DUPLICATE}</li>
+     *   <li>추가 후 {@code concepts.size() > MAX_CONCEPT_COUNT}이면 거부 → {@link ErrorCode#LEARNING_FACADE_CONCEPTS_SIZE_INVALID}</li>
+     *   <li>displayOrder는 현재 concepts 크기 + 1 (1-based)</li>
+     * </ul>
+     */
+    public LearningFacadeConcept addConcept(String value) {
+        String normalized = LearningFacadeConcept.normalizeValue(value);
+        validateConceptDuplicate(normalized);
+        if (concepts.size() + 1 > MAX_CONCEPT_COUNT) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_FACADE_CONCEPTS_SIZE_INVALID,
+                    "현재 " + concepts.size() + "개 상태에서 추가 시 최대(" + MAX_CONCEPT_COUNT + ")를 초과합니다."
+            );
+        }
+        LearningFacadeConcept concept = LearningFacadeConcept.of(this, normalized, concepts.size() + 1);
+        concepts.add(concept);
+        return concept;
+    }
+
+    /**
+     * 컨셉 1건 제거. 최소 개수({@link #MIN_CONCEPT_COUNT}) 미만이 되는 제거는 거부한다.
+     * displayOrder는 제거 후 1-based로 재부여된다.
+     */
+    public void removeConcept(Long conceptId) {
+        if (conceptId == null) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "conceptId는 null일 수 없습니다."
+            );
+        }
+        if (concepts.size() - 1 < MIN_CONCEPT_COUNT) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_FACADE_CONCEPTS_SIZE_INVALID,
+                    "최소 " + MIN_CONCEPT_COUNT + "개는 유지해야 합니다."
+            );
+        }
+        LearningFacadeConcept target = concepts.stream()
+                .filter(c -> conceptId.equals(c.getId()))
+                .findFirst()
+                .orElseThrow(() -> LearningFacadeDomainException.of(
+                        ErrorCode.INVALID_INPUT,
+                        "conceptId=" + conceptId + " 는 현재 concepts에 존재하지 않습니다."
+                ));
+        concepts.remove(target);
+        // 남은 항목의 displayOrder를 1..N으로 재부여.
+        for (int i = 0; i < concepts.size(); i++) {
+            concepts.get(i).updateDisplayOrder(i + 1);
+        }
+    }
+
+    /**
+     * 컨셉 순서 재배치. 전달된 id 목록이 현재 concepts id 집합과 정확히 일치해야 한다.
+     * 불일치 시 {@link ErrorCode#LEARNING_FACADE_CONCEPTS_REORDER_MISMATCH}.
+     * 빈 리스트는 concepts가 비어있을 때만 정상(no-op).
+     */
+    public void reorderConcepts(List<Long> orderedConceptIds) {
+        if (orderedConceptIds == null) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "orderedConceptIds는 null일 수 없습니다."
+            );
+        }
+        Set<Long> currentIds  = concepts.stream()
+                                        .map(LearningFacadeConcept::getId)
+                                        .collect(Collectors.toSet());
+        Set<Long> incomingIds = new HashSet<>(orderedConceptIds);
+        if (orderedConceptIds.size() != currentIds.size() || !currentIds.equals(incomingIds)) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_FACADE_CONCEPTS_REORDER_MISMATCH,
+                    "전달 id 수=" + orderedConceptIds.size() + " · 현재 concepts 수=" + currentIds.size()
+            );
+        }
+        IntStream.range(0, orderedConceptIds.size()).forEach(i -> {
+            Long id = orderedConceptIds.get(i);
+            LearningFacadeConcept target = concepts.stream()
+                    .filter(c -> id.equals(c.getId()))
+                    .findFirst()
+                    .orElseThrow(); // 위 validation에서 방지됨
+            target.updateDisplayOrder(i + 1);
+        });
+        // 내부 컬렉션도 displayOrder 순으로 정렬해 in-memory 조회 시 순서 일관성 보장.
+        // (@OrderBy는 DB에서 load 시점만 적용되므로 in-memory 변경 후엔 수동 정렬 필요)
+        concepts.sort(java.util.Comparator.comparingInt(LearningFacadeConcept::getDisplayOrder));
+    }
+
+    /**
+     * concepts를 전달된 리스트로 통째 교체한다 (다건 부분성공 불허).
+     *
+     * <p>규칙:
+     * <ul>
+     *   <li>null 리스트 → {@code INVALID_INPUT}</li>
+     *   <li>size가 {@link #MIN_CONCEPT_COUNT}~{@link #MAX_CONCEPT_COUNT} 범위 밖 → {@code LEARNING_FACADE_CONCEPTS_SIZE_INVALID}</li>
+     *   <li>각 값은 trim + blank 거부 + 길이 검증</li>
+     *   <li>정규화 후 리스트 내 중복 → {@code LEARNING_FACADE_CONCEPT_DUPLICATE}</li>
+     *   <li>기존 concepts 전체를 제거 후 신규 리스트 순서대로 1-based displayOrder 부여</li>
+     *   <li>legacy {@code concept} 컬럼은 첫 항목과 동기화</li>
+     * </ul>
+     *
+     * @return {@link ConceptsChangeRecord} — previous / current / added / removed / kept
+     */
+    public ConceptsChangeRecord updateConcepts(List<String> newValues) {
+        if (newValues == null) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "concepts는 null일 수 없습니다."
+            );
+        }
+        if (newValues.size() < MIN_CONCEPT_COUNT || newValues.size() > MAX_CONCEPT_COUNT) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_FACADE_CONCEPTS_SIZE_INVALID,
+                    "size=" + newValues.size()
+            );
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String v : newValues) {
+            String n = LearningFacadeConcept.normalizeValue(v);
+            if (normalized.contains(n)) {
+                throw LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_FACADE_CONCEPT_DUPLICATE,
+                        "value=" + n
+                );
+            }
+            normalized.add(n);
+        }
+
+        List<String> previous = getConceptValues();
+        List<String> added    = normalized.stream()
+                                          .filter(n -> !previous.contains(n))
+                                          .toList();
+        List<String> removed  = previous.stream()
+                                        .filter(p -> !normalized.contains(p))
+                                        .toList();
+        List<String> kept     = normalized.stream()
+                                          .filter(previous::contains)
+                                          .toList();
+
+        // 통째 교체 — orphanRemoval=true 로 detach된 자식은 flush 시 삭제된다.
+        concepts.clear();
+        for (int i = 0; i < normalized.size(); i++) {
+            concepts.add(LearningFacadeConcept.of(this, normalized.get(i), i + 1));
+        }
+        // legacy 단수 concept 필드 동기화 (컬럼 DROP 전까지 유지)
+        this.concept = normalized.get(0);
+
+        return ConceptsChangeRecord.of(previous, normalized, added, removed, kept);
+    }
+
+    /**
+     * 현재 concepts를 displayOrder ASC 순으로 반환. 반환된 리스트는 unmodifiable.
+     */
+    public List<LearningFacadeConcept> getConcepts() {
+        return Collections.unmodifiableList(concepts);
+    }
+
+    /**
+     * concepts 컬렉션의 값 문자열만 뽑아 순서대로 반환 (API 응답 편의).
+     */
+    public List<String> getConceptValues() {
+        return concepts.stream()
+                       .map(LearningFacadeConcept::getValue)
+                       .toList();
+    }
+
+    // ─── LearningAxis API ─────────────────────────────────
 
     public LearningAxis addAxis(String name) {
         validateAxisNameDuplicate(name);
@@ -198,6 +435,18 @@ public class LearningFacade {
     }
 
     // ─── 내부 검증 ────────────────────────────────────────
+
+    private void validateConceptDuplicate(String normalizedValue) {
+        // trim된 값 기준 대소문자 정확 매칭으로 중복 판정.
+        boolean duplicated = concepts.stream()
+                                     .anyMatch(c -> c.getValue().equals(normalizedValue));
+        if (duplicated) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_FACADE_CONCEPT_DUPLICATE,
+                    "value=" + normalizedValue
+            );
+        }
+    }
 
     private void validateAxisNameDuplicate(String name) {
         if (name == null) return; // null 방어는 LearningAxis.create() 내부 validateName()이 처리

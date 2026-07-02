@@ -74,8 +74,15 @@ public enum ErrorCode {
     // ─── LearningFacade ───────────────────────────────────
     LEARNING_FACADE_NOT_FOUND("LF001",       "LearningFacade를 찾을 수 없습니다.",   HttpStatus.NOT_FOUND),
     LEARNING_FACADE_ALREADY_EXISTS("LF002",  "이미 LearningFacade가 존재합니다.",    HttpStatus.CONFLICT),
-    LEARNING_FACADE_CONCEPT_BLANK("LF003",   "직업적 컨셉은 비어 있을 수 없습니다.", HttpStatus.BAD_REQUEST),
+    LEARNING_FACADE_CONCEPT_BLANK("LF003",   "컨셉 값은 비어있을 수 없습니다.",     HttpStatus.BAD_REQUEST),
     LEARNING_FACADE_FORBIDDEN("LF004",       "본인의 LearningFacade가 아닙니다.",    HttpStatus.FORBIDDEN),
+
+    // ─── LearningFacade.concepts[] (Story-LT-E1-S2 / S5) ──
+    LEARNING_FACADE_CONCEPTS_SIZE_INVALID("LF005", "컨셉은 1~5개 이내여야 합니다.",   HttpStatus.BAD_REQUEST),
+    LEARNING_FACADE_CONCEPT_DUPLICATE("LF006",     "이미 등록된 컨셉입니다.",          HttpStatus.CONFLICT),
+    LEARNING_FACADE_CONCEPT_TOO_LONG("LF007",      "컨셉 값은 100자 이내여야 합니다.", HttpStatus.BAD_REQUEST),
+    LEARNING_FACADE_CONCEPTS_REORDER_MISMATCH("LF008",
+            "전달된 concept id 목록이 현재 컨셉 집합과 일치하지 않습니다.",       HttpStatus.BAD_REQUEST),
 
     // ─── LearningAxis ─────────────────────────────────────
     LEARNING_AXIS_NOT_FOUND("LA001",              "세부 축을 찾을 수 없습니다.",                             HttpStatus.NOT_FOUND),

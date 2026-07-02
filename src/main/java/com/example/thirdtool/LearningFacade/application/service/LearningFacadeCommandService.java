@@ -45,21 +45,21 @@ public class LearningFacadeCommandService {
         if (facadeRepository.existsByUserId(command.user().getId())) {
             throw LearningFacadeDomainException.of(ErrorCode.LEARNING_FACADE_ALREADY_EXISTS);
         }
-        LearningFacade facade = LearningFacade.create(command.user(), command.concept());
+        LearningFacade facade = LearningFacade.create(command.user(), command.concepts());
         return CreateFacade.of(facadeRepository.save(facade));
     }
 
     // ──────────────────────────────────────────────────────
-    // 3. 컨셉 수정
+    // 3. 컨셉 수정 (Story-LT-E1-S4: concepts[] 통째 교체)
     // ──────────────────────────────────────────────────────
 
-    public UpdateConcept updateConcept(LearningFacadeCommand.UpdateConcept command) {
+    public UpdateConcepts updateConcepts(LearningFacadeCommand.UpdateConcepts command) {
         LearningFacade facade = loadFacade(command.userId());
-        ConceptChangeRecord record = facade.updateConcept(command.concept());
+        ConceptsChangeRecord record = facade.updateConcepts(command.concepts());
         if (record.isChanged()) {
             facadeRepository.save(facade);
         }
-        return UpdateConcept.of(facade, record);
+        return UpdateConcepts.of(facade, record);
     }
 
     // ──────────────────────────────────────────────────────

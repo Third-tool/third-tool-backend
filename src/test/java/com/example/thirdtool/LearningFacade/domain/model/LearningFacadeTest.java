@@ -90,7 +90,7 @@ class LearningFacadeTest {
         @DisplayName("concept이 null이면 예외가 발생한다")
         void create_concept_null_예외() {
             //when & then
-            assertThatThrownBy(() -> LearningFacade.create(user, null))
+            assertThatThrownBy(() -> LearningFacade.create(user, (String) null))
                     .isInstanceOf(LearningFacadeDomainException.class);
         }
 

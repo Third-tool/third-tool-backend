@@ -185,14 +185,14 @@ public class LearningFacadeResponse {
 
     public record CreateFacade(
             Long facadeId,
-            String concept,
+            List<String> concepts,
             List<AxisItem> axes,
             LocalDateTime createdAt
     ) {
         public static CreateFacade of(LearningFacade facade) {
             return new CreateFacade(
                     facade.getId(),
-                    facade.getConcept(),
+                    facade.getConceptValues(),
                     List.of(),
                     facade.getCreatedAt()
             );
@@ -205,7 +205,7 @@ public class LearningFacadeResponse {
 
     public record FacadeDetail(
             Long facadeId,
-            String concept,
+            List<String> concepts,
             CoverageSummary coverageSummary,
             boolean isAxisCountExceedsRecommended,
             List<AxisItem> axes,
@@ -226,7 +226,7 @@ public class LearningFacadeResponse {
                                       java.util.Map<Long, List<Deck>> linkedDecksByAxis) {
             return new FacadeDetail(
                     facade.getId(),
-                    facade.getConcept(),
+                    facade.getConceptValues(),
                     CoverageSummary.from(facade.getCoverageSummary()),
                     facade.isAxisCountExceedsRecommended(),
                     facade.getAxes().stream()
@@ -245,19 +245,23 @@ public class LearningFacadeResponse {
     // 3. UpdateConcept
     // ──────────────────────────────────────────────────────
 
-    public record UpdateConcept(
+    public record UpdateConcepts(
             Long facadeId,
-            String concept,
-            boolean isConceptChanged,
-            boolean isDrifted,
+            List<String> concepts,
+            List<String> added,
+            List<String> removed,
+            List<String> kept,
+            boolean isChanged,
             LocalDateTime updatedAt
     ) {
-        public static UpdateConcept of(LearningFacade facade, ConceptChangeRecord record) {
-            return new UpdateConcept(
+        public static UpdateConcepts of(LearningFacade facade, ConceptsChangeRecord record) {
+            return new UpdateConcepts(
                     facade.getId(),
-                    facade.getConcept(),
+                    facade.getConceptValues(),
+                    record.getAdded(),
+                    record.getRemoved(),
+                    record.getKept(),
                     record.isChanged(),
-                    record.isDrifted(),
                     facade.getUpdatedAt()
             );
         }

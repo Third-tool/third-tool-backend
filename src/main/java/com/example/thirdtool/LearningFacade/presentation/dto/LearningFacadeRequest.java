@@ -12,14 +12,26 @@ public class LearningFacadeRequest {
 
     // ─── Facade ───────────────────────────────────────────
 
+    /**
+     * LearningFacade 생성 요청.
+     * concepts 배열은 필수 · 1~5개 · 각 값은 도메인에서 trim/blank/길이/중복 검증.
+     */
     public record CreateFacade(
-            @NotBlank
-            String concept
+            @NotNull
+            @jakarta.validation.constraints.Size(min = 1, max = 5,
+                    message = "컨셉은 1~5개 이내여야 합니다.")
+            List<String> concepts
     ) {}
 
-    public record UpdateConcept(
-            @NotBlank
-            String concept
+    /**
+     * LearningFacade.concepts 통째 교체 요청.
+     * 도메인 {@code updateConcepts()}가 부분성공 불허 · size/blank/중복 검증.
+     */
+    public record UpdateConcepts(
+            @NotNull
+            @jakarta.validation.constraints.Size(min = 1, max = 5,
+                    message = "컨셉은 1~5개 이내여야 합니다.")
+            List<String> concepts
     ) {}
 
     // ─── Axis ─────────────────────────────────────────────

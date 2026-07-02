@@ -21,12 +21,12 @@ public final class LearningFacadeCommand {
 
     public record CreateFacade(
             UserEntity user,
-            String concept
+            List<String> concepts
     ) {}
 
-    public record UpdateConcept(
+    public record UpdateConcepts(
             Long userId,
-            String concept
+            List<String> concepts
     ) {}
 
     public record AddAxis(

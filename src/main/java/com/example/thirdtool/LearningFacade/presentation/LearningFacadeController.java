@@ -41,7 +41,7 @@ public class LearningFacadeController {
             @Valid @RequestBody LearningFacadeRequest.CreateFacade request
     ) {
         return facadeCommandService.createFacade(
-                new LearningFacadeCommand.CreateFacade(user, request.concept()));
+                new LearningFacadeCommand.CreateFacade(user, request.concepts()));
     }
 
     // 2. GET /learning-facade
@@ -53,14 +53,14 @@ public class LearningFacadeController {
                 new LearningFacadeQuery.GetFacade(user.getId()));
     }
 
-    // 3. PATCH /learning-facade/concept
-    @PatchMapping("/concept")
-    public LearningFacadeResponse.UpdateConcept updateConcept(
+    // 3. PATCH /learning-facade/concepts (Story-LT-E1-S4: concepts[] 통째 교체)
+    @PatchMapping("/concepts")
+    public LearningFacadeResponse.UpdateConcepts updateConcepts(
             @AuthenticationPrincipal UserEntity user,
-            @Valid @RequestBody LearningFacadeRequest.UpdateConcept request
+            @Valid @RequestBody LearningFacadeRequest.UpdateConcepts request
     ) {
-        return facadeCommandService.updateConcept(
-                new LearningFacadeCommand.UpdateConcept(user.getId(), request.concept()));
+        return facadeCommandService.updateConcepts(
+                new LearningFacadeCommand.UpdateConcepts(user.getId(), request.concepts()));
     }
 
     // 4. POST /learning-facade/axes

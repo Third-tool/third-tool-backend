@@ -103,6 +103,42 @@ public class LearningFacade {
         return facade;
     }
 
+    /**
+     * concepts 다건 진입점 (Story-LT-E1-S4).
+     * size/blank/중복 검증 후 legacy {@code concept}은 첫 값으로 초기화되고 컬렉션은 1..N 순서로 채워진다.
+     */
+    public static LearningFacade create(UserEntity user, List<String> newConcepts) {
+        requireNonNull(user, "user");
+        if (newConcepts == null) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "concepts는 null일 수 없습니다."
+            );
+        }
+        if (newConcepts.size() < MIN_CONCEPT_COUNT || newConcepts.size() > MAX_CONCEPT_COUNT) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.LEARNING_FACADE_CONCEPTS_SIZE_INVALID,
+                    "size=" + newConcepts.size()
+            );
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String v : newConcepts) {
+            String n = LearningFacadeConcept.normalizeValue(v);
+            if (normalized.contains(n)) {
+                throw LearningFacadeDomainException.of(
+                        ErrorCode.LEARNING_FACADE_CONCEPT_DUPLICATE,
+                        "value=" + n
+                );
+            }
+            normalized.add(n);
+        }
+        LearningFacade facade = new LearningFacade(user, normalized.get(0));
+        for (int i = 0; i < normalized.size(); i++) {
+            facade.concepts.add(LearningFacadeConcept.of(facade, normalized.get(i), i + 1));
+        }
+        return facade;
+    }
+
     // ─── 행위 ─────────────────────────────────────────────
 
     public ConceptChangeRecord updateConcept(String newConcept) {

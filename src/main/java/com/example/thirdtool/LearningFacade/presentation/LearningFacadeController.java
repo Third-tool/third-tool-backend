@@ -106,6 +106,51 @@ public class LearningFacadeController {
                 new LearningFacadeCommand.ReorderAxes(user.getId(), request.orderedAxisIds()));
     }
 
+    // ─── Layer 엔드포인트 (Story-LT-E2-S4·S5) ──────────────
+
+    // POST /learning-facade/layers
+    @PostMapping("/layers")
+    @ResponseStatus(HttpStatus.CREATED)
+    public LearningFacadeResponse.AddLayer addLayer(
+            @AuthenticationPrincipal UserEntity user,
+            @Valid @RequestBody LearningFacadeRequest.AddLayer request
+    ) {
+        return facadeCommandService.addLayer(
+                new LearningFacadeCommand.AddLayer(user.getId(), request.name()));
+    }
+
+    // PATCH /learning-facade/layers/{layerId}
+    @PatchMapping("/layers/{layerId}")
+    public LearningFacadeResponse.RenameLayer renameLayer(
+            @AuthenticationPrincipal UserEntity user,
+            @PathVariable Long layerId,
+            @Valid @RequestBody LearningFacadeRequest.RenameLayer request
+    ) {
+        return facadeCommandService.renameLayer(
+                new LearningFacadeCommand.RenameLayer(user.getId(), layerId, request.name()));
+    }
+
+    // DELETE /learning-facade/layers/{layerId}
+    @DeleteMapping("/layers/{layerId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeLayer(
+            @AuthenticationPrincipal UserEntity user,
+            @PathVariable Long layerId
+    ) {
+        facadeCommandService.removeLayer(
+                new LearningFacadeCommand.RemoveLayer(user.getId(), layerId));
+    }
+
+    // PUT /learning-facade/layers/order
+    @PutMapping("/layers/order")
+    public LearningFacadeResponse.ReorderLayers reorderLayers(
+            @AuthenticationPrincipal UserEntity user,
+            @Valid @RequestBody LearningFacadeRequest.ReorderLayers request
+    ) {
+        return facadeCommandService.reorderLayers(
+                new LearningFacadeCommand.ReorderLayers(user.getId(), request.orderedLayerIds()));
+    }
+
     // POST /learning-facade/axes/{axisId}/decks (Fix-Story 2에서 신설)는 폐기되었다.
     // (Fix — Axis↔Deck 완전 통합, BE-Story 2, 2026-07-01)
     // 축 생성 시 이벤트로 자동 Deck을 만들도록 통일 — 사용자가 명시적으로 덱을 만들 진입점은 없다.

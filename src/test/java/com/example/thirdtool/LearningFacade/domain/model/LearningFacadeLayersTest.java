@@ -82,6 +82,144 @@ class LearningFacadeLayersTest {
         }
     }
 
+    // ─── addLayer / reorderLayers / removeLayer (Story-S4·S5) ─
+
+    @Nested
+    @DisplayName("addLayer / renameLayer")
+    class LayerLifecycle {
+
+        @Test
+        @DisplayName("addLayer_default이후_displayOrder는_max_plus_1")
+        void addLayer_default이후_displayOrder는_max_plus_1() {
+            LearningFacade facade = LearningFacade.create(user, "백엔드");
+
+            LearningLayer added = facade.addLayer("UI");
+
+            assertThat(added.getDisplayOrder()).isEqualTo(2);
+            assertThat(facade.getLayers()).extracting(LearningLayer::getName)
+                    .containsExactly("Uncategorized", "UI");
+        }
+
+        @Test
+        @DisplayName("addLayer_동일이름_중복_예외")
+        void addLayer_동일이름_중복_예외() {
+            LearningFacade facade = LearningFacade.create(user, "백엔드");
+            facade.addLayer("UI");
+
+            assertThatThrownBy(() -> facade.addLayer("UI"))
+                    .isInstanceOf(LearningFacadeDomainException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.LEARNING_LAYER_DUPLICATE_NAME);
+        }
+
+        @Test
+        @DisplayName("addLayer_5개_초과시_권장_한도_플래그_true")
+        void addLayer_5개_초과시_권장_한도_플래그_true() {
+            LearningFacade facade = LearningFacade.create(user, "백엔드");
+            facade.addLayer("L2");
+            facade.addLayer("L3");
+            facade.addLayer("L4");
+            facade.addLayer("L5"); // 총 5개 (default 포함)
+
+            assertThat(facade.isLayerCountExceedsRecommended()).isFalse();
+
+            facade.addLayer("L6"); // 6개
+
+            assertThat(facade.isLayerCountExceedsRecommended()).isTrue();
+        }
+
+        @Test
+        @DisplayName("renameLayer_동일값_no_op_false")
+        void renameLayer_동일값_no_op_false() {
+            LearningFacade facade = LearningFacade.create(user, "백엔드");
+            LearningLayer layer = facade.addLayer("UI");
+            ReflectionTestUtils.setField(layer, "id", 20L);
+
+            boolean changed = facade.renameLayer(20L, "UI");
+
+            assertThat(changed).isFalse();
+        }
+
+        @Test
+        @DisplayName("renameLayer_다른_활성layer와_중복_예외")
+        void renameLayer_다른_활성layer와_중복_예외() {
+            LearningFacade facade = LearningFacade.create(user, "백엔드");
+            LearningLayer ui = facade.addLayer("UI");
+            LearningLayer view = facade.addLayer("View");
+            ReflectionTestUtils.setField(ui, "id", 20L);
+            ReflectionTestUtils.setField(view, "id", 30L);
+
+            assertThatThrownBy(() -> facade.renameLayer(30L, "UI"))
+                    .isInstanceOf(LearningFacadeDomainException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.LEARNING_LAYER_DUPLICATE_NAME);
+        }
+    }
+
+    @Nested
+    @DisplayName("removeLayer — default 보호")
+    class RemoveLayer {
+
+        @Test
+        @DisplayName("removeLayer_default_Uncategorized_삭제_시도_예외")
+        void removeLayer_default_Uncategorized_삭제_시도_예외() {
+            LearningFacade facade = LearningFacade.create(user, "백엔드");
+            LearningLayer defaultLayer = facade.getDefaultLayer();
+            ReflectionTestUtils.setField(defaultLayer, "id", 10L);
+
+            assertThatThrownBy(() -> facade.removeLayer(10L))
+                    .isInstanceOf(LearningFacadeDomainException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.LEARNING_LAYER_HAS_ACTIVE_AXES);
+        }
+
+        @Test
+        @DisplayName("removeLayer_non_default_활성_axis_없음_성공")
+        void removeLayer_non_default_활성_axis_없음_성공() {
+            LearningFacade facade = LearningFacade.create(user, "백엔드");
+            LearningLayer ui = facade.addLayer("UI");
+            ReflectionTestUtils.setField(ui, "id", 20L);
+
+            facade.removeLayer(20L);
+
+            assertThat(ui.isDeleted()).isTrue();
+            assertThat(facade.getLayers()).hasSize(1); // default만 남음
+        }
+    }
+
+    @Nested
+    @DisplayName("reorderLayers")
+    class Reorder {
+
+        @Test
+        @DisplayName("reorderLayers_정상_displayOrder_재부여")
+        void reorderLayers_정상_displayOrder_재부여() {
+            LearningFacade facade = LearningFacade.create(user, "백엔드");
+            LearningLayer defaultLayer = facade.getDefaultLayer();
+            ReflectionTestUtils.setField(defaultLayer, "id", 10L);
+            LearningLayer ui = facade.addLayer("UI");
+            LearningLayer view = facade.addLayer("View");
+            ReflectionTestUtils.setField(ui, "id", 20L);
+            ReflectionTestUtils.setField(view, "id", 30L);
+
+            facade.reorderLayers(java.util.List.of(30L, 10L, 20L));
+
+            assertThat(facade.getLayers()).extracting(LearningLayer::getName)
+                    .containsExactly("View", "Uncategorized", "UI");
+        }
+
+        @Test
+        @DisplayName("reorderLayers_id_집합_불일치_예외")
+        void reorderLayers_id_집합_불일치_예외() {
+            LearningFacade facade = LearningFacade.create(user, "백엔드");
+            LearningLayer defaultLayer = facade.getDefaultLayer();
+            ReflectionTestUtils.setField(defaultLayer, "id", 10L);
+            LearningLayer ui = facade.addLayer("UI");
+            ReflectionTestUtils.setField(ui, "id", 20L);
+
+            assertThatThrownBy(() -> facade.reorderLayers(java.util.List.of(10L, 99L)))
+                    .isInstanceOf(LearningFacadeDomainException.class)
+                    .extracting("errorCode").isEqualTo(ErrorCode.LEARNING_LAYER_REORDER_MISMATCH);
+        }
+    }
+
     @Nested
     @DisplayName("findLayer / getLayers")
     class Query {

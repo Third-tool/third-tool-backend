@@ -50,6 +50,7 @@ class ReviewCommandServiceTest {
     private ReviewQueryService queryService;
     private DeckQueryService deckQueryService;
     private CardRepository cardRepository;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     private ReviewCommandService service;
 
     private UserEntity user;
@@ -61,9 +62,10 @@ class ReviewCommandServiceTest {
         queryService      = mock(ReviewQueryService.class);
         deckQueryService  = mock(DeckQueryService.class);
         cardRepository    = mock(CardRepository.class);
+        eventPublisher    = mock(org.springframework.context.ApplicationEventPublisher.class);
 
         service = new ReviewCommandService(
-                sessionRepository, queryService, deckQueryService, cardRepository
+                sessionRepository, queryService, deckQueryService, cardRepository, eventPublisher
         );
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
@@ -90,7 +92,7 @@ class ReviewCommandServiceTest {
     class StartReview {
 
         @Test
-        @DisplayName("정상 시작 — 첫 카드 viewCount+1, isLastView=false, save 1회")
+        @DisplayName("정상 시작 — 첫 카드 viewCount+1, isLastView=false, save 1회 + CardViewedEvent 발행")
         void startReview_happy_incrementsView() {
             Card card = persistedCard(1000L, "k1");
             when(deckQueryService.getActiveDeck(500L)).thenReturn(deck);
@@ -103,6 +105,9 @@ class ReviewCommandServiceTest {
             assertThat(card.getStatus()).isEqualTo(CardStatus.ON_FIELD);
             assertThat(response.currentCard().isLastView()).isFalse();
             verify(cardRepository, times(1)).save(card);
+            // Story-LT-E4-S4-5 — CardViewedEvent axisId 필드 발행 검증
+            verify(eventPublisher, times(1))
+                    .publishEvent(new com.example.thirdtool.Card.domain.event.CardViewedEvent(1000L, 1L, 10L));
         }
 
         @Test

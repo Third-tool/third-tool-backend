@@ -70,5 +70,16 @@ public interface CardRepository {
      */
     Page<CardSummaryRow> searchCards(CardSearchCondition condition, Pageable pageable);
 
+    /**
+     * Story-LT-E4-S4-4 — 축 스코프 카드 카운트 (Coverage 재계산 축 스코프).
+     * 활성 카드만 계산 (deleted=false).
+     */
+    long countByAxisIdAndDeletedFalse(Long axisId);
+
+    /**
+     * Story-LT-E4-S4-4 — 축 스코프 특정 상태 카드 카운트 (Coverage 재계산 축 스코프).
+     * 활성 카드만 계산 (deleted=false).
+     */
+    long countByAxisIdAndStatusAndDeletedFalse(Long axisId, CardStatus status);
 }
 

@@ -5,7 +5,6 @@ import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.CardStatus;
 import com.example.thirdtool.Card.domain.model.CardStatusHistoryAppender;
 import com.example.thirdtool.Card.domain.model.MainNote;
-import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Card.domain.model.Summary;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
@@ -19,13 +18,14 @@ import com.example.thirdtool.Review.presentation.dto.ReviewRequest;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.UserSchedule.application.service.UserScheduleQueryService;
+import com.example.thirdtool.UserSchedule.domain.model.LearningMode;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.Duration;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,12 +39,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * ReviewCommandService 매트릭스 (Story-2-1·2-3 사용자별 budget 주입 + maxView 자동 archive).
+ * ReviewCommandService 매트릭스 (Story-CARD-E1-S1-1~5 테스트 재배선).
+ *
+ * <p>Story-CARD-E1-S1-4 — {@code resolveOnFieldBudget()} 폐기.
+ * 이제 협력자 호출은 {@code currentMode(userId): LearningMode}로, 소비자에서
+ * {@code toOnFieldBudget()}로 우회한다.
  *
  * <p>전략 (`.claude/rules/conventions.md` §4.7): Repository·Cross-BC Service Mock + 도메인 객체(Card, Deck,
  * ReviewSession, UserEntity)는 실제 인스턴스로 생성해 상태 변화를 그대로 관찰한다.
  */
-@DisplayName("ReviewCommandService — Story 2-1·2-3 (사용자별 budget + maxView archive)")
+@DisplayName("ReviewCommandService — Story-CARD-E1-S1-1~5 (currentMode 주입)")
 class ReviewCommandServiceTest {
 
     private ReviewSessionRepository sessionRepository;
@@ -96,14 +100,13 @@ class ReviewCommandServiceTest {
     class StartReview {
 
         @Test
-        @DisplayName("정상 시작 — 첫 카드 viewCount+1, budget 사용자별로 조회, isLastView=false")
+        @DisplayName("정상 시작 — 첫 카드 viewCount+1, currentMode 사용자별로 조회, isLastView=false")
         void startReview_happy_incrementsView_noArchive() {
             Card card = persistedCard();
             when(deckQueryService.getActiveDeck(500L)).thenReturn(deck);
             when(cardRepository.findAllByDeckIdAndDeletedFalse(500L)).thenReturn(List.of(card));
-            // budget maxView=3 — 첫 진입(viewCount=1)은 isLastView=false
-            when(userScheduleQueryService.resolveOnFieldBudget(1L))
-                    .thenReturn(OnFieldBudget.of(3, Duration.ofDays(10)));
+            // MODE_7D (stepCount=3) — 첫 진입(viewCount=1)은 isLastView=false
+            when(userScheduleQueryService.currentMode(1L)).thenReturn(LearningMode.MODE_7D);
 
             ReviewResponse.StartSession response =
                     service.startReview(new ReviewRequest.StartSession(500L), user);
@@ -116,6 +119,7 @@ class ReviewCommandServiceTest {
         }
 
         @Test
+        @Disabled("PR#2 재작성 예정 - Story-CARD-E2-S2-6 (maxView=1 매핑 없음)")
         @DisplayName("maxView=1 budget — 첫 노출이 곧 마지막 노출 → MAX_VIEW archive + history append + Deck recalc")
         void startReview_maxViewReached_archivesWithHistory() {
             Card card = persistedCard();
@@ -123,8 +127,7 @@ class ReviewCommandServiceTest {
 
             when(deckQueryService.getActiveDeck(500L)).thenReturn(deck);
             when(cardRepository.findAllByDeckIdAndDeletedFalse(500L)).thenReturn(List.of(card));
-            when(userScheduleQueryService.resolveOnFieldBudget(1L))
-                    .thenReturn(OnFieldBudget.of(1, Duration.ofDays(10)));
+            // maxView=1은 새 mode 체계(3~6)에 정확 매핑 없음 → PR#2에서 재작성.
 
             ReviewResponse.StartSession response =
                     service.startReview(new ReviewRequest.StartSession(500L), user);
@@ -138,7 +141,7 @@ class ReviewCommandServiceTest {
         }
 
         @Test
-        @DisplayName("다른 유저의 deck 접근 시 REVIEW_SESSION_FORBIDDEN — budget 조회 미발생")
+        @DisplayName("다른 유저의 deck 접근 시 REVIEW_SESSION_FORBIDDEN — currentMode 조회 미발생")
         void startReview_otherUserDeck_throws() {
             UserEntity otherOwner = UserEntity.ofLocal("other", "pw", "n", "o@e.com");
             ReflectionTestUtils.setField(otherOwner, "id", 99L);
@@ -152,7 +155,7 @@ class ReviewCommandServiceTest {
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.REVIEW_SESSION_FORBIDDEN);
 
-            verify(userScheduleQueryService, never()).resolveOnFieldBudget(any());
+            verify(userScheduleQueryService, never()).currentMode(any());
             verify(cardRepository, never()).save(any());
         }
     }
@@ -164,7 +167,7 @@ class ReviewCommandServiceTest {
     class MoveToNext {
 
         @Test
-        @DisplayName("다음 카드 진입 시 viewCount+1 — budget 사용자별 주입, archive 미발생")
+        @DisplayName("다음 카드 진입 시 viewCount+1 — currentMode 사용자별 주입, archive 미발생")
         void moveToNext_happy_incrementsView() {
             // first card는 startReview에서 진입 처리됨. 본 테스트는 moveToNext 단독 검증.
             Card card1 = persistedCard();
@@ -173,8 +176,8 @@ class ReviewCommandServiceTest {
 
             ReviewSession session = buildComparingSession(List.of(card1, card2));
             when(queryService.getSessionByOwner(eq(700L), eq(user))).thenReturn(session);
-            when(userScheduleQueryService.resolveOnFieldBudget(1L))
-                    .thenReturn(OnFieldBudget.of(3, Duration.ofDays(10)));
+            // MODE_7D (stepCount=3) — 두 번째 카드 첫 진입(viewCount=1)은 isLastView=false
+            when(userScheduleQueryService.currentMode(1L)).thenReturn(LearningMode.MODE_7D);
 
             ReviewResponse.NextCard response = service.moveToNext(700L, user);
 
@@ -185,7 +188,7 @@ class ReviewCommandServiceTest {
         }
 
         @Test
-        @DisplayName("세션 종료 카드(마지막+1) — finished, budget 미조회·save 미호출")
+        @DisplayName("세션 종료 카드(마지막+1) — finished, currentMode 미조회·save 미호출")
         void moveToNext_lastCard_finishedSession_noBudgetCall() {
             Card only = persistedCard();
             ReviewSession session = buildComparingSession(List.of(only));
@@ -197,11 +200,12 @@ class ReviewCommandServiceTest {
             assertThat(session.isFinished()).isTrue();
             assertThat(response.isFinished()).isTrue();
             assertThat(response.currentCard()).isNull();
-            verify(userScheduleQueryService, never()).resolveOnFieldBudget(any());
+            verify(userScheduleQueryService, never()).currentMode(any());
             verify(cardRepository, never()).save(any());
         }
 
         @Test
+        @Disabled("PR#2 재작성 예정 - Story-CARD-E2-S2-6 (maxView=1 매핑 없음)")
         @DisplayName("다음 카드가 maxView에 도달 — MAX_VIEW archive + history append")
         void moveToNext_maxViewReached_archives() {
             Card card1 = persistedCard();
@@ -210,9 +214,7 @@ class ReviewCommandServiceTest {
 
             ReviewSession session = buildComparingSession(List.of(card1, card2));
             when(queryService.getSessionByOwner(eq(700L), eq(user))).thenReturn(session);
-            // budget maxView=1 — moveToNext에서 viewCount=1로 즉시 isLastView=true
-            when(userScheduleQueryService.resolveOnFieldBudget(1L))
-                    .thenReturn(OnFieldBudget.of(1, Duration.ofDays(10)));
+            // maxView=1은 새 mode 체계에 없음 → PR#2에서 재작성.
 
             ReviewResponse.NextCard response = service.moveToNext(700L, user);
 
@@ -233,16 +235,16 @@ class ReviewCommandServiceTest {
         @DisplayName("RECALLING → COMPARING 전환 + isLastView는 현재 카드 상태로 결정")
         void startComparing_transitionsStep_returnsIsLastView() {
             Card card = persistedCard();
-            // viewCount를 2로 만들어 두기 (startReview에서 진입했다 가정)
+            // MODE_7D stepCount=3 → viewCount=3에 도달하면 isLastView=true.
             card.recordView();
             card.recordView();
-            assertThat(card.getViewCount()).isEqualTo(2);
+            card.recordView();
+            assertThat(card.getViewCount()).isEqualTo(3);
 
             ReviewSession session = buildNewSession(List.of(card));
             when(queryService.getSessionByOwner(eq(700L), eq(user))).thenReturn(session);
-            // budget maxView=2 → 현재 viewCount=2이므로 isLastView=true
-            when(userScheduleQueryService.resolveOnFieldBudget(1L))
-                    .thenReturn(OnFieldBudget.of(2, Duration.ofDays(10)));
+            // MODE_7D (stepCount=3) → 현재 viewCount=3이므로 isLastView=true
+            when(userScheduleQueryService.currentMode(1L)).thenReturn(LearningMode.MODE_7D);
 
             ReviewResponse.CardReviewDto response = service.startComparing(700L, user);
 

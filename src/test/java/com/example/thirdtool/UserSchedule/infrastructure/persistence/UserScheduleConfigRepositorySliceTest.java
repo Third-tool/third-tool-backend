@@ -19,12 +19,14 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * UserScheduleConfigRepository slice 테스트 (@DataJpaTest + H2).
+ * UserScheduleConfigRepository slice 테스트 — Story-CARD-E1-S1-1~5 테스트 재배선.
  *
- * <p>Story-4-2 V12 마이그레이션 정합 검증:
+ * <p>Story-CARD-E1-S1-4 — LearningMode 재편(MODE_7D/14D/28D/60D) 반영. 새 threshold:
+ * ≤7 → MODE_7D, 8~14 → MODE_14D, 15~28 → MODE_28D, 29~60 → MODE_60D.
+ *
  * <ul>
  *   <li>findByUserId / existsByUserId 정상·미존재</li>
- *   <li>LearningMode enum 영속 round-trip (MODE_10D/20D/30D)</li>
+ *   <li>LearningMode enum 영속 round-trip (MODE_7D/14D/28D)</li>
  *   <li>updateMode 후 mapped_mode·raw_input_days 갱신 영속</li>
  * </ul>
  *
@@ -33,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @ActiveProfiles("test")
 @Import(QuerydslTestConfig.class)
-@DisplayName("UserScheduleConfigRepository slice — Story-4-2")
+@DisplayName("UserScheduleConfigRepository slice — Story-CARD-E1-S1-1~5 (MODE 재편)")
 class UserScheduleConfigRepositorySliceTest {
 
     @Autowired
@@ -56,7 +58,7 @@ class UserScheduleConfigRepositorySliceTest {
     @Test
     @DisplayName("findByUserId — 저장된 config는 userId로 단건 조회된다")
     void findByUserId_returnsExisting() {
-        // given
+        // given — 13일 입력 → MODE_14D (8~14 범위)
         UserScheduleConfig config = UserScheduleConfig.create(user.getId(), 13, policy);
         repository.save(config);
         em.flush();
@@ -68,7 +70,7 @@ class UserScheduleConfigRepositorySliceTest {
         // then
         assertThat(found).isPresent();
         assertThat(found.get().getRawInputDays()).isEqualTo(13);
-        assertThat(found.get().getMappedMode()).isEqualTo(LearningMode.MODE_10D);
+        assertThat(found.get().getMappedMode()).isEqualTo(LearningMode.MODE_14D);
     }
 
     @Test
@@ -89,31 +91,31 @@ class UserScheduleConfigRepositorySliceTest {
     }
 
     @Test
-    @DisplayName("LearningMode enum — MODE_20D / MODE_30D round-trip")
-    void enumRoundTrip_20D_and_30D() {
-        // MODE_20D (15~24)
+    @DisplayName("LearningMode enum — MODE_14D / MODE_28D round-trip")
+    void enumRoundTrip_14D_and_28D() {
+        // MODE_14D (8~14) — 10일 입력
         UserEntity user2 = UserEntity.ofLocal("u2", "pw", "n2", "u2@e.com");
         em.persist(user2);
-        repository.save(UserScheduleConfig.create(user2.getId(), 20, policy));
+        repository.save(UserScheduleConfig.create(user2.getId(), 10, policy));
 
-        // MODE_30D (25+)
+        // MODE_28D (15~28) — 25일 입력
         UserEntity user3 = UserEntity.ofLocal("u3", "pw", "n3", "u3@e.com");
         em.persist(user3);
-        repository.save(UserScheduleConfig.create(user3.getId(), 30, policy));
+        repository.save(UserScheduleConfig.create(user3.getId(), 25, policy));
         em.flush();
         em.clear();
 
         assertThat(repository.findByUserId(user2.getId()).orElseThrow().getMappedMode())
-                .isEqualTo(LearningMode.MODE_20D);
+                .isEqualTo(LearningMode.MODE_14D);
         assertThat(repository.findByUserId(user3.getId()).orElseThrow().getMappedMode())
-                .isEqualTo(LearningMode.MODE_30D);
+                .isEqualTo(LearningMode.MODE_28D);
     }
 
     @Test
     @DisplayName("Story 6-2 — dailyTarget 기본값 20 round-trip + updateDailyTarget 영속")
     void dailyTarget_default20_updatePersists() {
-        // given — 기본 생성
-        repository.save(UserScheduleConfig.create(user.getId(), 10, policy));
+        // given — 7일 입력(MODE_7D)로 생성
+        repository.save(UserScheduleConfig.create(user.getId(), 7, policy));
         em.flush();
         em.clear();
 
@@ -129,20 +131,20 @@ class UserScheduleConfigRepositorySliceTest {
         UserScheduleConfig reloaded = repository.findByUserId(user.getId()).orElseThrow();
         assertThat(reloaded.getDailyTarget()).isEqualTo(50);
         // 다른 필드는 영향 없음
-        assertThat(reloaded.getRawInputDays()).isEqualTo(10);
-        assertThat(reloaded.getMappedMode()).isEqualTo(LearningMode.MODE_10D);
+        assertThat(reloaded.getRawInputDays()).isEqualTo(7);
+        assertThat(reloaded.getMappedMode()).isEqualTo(LearningMode.MODE_7D);
     }
 
     @Test
     @DisplayName("updateMode — raw_input_days와 mapped_mode가 함께 갱신·영속된다")
     void updateMode_persistsBothFields() {
-        // given — 10D 모드로 시작
-        UserScheduleConfig config = UserScheduleConfig.create(user.getId(), 10, policy);
+        // given — MODE_7D로 시작 (7일 입력)
+        UserScheduleConfig config = UserScheduleConfig.create(user.getId(), 7, policy);
         repository.save(config);
         em.flush();
         em.clear();
 
-        // when — 25로 수정 → MODE_30D
+        // when — 25로 수정 → MODE_28D
         UserScheduleConfig loaded = repository.findByUserId(user.getId()).orElseThrow();
         loaded.updateMode(25, policy);
         em.flush();
@@ -151,6 +153,6 @@ class UserScheduleConfigRepositorySliceTest {
         // then
         UserScheduleConfig reloaded = repository.findByUserId(user.getId()).orElseThrow();
         assertThat(reloaded.getRawInputDays()).isEqualTo(25);
-        assertThat(reloaded.getMappedMode()).isEqualTo(LearningMode.MODE_30D);
+        assertThat(reloaded.getMappedMode()).isEqualTo(LearningMode.MODE_28D);
     }
 }

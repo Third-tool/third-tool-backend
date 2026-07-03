@@ -50,6 +50,7 @@ class ReviewCommandServiceTest {
     private ReviewQueryService queryService;
     private DeckQueryService deckQueryService;
     private CardRepository cardRepository;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     private ReviewCommandService service;
 
     private UserEntity user;
@@ -61,9 +62,10 @@ class ReviewCommandServiceTest {
         queryService      = mock(ReviewQueryService.class);
         deckQueryService  = mock(DeckQueryService.class);
         cardRepository    = mock(CardRepository.class);
+        eventPublisher    = mock(org.springframework.context.ApplicationEventPublisher.class);
 
         service = new ReviewCommandService(
-                sessionRepository, queryService, deckQueryService, cardRepository
+                sessionRepository, queryService, deckQueryService, cardRepository, eventPublisher
         );
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");

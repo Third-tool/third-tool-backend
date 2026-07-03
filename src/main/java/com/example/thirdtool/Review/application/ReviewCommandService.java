@@ -1,5 +1,6 @@
 package com.example.thirdtool.Review.application;
 
+import com.example.thirdtool.Card.domain.event.CardViewedEvent;
 import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
@@ -12,6 +13,7 @@ import com.example.thirdtool.Review.presentation.dto.ReviewRequest;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,9 @@ public class ReviewCommandService {
 
     // Card BC 의존 — port interface를 통한 접근 (ADR-006)
     private final CardRepository cardRepository;
+
+    // Story-LT-E4-S4-5 — CardViewedEvent 발행용. 소비처는 M5 이관.
+    private final ApplicationEventPublisher eventPublisher;
 
     // ─── 1. 리뷰 세션 시작 ───────────────────────────────
 
@@ -88,5 +93,11 @@ public class ReviewCommandService {
         Card card = session.currentCardReview().getCard();
         card.recordView();
         cardRepository.save(card);
+        // Story-LT-E4-S4-5 — axisId 이벤트 발행. Deck 폐기(M5) 이후에도 축 소유권이 유지되도록 명시.
+        eventPublisher.publishEvent(new CardViewedEvent(
+                card.getId(),
+                session.getUser().getId(),
+                card.getAxisId()
+        ));
     }
 }

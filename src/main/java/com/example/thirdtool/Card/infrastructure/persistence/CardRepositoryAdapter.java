@@ -91,4 +91,13 @@ public class CardRepositoryAdapter implements CardRepository {
         return cardJpaRepository.findByUserIdAndAxisIdsAndStatus(userId, axisIds, status);
     }
 
+    @Override
+    public long countByAxisIdAndDeletedFalse(Long axisId) {
+        return cardJpaRepository.countByAxisIdAndDeletedFalse(axisId);
+    }
+
+    @Override
+    public long countByAxisIdAndStatusAndDeletedFalse(Long axisId, CardStatus status) {
+        return cardJpaRepository.countByAxisIdAndStatusAndDeletedFalse(axisId, status);
+    }
 }

@@ -26,6 +26,12 @@ public interface CardJpaRepository extends JpaRepository<Card, Long>, CardReposi
 
     List<Card> findAllByStatusAndDeletedFalse(CardStatus status);
 
+
+    // Story-LT-E4-S4-4 — 축 스코프 Coverage 재계산용 카운트 (활성 카드만).
+    long countByAxisIdAndDeletedFalse(Long axisId);
+
+    long countByAxisIdAndStatusAndDeletedFalse(Long axisId, CardStatus status);
+
     @Query("""
             SELECT DISTINCT c FROM Card c
             LEFT JOIN FETCH c.cardTags ct

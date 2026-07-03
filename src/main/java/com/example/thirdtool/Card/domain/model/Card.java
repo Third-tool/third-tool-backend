@@ -37,6 +37,13 @@ public class Card {
     @JoinColumn(name = "deck_id", nullable = false)
     private Deck deck;
 
+    // ─── 축 직접 매핑 (Story-LT-E4-S4-3) ─────────────────────
+    // Card가 소속 Axis를 직접 참조한다. 값은 create() 시점에 deck.getAxisId()로 유도.
+    // M5 Deck 폐기에 대비한 사전 인프라 (deck.axis_id와 병존 · 데이터 정합 유지).
+    // Raw Long 참조 — BC 간 직접 객체 참조 회피 (docs/PACKAGE.md §6).
+    @Column(name = "axis_id", nullable = false)
+    private Long axisId;
+
     // ─── 학습 맥락 (Main Notes) ──────────────────────────────
     @Embedded
     private MainNote mainNote;
@@ -112,6 +119,14 @@ public class Card {
         this.createdMode    = createdMode;
     }
 
+    /**
+     * Story-LT-E4-S4-3 — 카드의 축 참조 raw Long.
+     * deck.getAxisId()와 동일값(정합 불변식). Deck 폐기 후에도 카드-축 소유권 유지.
+     */
+    public Long getAxisId() {
+        return axisId;
+    }
+
     // -------------------------------------------------------------------------
     // 생성
     // -------------------------------------------------------------------------
@@ -149,6 +164,7 @@ public class Card {
 
         Card card  = new Card(mainNote, summary, createdMode, today);
         card.deck  = deck;
+        card.axisId = deck.getAxisId();  // Story-LT-E4-S4-3 — deck.axisId 스냅샷 (정합 불변식)
         keywordValues.forEach(v -> card.keywordCues.add(KeywordCue.create(card, v)));
         resolvedTags.forEach(tag -> card.cardTags.add(CardTag.link(card, tag)));
         return card;

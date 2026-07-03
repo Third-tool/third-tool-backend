@@ -1,5 +1,7 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
+import com.example.thirdtool.Card.domain.model.CardStatus;
+import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.LearningFacade.domain.model.AxisTopic;
 import com.example.thirdtool.LearningFacade.domain.model.CoverageStatus;
 import com.example.thirdtool.LearningFacade.domain.model.ProficiencyLevel;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Component;
 public class CoverageRecalculator {
 
     private final TopicMaterialRepository topicMaterialRepository;
+    private final CardRepository cardRepository;
 
     public CoverageStatus recalculate(AxisTopic topic) {
         CoverageStatus newStatus = calculate(topic.getId());
@@ -27,5 +30,27 @@ public class CoverageRecalculator {
         boolean hasMastered = topicMaterialRepository
                 .existsByTopicIdAndMaterialProficiencyLevel(topicId, ProficiencyLevel.MASTERED);
         return hasMastered ? CoverageStatus.COVERED : CoverageStatus.PARTIAL;
+    }
+
+    /**
+     * Story-LT-E4-S4-4 — 축 스코프 Coverage 재계산.
+     *
+     * <p>기존 Topic 스코프({@link #recalculate(AxisTopic)})는 자료 기반(topic_material 카운트) 판정.
+     * 축 스코프는 카드 상태 기반: 축 카드 0개 → NO_MATERIAL, 모두 ARCHIVE → COVERED,
+     * 일부 ON_FIELD → PARTIAL. Deck 폐기(M5) 이후 축이 카드 소유의 유일 스코프가 되는 흐름 반영.
+     *
+     * <p><b>소비처</b>: M4에는 소비처 없음. M5 DailyLearningBatch·Deck 폐기 Story에서 소비.
+     * 반환된 CoverageStatus를 LearningAxis 필드로 저장하는 로직은 M5 이관.
+     */
+    public CoverageStatus recalculateByAxis(Long axisId) {
+        if (axisId == null) {
+            throw new IllegalArgumentException("CoverageRecalculator: axisId는 null일 수 없습니다.");
+        }
+        long total = cardRepository.countByAxisIdAndDeletedFalse(axisId);
+        if (total == 0) {
+            return CoverageStatus.NO_MATERIAL;
+        }
+        long archived = cardRepository.countByAxisIdAndStatusAndDeletedFalse(axisId, CardStatus.ARCHIVE);
+        return archived == total ? CoverageStatus.COVERED : CoverageStatus.PARTIAL;
     }
 }

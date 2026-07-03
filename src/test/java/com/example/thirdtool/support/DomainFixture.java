@@ -46,7 +46,7 @@ public class DomainFixture {
         return card;
     }
 
-    /** enteredFieldAt이 설정된 카드 (OnFieldBudget 기간 초과 테스트용) */
+    /** enteredFieldAt이 설정된 카드 */
     public static Card sampleCardWithEnteredFieldAt(LocalDateTime enteredFieldAt) {
         Card card = sampleCard();
         ReflectionTestUtils.setField(card, "enteredFieldAt", enteredFieldAt);
@@ -71,20 +71,6 @@ public class DomainFixture {
         Tag tag = Tag.of(value);
         ReflectionTestUtils.setField(tag, "id", id);
         return tag;
-    }
-
-    // ─── OnFieldBudget ────────────────────────────────────────────────────────
-
-    public static OnFieldBudget sampleBudget() {
-        return OnFieldBudget.of(3, Duration.ofDays(10));
-    }
-
-    public static OnFieldBudget budgetWithMaxView(int maxView) {
-        return OnFieldBudget.of(maxView, Duration.ofDays(30));
-    }
-
-    public static OnFieldBudget budgetWithMaxDuration(Duration maxDuration) {
-        return OnFieldBudget.of(10, maxDuration);
     }
 
     // ─── SoftScheduleTemplate ─────────────────────────────────────────────────

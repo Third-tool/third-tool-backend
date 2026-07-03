@@ -4,17 +4,16 @@ import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.MainNote;
 import com.example.thirdtool.Card.domain.model.Summary;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
-import com.example.thirdtool.LearningFacade.application.service.LearningFacadeQueryService;
-import com.example.thirdtool.Review.domain.model.StateRecommendationDistributor;
 import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
+import com.example.thirdtool.LearningFacade.application.service.LearningFacadeQueryService;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
+import com.example.thirdtool.Review.domain.model.StateRecommendationDistributor;
 import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.UserSchedule.application.service.UserScheduleQueryService;
-import com.example.thirdtool.UserSchedule.domain.model.LearningMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,19 +24,16 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * ReviewQueryService — Story-CARD-E1-S1-1~5 테스트 재배선.
+ * ReviewQueryService — Story-CARD-E2-S2-4 재작성.
  *
- * <p>Story-CARD-E1-S1-4 — {@code resolveOnFieldBudget()} 폐기 → {@code currentMode(userId)}로 우회.
- * isLastView는 사용자별 LearningMode의 stepCount로 결정된다.
+ * <p>OnFieldBudget 폐기(PR#2)에 따라 {@code isLastView} 판정이 사라진다.
+ * API 필드 호환을 위해 응답 DTO에는 남지만 항상 {@code false}로 반환된다.
  */
-@DisplayName("ReviewQueryService — Story-CARD-E1-S1-1~5 (currentMode 주입 / 소유자 검증)")
+@DisplayName("ReviewQueryService — Story-CARD-E2-S2-4 (isLastView 항상 false)")
 class ReviewQueryServiceTest {
 
     private ReviewSessionRepository sessionRepository;
@@ -82,22 +78,20 @@ class ReviewQueryServiceTest {
     }
 
     @Test
-    @DisplayName("findById — 소유자 정상 + isLastView가 사용자별 currentMode(stepCount)로 결정된다")
-    void findById_owner_resolvesIsLastViewByUserBudget() {
+    @DisplayName("findById — 소유자 정상 조회 시 isLastView는 항상 false")
+    void findById_owner_isLastViewAlwaysFalse() {
         Card card = sampleCard();
-        // MODE_7D stepCount=3 → viewCount=3에 도달하면 isLastView=true.
+        // viewCount를 임의로 늘려도 isLastView는 false로 고정된다 (OnFieldBudget 폐기).
         card.recordView();
         card.recordView();
         card.recordView();
         assertThat(card.getViewCount()).isEqualTo(3);
         persistedSession(card);
-        // MODE_7D (stepCount=3) → viewCount=3이므로 isLastView=true
-        when(userScheduleQueryService.currentMode(1L)).thenReturn(LearningMode.MODE_7D);
 
         ReviewResponse.SessionDetail response = service.findById(700L, owner);
 
         assertThat(response.currentCard()).isNotNull();
-        assertThat(response.currentCard().isLastView()).isTrue();
+        assertThat(response.currentCard().isLastView()).isFalse();
     }
 
     @Test
@@ -109,8 +103,6 @@ class ReviewQueryServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.REVIEW_SESSION_NOT_FOUND);
-
-        verify(userScheduleQueryService, never()).currentMode(any());
     }
 
     @Test
@@ -123,18 +115,14 @@ class ReviewQueryServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.REVIEW_SESSION_FORBIDDEN);
-
-        verify(userScheduleQueryService, never()).currentMode(any());
     }
 
     @Test
-    @DisplayName("findById — 종료된 세션은 currentCard=null + isLastView 결정 미발생")
+    @DisplayName("findById — 종료된 세션은 currentCard=null")
     void findById_finishedSession_currentCardNull() {
         Card card = sampleCard();
         ReviewSession s = persistedSession(card);
         ReflectionTestUtils.setField(s, "finished", true);
-        // currentMode 조회는 finished 검사 전에 발생하지만, isLastView가 false로 고정된다.
-        when(userScheduleQueryService.currentMode(1L)).thenReturn(LearningMode.MODE_7D);
 
         ReviewResponse.SessionDetail response = service.findById(700L, owner);
 

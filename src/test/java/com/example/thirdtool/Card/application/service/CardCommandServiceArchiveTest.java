@@ -14,6 +14,8 @@ import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.model.DeckProgressStatus;
 import com.example.thirdtool.Deck.infrastructure.repository.DeckRepository;
 import com.example.thirdtool.User.domain.model.UserEntity;
+import com.example.thirdtool.UserSchedule.application.service.UserScheduleQueryService;
+import com.example.thirdtool.UserSchedule.domain.model.LearningMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -46,6 +48,7 @@ class CardCommandServiceArchiveTest {
     private TagRepository tagRepository;
     private DeckRepository deckRepository;
     private CardStatusHistoryAppender appender;
+    private UserScheduleQueryService userScheduleQueryService;
     private CardCommandService service;
 
     private UserEntity user;
@@ -57,12 +60,14 @@ class CardCommandServiceArchiveTest {
         tagRepository = mock(TagRepository.class);
         deckRepository = mock(DeckRepository.class);
         appender = mock(CardStatusHistoryAppender.class);
-        service = new CardCommandService(cardRepository, tagRepository, deckRepository, appender);
+        userScheduleQueryService = mock(UserScheduleQueryService.class);
+        service = new CardCommandService(cardRepository, tagRepository, deckRepository, appender, userScheduleQueryService);
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);
         deck = Deck.createFromAxis(user, 10L, "DDD");
         ReflectionTestUtils.setField(deck, "id", 500L);
+        when(userScheduleQueryService.currentMode(1L)).thenReturn(LearningMode.MODE_14D);
     }
 
     private Card persistedCard() {

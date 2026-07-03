@@ -43,7 +43,8 @@ public class ReviewQueryService {
     // ─── 1. 세션 단건 조회 ────────────────────────────────
     public ReviewResponse.SessionDetail findById(Long sessionId, UserEntity user) {
         ReviewSession session = getSessionByOwner(sessionId, user);
-        OnFieldBudget budget = userScheduleQueryService.resolveOnFieldBudget(user.getId());
+        // Story-CARD-E1-S1-4 — resolveOnFieldBudget() 폐기 → currentMode() 우회. PR#2에서 함께 제거.
+        OnFieldBudget budget = userScheduleQueryService.currentMode(user.getId()).toOnFieldBudget();
         boolean isLastView = resolveIsLastView(session, budget);
         return ReviewResponse.SessionDetail.of(session, isLastView);
     }

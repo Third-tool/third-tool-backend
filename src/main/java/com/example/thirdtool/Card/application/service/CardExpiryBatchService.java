@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  * <p>처리 흐름
  * <ol>
  *   <li>ON_FIELD 상태(deleted=false) 후보 카드 일괄 조회.</li>
- *   <li>사용자별로 묶어 각 사용자당 {@link UserScheduleQueryService#resolveOnFieldBudget} 1회만 조회.</li>
+ *   <li>사용자별로 묶어 각 사용자당 {@link UserScheduleQueryService#currentMode} 1회만 조회.</li>
  *   <li>각 카드에 대해 {@link CardExpiryPolicy#expire}로 만료 사유 판정 → ARCHIVE 전환.</li>
  *   <li>만료된 카드는 history append + 소속 Deck 재계산을 모음 단위로 1회 실행.</li>
  * </ol>
@@ -83,7 +83,8 @@ public class CardExpiryBatchService {
 
         for (Map.Entry<Long, List<Card>> entry : byUser.entrySet()) {
             Long userId = entry.getKey();
-            OnFieldBudget budget = userScheduleQueryService.resolveOnFieldBudget(userId);
+            // Story-CARD-E1-S1-4 — resolveOnFieldBudget() 폐기 → currentMode() 우회. PR#2에서 함께 제거.
+            OnFieldBudget budget = userScheduleQueryService.currentMode(userId).toOnFieldBudget();
             for (Card card : entry.getValue()) {
                 CardStatus before = card.getStatus();
                 Optional<ArchiveReason> reason = cardExpiryPolicy.expire(card, budget);

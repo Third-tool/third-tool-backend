@@ -26,7 +26,7 @@ public class UserScheduleCommandService {
     }
 
     /**
-     * Story 6-3 후속 — 사용자 dailyTarget 갱신. 미보유 유저는 기본 모드(MODE_10D)로 자동 생성한 뒤
+     * Story 6-3 후속 — 사용자 dailyTarget 갱신. 미보유 유저는 기본 모드(MODE_14D)로 자동 생성한 뒤
      * dailyTarget만 갱신한다. dailyTarget 변경 자체는 v1에서 mode 이력에 기록하지 않는다
      * (mode/inputDays 변경 이력만 추적 — Spec Story 4-2 §3).
      */

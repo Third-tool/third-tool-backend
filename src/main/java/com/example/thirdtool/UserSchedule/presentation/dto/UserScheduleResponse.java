@@ -28,21 +28,34 @@ public class UserScheduleResponse {
     public record Save(
             ScheduleDto schedule,
             LocalDateTime updatedAt,
-            String mappingGuide
+            String mappingGuide,
+            boolean wasClamped
     ) {
         public static Save of(UserScheduleConfig config) {
+            return of(config, false);
+        }
+
+        /**
+         * Story-CARD-E1-S1-5 — 60일 상한 clamp 여부를 프론트에 전달한다.
+         * clamp된 경우 `wasClamped=true`가 되고, mappingGuide 문구에도 clamp 안내가 추가된다.
+         */
+        public static Save of(UserScheduleConfig config, boolean wasClamped) {
             return new Save(
                     ScheduleDto.of(config),
                     config.getUpdatedAt(),
-                    buildMappingGuide(config)
+                    buildMappingGuide(config, wasClamped),
+                    wasClamped
             );
         }
 
-        private static String buildMappingGuide(UserScheduleConfig config) {
+        private static String buildMappingGuide(UserScheduleConfig config, boolean wasClamped) {
             int inputDays   = config.getRawInputDays();
             int modeDays    = config.getMappedMode().maxDays();
             String modeName = config.getMappedMode().getDisplayName();
 
+            if (wasClamped) {
+                return inputDays + "일을 입력하셨습니다. 최대 60일까지 지원되어 " + modeName + "로 운영됩니다.";
+            }
             if (inputDays == modeDays) {
                 return modeName + "로 운영됩니다.";
             }

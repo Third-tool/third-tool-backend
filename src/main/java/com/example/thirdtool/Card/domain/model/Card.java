@@ -4,6 +4,7 @@ package com.example.thirdtool.Card.domain.model;
 import com.example.thirdtool.Card.domain.exception.CardDomainException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
+import com.example.thirdtool.UserSchedule.domain.model.LearningMode;
 import jakarta.persistence.*;
 import lombok.Getter;
 import org.hibernate.annotations.CreationTimestamp;
@@ -11,7 +12,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,6 +26,7 @@ public class Card {
 
     // ─── 매직 넘버 ────────────────────────────────────────────────
     private static final int MAX_TAG_COUNT = 3;
+    private static final LearningMode DEFAULT_CREATED_MODE = LearningMode.MODE_14D;
 
     // ─── 식별자 ──────────────────────────────────────────────
     @Id
@@ -51,8 +55,6 @@ public class Card {
     private final List<KeywordCue> keywordCues = new ArrayList<>();
 
     // ─── 연결 태그 (CardTag) ──────────────────────────────────
-    // @ManyToMany 대신 명시적 중간 엔티티로 관리한다.
-    // 이유: linkedAt 보존, 역방향 조회 효율화, 태그 통계 확장 가능성
     @OneToMany(
             mappedBy      = "card",
             cascade       = CascadeType.ALL,
@@ -62,27 +64,24 @@ public class Card {
     private final List<CardTag> cardTags = new ArrayList<>();
 
     // ─── 운영 위치 (CardStatus) ───────────────────────────────
-    // 학습 성공/실패 평가가 아닌 "지금 어디에 위치해야 하는가"를 나타낸다.
-    // 이력은 CardStatusHistory가 담당한다. Card는 현재 위치만 책임진다.
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private CardStatus status = CardStatus.ON_FIELD;
 
     // ─── ON_FIELD 체류 추적 ───────────────────────────────────
-    // enteredFieldAt: 현재 ON_FIELD 구간 진입 시각.
-    //   - 생성 시 현재 시각으로 초기화.
-    //   - ARCHIVE → ON_FIELD 복귀 시 재기록.
-    //   - archive() 시 보존. (마지막 ON_FIELD 구간 통계 근거 유지)
     @Column(name = "entered_field_at")
     private LocalDateTime enteredFieldAt;
 
-    // viewCount: 현재 ON_FIELD 구간에서의 리뷰 세션 노출 횟수.
-    //   - 생성 시 0으로 초기화.
-    //   - ON_FIELD 복귀 시 0으로 초기화.
-    //   - incrementViewCount() 호출로만 증가.
-    //   - archive() 시 보존.
     @Column(name = "view_count", nullable = false)
     private int viewCount = 0;
+
+    // ─── 생성 시점 학습 모드 (Story-CARD-E3-S3-2) ─────────────
+    // 카드가 생성될 때 사용자의 현재 LearningMode를 스냅샷으로 보관한다.
+    // 사용자가 나중에 모드를 down/up-shift해도 이 카드의 스케줄은 createdMode 기준으로 유지.
+    // 하이브리드 로직: effectiveMaxDays(userCurrentMode) = min(createdMode.max, userCurrent.max)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "created_mode", nullable = false, length = 10)
+    private LearningMode createdMode;
 
     // ─── Soft Delete ─────────────────────────────────────────
     @Column(nullable = false)
@@ -104,29 +103,37 @@ public class Card {
     protected Card() {}
 
     /** create() 내부 전용 생성자. */
-    private Card(MainNote mainNote, Summary summary) {
+    private Card(MainNote mainNote, Summary summary, LearningMode createdMode, LocalDate today) {
         this.mainNote       = mainNote;
         this.summary        = summary;
         this.status         = CardStatus.ON_FIELD;
-        this.enteredFieldAt = LocalDateTime.now();
+        this.enteredFieldAt = today.atStartOfDay();
         this.viewCount      = 0;
+        this.createdMode    = createdMode;
     }
 
     // -------------------------------------------------------------------------
     // 생성
     // -------------------------------------------------------------------------
 
+    /**
+     * Story-CARD-E3-S3-4 — 확장된 팩토리. 사용자의 현재 mode(createdMode 스냅샷)와 오늘 날짜(enteredFieldAt 기준)를 주입받는다.
+     */
     public static Card create(
             Deck deck,
             MainNote mainNote,
             Summary summary,
             List<String> keywordValues,
-            List<Tag> tagList
+            List<Tag> tagList,
+            LearningMode createdMode,
+            LocalDate today
                              ) {
         requireNonNull(deck,          "deck");
         requireNonNull(mainNote,      "mainNote");
         requireNonNull(summary,       "summary");
         requireNonNull(keywordValues, "keywordValues");
+        requireNonNull(createdMode,   "createdMode");
+        requireNonNull(today,         "today");
 
         if (keywordValues.isEmpty()) {
             throw CardDomainException.of(ErrorCode.CARD_KEYWORD_MIN_REQUIRED);
@@ -140,21 +147,39 @@ public class Card {
                     "생성 시 태그는 최대 " + MAX_TAG_COUNT + "개까지 허용됩니다.");
         }
 
-        Card card  = new Card(mainNote, summary);
+        Card card  = new Card(mainNote, summary, createdMode, today);
         card.deck  = deck;
         keywordValues.forEach(v -> card.keywordCues.add(KeywordCue.create(card, v)));
         resolvedTags.forEach(tag -> card.cardTags.add(CardTag.link(card, tag)));
         return card;
     }
 
+    /**
+     * @deprecated Story-CARD-E3-S3-4 이관 후 호환 오버로드. Card.create(..., createdMode, today) 사용 권장.
+     * default: createdMode = MODE_14D, today = LocalDate.now(). 다음 릴리스에서 제거 예정.
+     */
+    @Deprecated
+    public static Card create(
+            Deck deck,
+            MainNote mainNote,
+            Summary summary,
+            List<String> keywordValues,
+            List<Tag> tagList
+                             ) {
+        return create(deck, mainNote, summary, keywordValues, tagList, DEFAULT_CREATED_MODE, LocalDate.now());
+    }
 
+    /**
+     * @deprecated Story-CARD-E3-S3-4 이관 후 호환 오버로드. 다음 릴리스에서 제거 예정.
+     */
+    @Deprecated
     public static Card create(
             Deck deck,
             MainNote mainNote,
             Summary summary,
             List<String> keywordValues
                              ) {
-        return create(deck, mainNote, summary, keywordValues, null);
+        return create(deck, mainNote, summary, keywordValues, null, DEFAULT_CREATED_MODE, LocalDate.now());
     }
 
     // -------------------------------------------------------------------------
@@ -183,8 +208,6 @@ public class Card {
     }
 
     public void removeKeyword(Long keywordCueId) {
-        // size 우선 검증 — 마지막 keyword는 어떤 id를 받든 제거 불가 (도메인 규칙).
-        // 이 순서는 keywordCueId가 null이거나 미영속 엔티티 id(null)인 경우의 NPE도 방지.
         if (keywordCues.size() <= 1) {
             throw CardDomainException.of(ErrorCode.CARD_KEYWORD_LAST_CANNOT_REMOVE);
         }
@@ -201,11 +224,6 @@ public class Card {
     // 태그
     // -------------------------------------------------------------------------
 
-    /**
-     * 태그를 단건 추가한다.
-     * 이미 3개이면 예외를 발생시킨다.
-     * 이미 연결된 태그를 다시 추가하면 예외를 발생시킨다.
-     */
     public void addTag(Tag tag) {
         requireNonNull(tag, "tag");
         if (cardTags.size() >= MAX_TAG_COUNT) {
@@ -250,12 +268,33 @@ public class Card {
         this.status = CardStatus.ARCHIVE;
     }
 
-    public void returnToField() {
+    /**
+     * Story-CARD-E3-S3-3 — ARCHIVE → ON_FIELD fresh 재시작.
+     *
+     * <p>재학습 = 새로운 학습 계약 의도. `createdMode`를 사용자의 현재 모드로 재기록해
+     * `effectiveMaxDays` 하이브리드 판정이 새로운 인터벌 계약을 반영하게 한다.
+     *
+     * @param userCurrentMode 사용자의 현재 학습 모드 (createdMode로 재기록)
+     * @param today 오늘 날짜 (enteredFieldAt으로 재기록)
+     */
+    public void returnToField(LearningMode userCurrentMode, LocalDate today) {
+        requireNonNull(userCurrentMode, "userCurrentMode");
+        requireNonNull(today,           "today");
         if (this.status == CardStatus.ON_FIELD) return;
         this.status         = CardStatus.ON_FIELD;
-        this.enteredFieldAt = LocalDateTime.now();  // 새 ON_FIELD 구간 진입 시각 재기록
-        this.viewCount      = 0;                    // 새 구간 노출 횟수 초기화
-        this.lastViewedAt   = null;                 // 이전 구간 열람 시각은 schedule 판단 대상 아님
+        this.enteredFieldAt = today.atStartOfDay();
+        this.viewCount      = 0;
+        this.lastViewedAt   = null;
+        this.createdMode    = userCurrentMode;
+    }
+
+    /**
+     * @deprecated Story-CARD-E3-S3-3 이관 후 호환 오버로드. `returnToField(userCurrentMode, today)` 사용 권장.
+     * default: userCurrentMode = MODE_14D, today = LocalDate.now(). 다음 릴리스에서 제거 예정.
+     */
+    @Deprecated
+    public void returnToField() {
+        returnToField(DEFAULT_CREATED_MODE, LocalDate.now());
     }
 
     public void recordView() {
@@ -264,13 +303,51 @@ public class Card {
         this.lastViewedAt = LocalDateTime.now();
     }
 
-    // Story-CARD-E2-S2-1 — OnFieldBudget 폐기로 이중 게이트(maxView/maxDuration) 도메인 메서드 제거.
-    // Archive 결정은 M5 DailyLearningBatch가 lazy 판정한다.
-
     public boolean isScheduleAvailable(Duration minInterval) {
         if (minInterval == null || minInterval.isZero() || minInterval.isNegative()) return true;
         if (this.lastViewedAt == null) return true;
         return Duration.between(this.lastViewedAt, LocalDateTime.now()).compareTo(minInterval) >= 0;
+    }
+
+    // -------------------------------------------------------------------------
+    // M3 하이브리드 판정 (Story-CARD-E3-S3-2)
+    //
+    // 규칙:
+    //   - effectiveMaxDays = min(createdMode.maxDays, userCurrentMode.maxDays)
+    //     · down-shift(MODE_28D→MODE_7D): 카드의 createdMode(28)보다 사용자 현재(7)가 짧으면 즉시 cap
+    //     · up-shift(MODE_7D→MODE_28D): 카드의 createdMode(7)가 유지 — 계약 확장 안 함
+    //   - effectiveIntervals = createdMode.intervals 중 effectiveMaxDays 이하만
+    //   - isDueOn = daysSinceEntered ∈ effectiveIntervals
+    //   - hasScheduleExhausted = daysSinceEntered > effectiveMaxDays
+    // -------------------------------------------------------------------------
+
+    public int effectiveMaxDays(LearningMode userCurrentMode) {
+        requireNonNull(userCurrentMode, "userCurrentMode");
+        return Math.min(createdMode.maxDays(), userCurrentMode.maxDays());
+    }
+
+    public List<Integer> effectiveIntervals(LearningMode userCurrentMode) {
+        int cap = effectiveMaxDays(userCurrentMode);
+        return createdMode.getIntervals().stream()
+                          .filter(day -> day <= cap)
+                          .toList();
+    }
+
+    public boolean isDueOn(LocalDate today, LearningMode userCurrentMode) {
+        requireNonNull(today, "today");
+        int daysSince = daysSinceEntered(today);
+        return effectiveIntervals(userCurrentMode).contains(daysSince);
+    }
+
+    public boolean hasScheduleExhausted(LearningMode userCurrentMode, LocalDate today) {
+        requireNonNull(today, "today");
+        return daysSinceEntered(today) > effectiveMaxDays(userCurrentMode);
+    }
+
+    private int daysSinceEntered(LocalDate today) {
+        if (this.enteredFieldAt == null) return 0;
+        long days = ChronoUnit.DAYS.between(this.enteredFieldAt.toLocalDate(), today);
+        return (int) Math.max(0, days);
     }
 
     // -------------------------------------------------------------------------
@@ -309,13 +386,12 @@ public class Card {
     public boolean       isDeleted()        { return deleted; }
     public LocalDateTime getEnteredFieldAt(){ return enteredFieldAt; }
     public int           getViewCount()     { return viewCount; }
+    public LearningMode  getCreatedMode()   { return createdMode; }
 
-    /** 수정 불가능한 뷰를 반환한다. Aggregate 외부에서 직접 컬렉션 조작 불가. */
     public List<KeywordCue> getKeywordCues() {
         return Collections.unmodifiableList(keywordCues);
     }
 
-    /** 수정 불가능한 뷰를 반환한다. Aggregate 외부에서 직접 컬렉션 조작 불가. */
     public List<CardTag> getCardTags() {
         return Collections.unmodifiableList(cardTags);
     }

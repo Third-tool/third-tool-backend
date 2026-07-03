@@ -69,6 +69,7 @@ public class SuggestionCatalogLoader {
     }
 
     private static SuggestionCatalog emptyCatalog(String role) {
-        return new SuggestionCatalog(role, List.of(), Map.of(), Map.of(), Map.of());
+        return new SuggestionCatalog(role, List.of(), Map.of(), Map.of(), Map.of(),
+                List.of(), List.of());
     }
 }

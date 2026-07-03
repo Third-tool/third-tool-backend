@@ -162,9 +162,12 @@ public class Card {
                     "생성 시 태그는 최대 " + MAX_TAG_COUNT + "개까지 허용됩니다.");
         }
 
+        Long axisId = deck.getAxisId();
+        requireNonNull(axisId, "deck.axisId");  // Story-LT-E4-Reviewer — NOT NULL late-fail 방어
+
         Card card  = new Card(mainNote, summary, createdMode, today);
         card.deck  = deck;
-        card.axisId = deck.getAxisId();  // Story-LT-E4-S4-3 — deck.axisId 스냅샷 (정합 불변식)
+        card.axisId = axisId;  // Story-LT-E4-S4-3 — deck.axisId 스냅샷 (정합 불변식)
         keywordValues.forEach(v -> card.keywordCues.add(KeywordCue.create(card, v)));
         resolvedTags.forEach(tag -> card.cardTags.add(CardTag.link(card, tag)));
         return card;

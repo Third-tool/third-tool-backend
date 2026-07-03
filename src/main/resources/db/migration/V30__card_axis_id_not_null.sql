@@ -10,7 +10,10 @@
 ALTER TABLE card
     MODIFY COLUMN axis_id BIGINT NOT NULL;
 
+-- Reviewer 조치: LearningAxis는 Soft Delete(ADR021, V14), Card도 Soft Delete(ADR003).
+-- CASCADE는 hard delete 시나리오만 트리거되지만 관리자·복구 흐름에서 조용한 데이터 소실 위험.
+-- RESTRICT로 두어 Application이 명시적으로 카드 정리 후 축 삭제하도록 강제.
 ALTER TABLE card
     ADD CONSTRAINT fk_card_axis
         FOREIGN KEY (axis_id) REFERENCES learning_axis (id)
-        ON DELETE CASCADE;
+        ON DELETE RESTRICT;

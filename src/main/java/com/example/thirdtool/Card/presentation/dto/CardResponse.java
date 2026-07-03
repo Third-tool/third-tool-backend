@@ -9,11 +9,12 @@ import java.util.List;
 public class CardResponse {
 
     // ─── 1. 카드 생성 응답 ───────────────────────────────────
-    // Story-CARD-E3-S3-4 — 생성 시점 사용자 mode 스냅샷(createdMode)을 응답에 노출한다.
-    // FE는 이 값을 사용자 안내(예: "이 카드는 14일 인터벌로 학습됩니다") 및 M5 하이브리드 판정에 활용한다.
+    // Story-CARD-E3-S3-4 — createdMode 스냅샷 노출
+    // Story-LT-E4-S4-3 — axisId 직접 노출 (M5 Deck 폐기 대비 사전 인프라)
     public record Create(
             Long cardId,
             Long deckId,
+            Long axisId,
             MainNoteDto mainNote,
             List<KeywordDto> keywords,
             String summary,
@@ -29,6 +30,7 @@ public class CardResponse {
             return new Create(
                     card.getId(),
                     card.getDeck().getId(),
+                    card.getAxisId(),
                     MainNoteDto.of(card),
                     KeywordDto.listOf(card),
                     card.getSummary().getValue(),
@@ -47,6 +49,7 @@ public class CardResponse {
     public record Detail(
             Long cardId,
             Long deckId,
+            Long axisId,
             MainNoteDto mainNote,
             List<KeywordDto> keywords,
             String summary,
@@ -63,6 +66,7 @@ public class CardResponse {
             return new Detail(
                     card.getId(),
                     card.getDeck().getId(),
+                    card.getAxisId(),
                     MainNoteDto.of(card),
                     KeywordDto.listOf(card),
                     card.getSummary().getValue(),

@@ -40,7 +40,7 @@ public class UserScheduleResponse {
 
         private static String buildMappingGuide(UserScheduleConfig config) {
             int inputDays   = config.getRawInputDays();
-            int modeDays    = config.getMappedMode().getDurationDays();
+            int modeDays    = config.getMappedMode().maxDays();
             String modeName = config.getMappedMode().getDisplayName();
 
             if (inputDays == modeDays) {
@@ -94,8 +94,8 @@ public class UserScheduleResponse {
                     config.getRawInputDays(),
                     mode.name(),
                     mode.getDisplayName(),
-                    mode.getMaxView(),
-                    mode.getDurationDays(),
+                    mode.stepCount(),
+                    mode.maxDays(),
                     config.getDailyTarget(),
                     intervals
             );

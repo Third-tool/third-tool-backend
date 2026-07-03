@@ -32,7 +32,13 @@ public class QLearningAxis extends EntityPathBase<LearningAxis> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final QLearningLayer layer;
+
     public final StringPath name = createString("name");
+
+    public final ListPath<AxisRoadmapNode, QAxisRoadmapNode> roadmapNodes = this.<AxisRoadmapNode, QAxisRoadmapNode>createList("roadmapNodes", AxisRoadmapNode.class, QAxisRoadmapNode.class, PathInits.DIRECT2);
+
+    public final ListPath<AxisSelection, QAxisSelection> selections = this.<AxisSelection, QAxisSelection>createList("selections", AxisSelection.class, QAxisSelection.class, PathInits.DIRECT2);
 
     public final ListPath<AxisTopic, QAxisTopic> topics = this.<AxisTopic, QAxisTopic>createList("topics", AxisTopic.class, QAxisTopic.class, PathInits.DIRECT2);
 
@@ -55,6 +61,7 @@ public class QLearningAxis extends EntityPathBase<LearningAxis> {
     public QLearningAxis(Class<? extends LearningAxis> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
         this.facade = inits.isInitialized("facade") ? new QLearningFacade(forProperty("facade"), inits.get("facade")) : null;
+        this.layer = inits.isInitialized("layer") ? new QLearningLayer(forProperty("layer"), inits.get("layer")) : null;
     }
 
 }

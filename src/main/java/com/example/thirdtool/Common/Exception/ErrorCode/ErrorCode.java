@@ -156,6 +156,7 @@ public enum ErrorCode {
     // ─── UserSchedule ─────────────────────────────────────
     SCHEDULE_NOT_FOUND("SCHEDULE001",            "스케줄을 찾을 수 없습니다.",                  HttpStatus.NOT_FOUND),
     SCHEDULE_HISTORY_LIMIT_EXCEEDED("SCHEDULE002", "스케줄 이력 조회 한도를 초과했습니다.",     HttpStatus.BAD_REQUEST),
+    USER_SCHEDULE_INPUT_TOO_SHORT("SCHEDULE003",   "학습 목표 일수는 1일 이상이어야 합니다.",   HttpStatus.BAD_REQUEST),
 
             // ─── 파일 / 스토리지 ──────────────────────────────────
     FILE_EMPTY("FILE001",                   "파일이 비어있습니다.",               HttpStatus.BAD_REQUEST),

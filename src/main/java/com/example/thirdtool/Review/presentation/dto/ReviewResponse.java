@@ -145,11 +145,21 @@ public class ReviewResponse {
     }
 
     // ─── 공통 중첩 DTO ────────────────────────────────────────────────────────
+
+    /**
+     * 리뷰 카드 응답 DTO.
+     *
+     * <p><b>Deprecated 필드</b>: {@code isLastView} — Story-CARD-E2-S2-4 폐기.
+     * OnFieldBudget 폐기로 "이번이 마지막 노출인가" 판정이 사라졌다. FE 호환 유지를 위해
+     * 필드는 남지만 값은 항상 {@code false}. Archive 판정은 M5 DailyLearningBatch로 이관됐다.
+     * v2 API에서 필드 자체가 제거될 예정.
+     */
     public record CardReviewDto(
             Long cardReviewId,
             Long cardId,
             int cardOrder,
             ReviewStep reviewStep,
+            // @deprecated Story-CARD-E2-S2-4 — 항상 false. M5 DailyLearningBatch로 판정 이관, v2 API에서 필드 제거 예정.
             boolean isLastView,
             MainNoteDto mainNote,
             List<KeywordDto> keywordCues,   // RECALLING이면 null

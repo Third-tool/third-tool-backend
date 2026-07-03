@@ -18,14 +18,18 @@ public enum ArchiveReason {
     /**
      * 카드 생성 시점의 mode 인터벌이 소진된 경우.
      * 예: `createdMode = MODE_7D`인 카드가 7일 경과 → 스케줄 소진.
-     * M5 DailyLearningBatch가 lazy로 판정한다.
+     *
+     * <p><b>판정 시점</b>: M4에서는 판정 주체 없음. M5 DailyLearningBatch가 lazy로 판정한다.
+     * 현재 enum 값은 미래 판정을 대비한 도메인 어휘로만 존재.
      */
     SCHEDULE_EXHAUSTED,
 
     /**
      * 사용자 모드가 다운시프트되어 카드 스케줄이 즉시 만료된 경우.
      * 예: 사용자가 MODE_28D → MODE_7D로 축소했는데 이미 7일 초과한 카드.
-     * PR#3 (Story-CARD-E3) Card.effectiveMaxDays 하이브리드 로직과 연동된다.
+     *
+     * <p><b>판정 시점</b>: M4 PR#2에서는 판정 주체 없음.
+     * PR#3(Story-CARD-E3) `Card.effectiveMaxDays` 하이브리드 로직 도입 이후 M5 DailyLearningBatch가 판정.
      */
     MODE_DOWNGRADED
 }

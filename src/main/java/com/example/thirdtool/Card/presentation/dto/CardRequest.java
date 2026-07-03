@@ -62,7 +62,8 @@ public class CardRequest {
 
     // ─── 카드 ARCHIVE 전환 요청 ───────────────────────────
     // 사용자 명시 액션의 reason은 MANUAL로 고정 (Service에서 강제) — 본 DTO는 향후
-    // 관리자/시스템 호출(MAX_VIEW·MAX_DURATION)을 위한 확장 여지를 위해 enum을 받는다.
+    // 시스템 호출(SCHEDULE_EXHAUSTED · MODE_DOWNGRADED)을 위한 확장 여지를 위해 enum을 받는다.
+    // Story-CARD-E2-S2-3: ArchiveReason 3값 재편에 맞춰 주석 갱신.
     public record Archive(
             @NotNull
             ArchiveReason reason

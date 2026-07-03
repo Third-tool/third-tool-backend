@@ -1,9 +1,9 @@
 package com.example.thirdtool.UserSchedule.application.service;
 
-import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.UserSchedule.domain.exception.UserScheduleDomainException;
+import com.example.thirdtool.UserSchedule.domain.model.LearningMode;
 import com.example.thirdtool.UserSchedule.domain.model.LearningModeMappingPolicy;
 import com.example.thirdtool.UserSchedule.domain.model.UserScheduleConfig;
 import com.example.thirdtool.UserSchedule.infrastructure.persistence.UserScheduleConfigHistoryRepository;
@@ -35,26 +35,24 @@ public class UserScheduleQueryService {
     }
 
     /**
-     * Cross-BC inbound — Card BC {@link OnFieldBudget}을 사용자별 설정에서 파생해 반환한다.
+     * Cross-BC inbound — 사용자의 현재 학습 모드(LearningMode)를 반환한다.
      *
-     * <p>Review BC가 매 노출(`recordView`)·세션 진입 시점에 호출한다. 설정 미보유 유저는
-     * 첫 호출 시 기본 모드(MODE_10D)로 자동 초기화 — Story 4-2 "최초 설정 미완료 유저는
-     * 기본값(10일 모드) 자동 초기화".
+     * <p>Story-CARD-E1-S1-4 — {@code resolveOnFieldBudget()} 폐기. 이제 호출자는
+     * mode 자체를 받아 필요한 파생 값(intervals·maxDays 등)을 직접 계산한다.
      *
-     * <p>{@code UserScheduleConfig} 엔티티 자체는 BC 경계 밖으로 노출하지 않는다.
-     * 호출자가 필요한 것은 {@link OnFieldBudget} VO뿐이다.
+     * <p>설정 미보유 유저는 첫 호출 시 기본 모드({@code MODE_14D})로 자동 초기화.
      */
-    public OnFieldBudget resolveOnFieldBudget(Long userId) {
+    public LearningMode currentMode(Long userId) {
         UserScheduleConfig config = configRepository.findByUserId(userId)
                                                     .orElseGet(() -> initDefault(userId));
-        return config.resolveOnFieldBudget();
+        return config.getMappedMode();
     }
 
     /**
      * Cross-BC inbound — Card BC {@link SoftScheduleTemplate}을 사용자별 설정에서 파생해 반환한다.
      *
-     * <p>Review BC가 오늘 학습 후보 수집 시 사용자별 간격 단계(1·3·7일 / 1·3·7·14일 / 1·3·7·14·21일)
-     * 를 가져오기 위해 호출한다. 설정 미보유 유저는 첫 호출 시 기본 모드(MODE_10D)로 자동 초기화.
+     * <p>Review BC가 오늘 학습 후보 수집 시 사용자별 간격 단계(1·3·7일 / 1·3·7·14일 / 1·3·7·14·28일 / 1·3·7·14·28·60일)
+     * 를 가져오기 위해 호출한다. 설정 미보유 유저는 첫 호출 시 기본 모드({@code MODE_14D})로 자동 초기화.
      */
     public SoftScheduleTemplate resolveSoftScheduleTemplate(Long userId) {
         UserScheduleConfig config = configRepository.findByUserId(userId)

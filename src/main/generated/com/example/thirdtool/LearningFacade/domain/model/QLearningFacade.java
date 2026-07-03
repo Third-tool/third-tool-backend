@@ -26,9 +26,13 @@ public class QLearningFacade extends EntityPathBase<LearningFacade> {
 
     public final StringPath concept = createString("concept");
 
+    public final ListPath<LearningFacadeConcept, QLearningFacadeConcept> concepts = this.<LearningFacadeConcept, QLearningFacadeConcept>createList("concepts", LearningFacadeConcept.class, QLearningFacadeConcept.class, PathInits.DIRECT2);
+
     public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
+
+    public final ListPath<LearningLayer, QLearningLayer> layers = this.<LearningLayer, QLearningLayer>createList("layers", LearningLayer.class, QLearningLayer.class, PathInits.DIRECT2);
 
     public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt", java.time.LocalDateTime.class);
 

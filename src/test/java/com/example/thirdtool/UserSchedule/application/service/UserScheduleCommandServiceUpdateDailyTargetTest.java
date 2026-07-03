@@ -25,9 +25,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * UserScheduleCommandService.updateDailyTarget — Story 6-2/6-3 매트릭스.
+ * UserScheduleCommandService.updateDailyTarget — Story-CARD-E1-S1-1~5 테스트 재배선.
+ *
+ * <p>Story-CARD-E1-S1-4 — LearningMode 재편(MODE_7D/14D/28D/60D). DEFAULT_INPUT_DAYS=14 → default=MODE_14D.
  */
-@DisplayName("UserScheduleCommandService — updateDailyTarget (Story 6-2/6-3)")
+@DisplayName("UserScheduleCommandService — updateDailyTarget (Story-CARD-E1-S1-1~5)")
 class UserScheduleCommandServiceUpdateDailyTargetTest {
 
     private UserScheduleConfigRepository configRepository;
@@ -50,6 +52,7 @@ class UserScheduleCommandServiceUpdateDailyTargetTest {
     @Test
     @DisplayName("기존 설정 보유: dailyTarget 갱신 + 저장 + history 미발생(mode 미변경)")
     void updateDailyTarget_existing_updates_noHistory() {
+        // MODE_14D 범위 입력(10일 → MODE_14D)
         UserScheduleConfig config = UserScheduleConfig.create(1L, 10, mappingPolicy);
         when(configRepository.findByUserId(eq(1L))).thenReturn(Optional.of(config));
 
@@ -70,11 +73,12 @@ class UserScheduleCommandServiceUpdateDailyTargetTest {
         UserScheduleResponse.Save response = service.updateDailyTarget(2L, 50);
 
         assertThat(response.schedule().dailyTarget()).isEqualTo(50);
-        assertThat(response.schedule().mappedMode()).isEqualTo(LearningMode.MODE_10D.name());
+        // DEFAULT_INPUT_DAYS=14 → default=MODE_14D
+        assertThat(response.schedule().mappedMode()).isEqualTo(LearningMode.MODE_14D.name());
         // createDefault에서 1회, updateDailyTarget 부분에서 추가 save 1회 → 총 2회
         verify(configRepository, times(2)).save(any(UserScheduleConfig.class));
         // 초기 생성 history만 1회 (dailyTarget 변경 자체는 mode history 미생성)
-        verify(historyAppender, times(1)).append(any(), eq(null), eq(LearningMode.MODE_10D), eq(10));
+        verify(historyAppender, times(1)).append(any(), eq(null), eq(LearningMode.MODE_14D), eq(14));
     }
 
     @Test

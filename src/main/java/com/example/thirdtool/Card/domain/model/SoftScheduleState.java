@@ -8,6 +8,8 @@ public enum SoftScheduleState {
     INTERVAL_7D,
     INTERVAL_14D,
     INTERVAL_21D,
+    INTERVAL_28D,
+    INTERVAL_60D,
     NOT_YET;
 
     /** 노출 가능 여부를 반환한다. NOT_YET만 false를 반환한다. */

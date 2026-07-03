@@ -9,61 +9,59 @@ import java.util.List;
 
 public enum LearningMode {
 
-    MODE_10D(10, 3, "10일 모드", List.of(
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(1), SoftScheduleState.INTERVAL_1D),
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(3), SoftScheduleState.INTERVAL_3D),
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(7), SoftScheduleState.INTERVAL_7D)
-                                     )),
+    MODE_7D(List.of(1, 3, 7), "7일 모드"),
+    MODE_14D(List.of(1, 3, 7, 14), "14일 모드"),
+    MODE_28D(List.of(1, 3, 7, 14, 28), "28일 모드"),
+    MODE_60D(List.of(1, 3, 7, 14, 28, 60), "60일 모드");
 
-    MODE_20D(20, 5, "20일 모드", List.of(
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(1),  SoftScheduleState.INTERVAL_1D),
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(3),  SoftScheduleState.INTERVAL_3D),
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(7),  SoftScheduleState.INTERVAL_7D),
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(14), SoftScheduleState.INTERVAL_14D)
-                                     )),
-
-    MODE_30D(30, 7, "30일 모드", List.of(
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(1),  SoftScheduleState.INTERVAL_1D),
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(3),  SoftScheduleState.INTERVAL_3D),
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(7),  SoftScheduleState.INTERVAL_7D),
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(14), SoftScheduleState.INTERVAL_14D),
-            new SoftScheduleTemplate.IntervalStep(Duration.ofDays(21), SoftScheduleState.INTERVAL_21D)
-                                     ));
-
-    // ─── 모드 속성 ────────────────────────────────────────────────
-
-    private final int durationDays;
-    private final int maxView;
+    private final List<Integer> intervals;
     private final String displayName;
 
-    private final List<SoftScheduleTemplate.IntervalStep> intervalSteps;
-
-    LearningMode(
-            int durationDays,
-            int maxView,
-            String displayName,
-            List<SoftScheduleTemplate.IntervalStep> intervalSteps
-                ) {
-        this.durationDays  = durationDays;
-        this.maxView       = maxView;
-        this.displayName   = displayName;
-        this.intervalSteps = intervalSteps;
+    LearningMode(List<Integer> intervals, String displayName) {
+        this.intervals = List.copyOf(intervals);
+        this.displayName = displayName;
     }
 
-    // ─── 행위 ─────────────────────────────────────────────────────
-
-    public OnFieldBudget toOnFieldBudget() {
-        return OnFieldBudget.of(maxView, Duration.ofDays(durationDays));
+    public List<Integer> getIntervals() {
+        return intervals;
     }
 
-    public SoftScheduleTemplate toSoftScheduleTemplate() {
-        return SoftScheduleTemplate.of(intervalSteps);
+    public int maxDays() {
+        return intervals.get(intervals.size() - 1);
+    }
+
+    public int stepCount() {
+        return intervals.size();
     }
 
     public String getDisplayName() {
         return displayName;
     }
 
-    public int getDurationDays() { return durationDays; }
-    public int getMaxView()      { return maxView; }
+    public OnFieldBudget toOnFieldBudget() {
+        return OnFieldBudget.of(stepCount(), Duration.ofDays(maxDays()));
+    }
+
+    public SoftScheduleTemplate toSoftScheduleTemplate() {
+        List<SoftScheduleTemplate.IntervalStep> steps = intervals.stream()
+                .map(day -> new SoftScheduleTemplate.IntervalStep(
+                        Duration.ofDays(day),
+                        mapDayToState(day)
+                ))
+                .toList();
+        return SoftScheduleTemplate.of(steps);
+    }
+
+    private static SoftScheduleState mapDayToState(int day) {
+        return switch (day) {
+            case 1 -> SoftScheduleState.INTERVAL_1D;
+            case 3 -> SoftScheduleState.INTERVAL_3D;
+            case 7 -> SoftScheduleState.INTERVAL_7D;
+            case 14 -> SoftScheduleState.INTERVAL_14D;
+            case 28 -> SoftScheduleState.INTERVAL_28D;
+            case 60 -> SoftScheduleState.INTERVAL_60D;
+            default -> throw new IllegalStateException(
+                    "LearningMode: 알 수 없는 인터벌 일수. day=" + day);
+        };
+    }
 }

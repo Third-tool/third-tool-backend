@@ -21,6 +21,8 @@ public class QUserScheduleConfig extends EntityPathBase<UserScheduleConfig> {
 
     public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
 
+    public final NumberPath<Integer> dailyTarget = createNumber("dailyTarget", Integer.class);
+
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final EnumPath<LearningMode> mappedMode = createEnum("mappedMode", LearningMode.class);

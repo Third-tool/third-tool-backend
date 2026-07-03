@@ -23,7 +23,8 @@ import java.time.LocalDateTime;
 public class UserScheduleConfig {
 
     // ─── 기본값 상수 ──────────────────────────────────────────────
-    private static final int DEFAULT_INPUT_DAYS = 10;
+    // Story-CARD-E1-S1-4 — LearningMode 재편으로 default MODE_14D 매핑을 위해 14로 조정.
+    private static final int DEFAULT_INPUT_DAYS = 14;
     private static final int DEFAULT_DAILY_TARGET = 20;
 
     // ─── 식별자 ──────────────────────────────────────────────────

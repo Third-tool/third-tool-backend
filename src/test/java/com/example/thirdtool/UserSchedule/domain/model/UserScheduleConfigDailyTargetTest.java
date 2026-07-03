@@ -8,7 +8,13 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DisplayName("UserScheduleConfig — dailyTarget (Story 6-2)")
+/**
+ * UserScheduleConfig dailyTarget — Story-CARD-E1-S1-1~5 테스트 재배선.
+ *
+ * <p>Story-CARD-E1-S1-4 — LearningMode 재편. 10일 입력은 MODE_14D로 매핑됨(8~14 범위).
+ * dailyTarget 자체 로직은 mode와 독립이므로 create 인자만 새 threshold에 맞춰 유지.
+ */
+@DisplayName("UserScheduleConfig — dailyTarget (Story-CARD-E1-S1-1~5)")
 class UserScheduleConfigDailyTargetTest {
 
     private final LearningModeMappingPolicy policy = new LearningModeMappingPolicy();

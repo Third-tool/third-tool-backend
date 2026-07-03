@@ -6,19 +6,18 @@ import com.example.thirdtool.Card.domain.model.CardExpiryPolicy;
 import com.example.thirdtool.Card.domain.model.CardStatus;
 import com.example.thirdtool.Card.domain.model.CardStatusHistoryAppender;
 import com.example.thirdtool.Card.domain.model.MainNote;
-import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Card.domain.model.Summary;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.domain.model.DeckProgressStatus;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import com.example.thirdtool.UserSchedule.application.service.UserScheduleQueryService;
+import com.example.thirdtool.UserSchedule.domain.model.LearningMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,12 +31,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * CardExpiryBatchService 매트릭스 — Story 2-2 야간 만료 처리.
+ * CardExpiryBatchService 매트릭스 — Story-CARD-E1-S1-1~5 테스트 재배선.
+ *
+ * <p>Story-CARD-E1-S1-4 — {@code resolveOnFieldBudget()} 폐기.
+ * 배치는 이제 사용자별 {@link LearningMode}를 조회해 {@code toOnFieldBudget()}로 변환한다.
  *
  * <p>Mockist (`conventions.md` §4.7) — Repository / Cross-BC Service Mock + 도메인 객체는 실제 생성.
  * 시간 의존성은 `enteredFieldAt` reflection 주입으로 통제 (`DomainFixture` 패턴 동일).
  */
-@DisplayName("CardExpiryBatchService — Story 2-2 야간 만료 처리")
+@DisplayName("CardExpiryBatchService — Story-CARD-E1-S1-1~5 (currentMode 주입)")
 class CardExpiryBatchServiceTest {
 
     private CardRepository cardRepository;
@@ -85,7 +87,7 @@ class CardExpiryBatchServiceTest {
     }
 
     @Test
-    @DisplayName("후보 0건이면 budget·history·recalc 어떤 호출도 없다 (no-op)")
+    @DisplayName("후보 0건이면 currentMode·history·recalc 어떤 호출도 없다 (no-op)")
     void noCandidates_noSideEffects() {
         when(cardRepository.findAllByStatus(CardStatus.ON_FIELD)).thenReturn(List.of());
 
@@ -93,7 +95,7 @@ class CardExpiryBatchServiceTest {
 
         assertThat(result.candidates()).isZero();
         assertThat(result.archived()).isZero();
-        verify(userScheduleQueryService, never()).resolveOnFieldBudget(any());
+        verify(userScheduleQueryService, never()).currentMode(any());
         verify(historyAppender, never()).append(any(), any(), any(), any());
     }
 
@@ -104,9 +106,8 @@ class CardExpiryBatchServiceTest {
         Card fresh   = cardIn(deckA, 1001L, LocalDateTime.now().minusDays(2),  0);  // 2일 경과
 
         when(cardRepository.findAllByStatus(CardStatus.ON_FIELD)).thenReturn(List.of(expired, fresh));
-        // userA budget — 10일 maxDuration, maxView=3
-        when(userScheduleQueryService.resolveOnFieldBudget(1L))
-                .thenReturn(OnFieldBudget.of(3, Duration.ofDays(10)));
+        // userA MODE_7D — maxDays=7, stepCount=3. 15일 > 7일 → expired, 2일 < 7일 → fresh
+        when(userScheduleQueryService.currentMode(1L)).thenReturn(LearningMode.MODE_7D);
 
         CardExpiryBatchService.ExpiryResult result = service.processExpired();
 
@@ -127,12 +128,11 @@ class CardExpiryBatchServiceTest {
     @Test
     @DisplayName("MAX_VIEW · MAX_DURATION 동시 도달 시 MAX_VIEW 우선 (OnFieldBudget 규칙)")
     void simultaneousMaxViewAndDuration_maxViewWins() {
-        // viewCount=3 + 15일 경과 → 둘 다 충족 → MAX_VIEW
+        // viewCount=3 + 15일 경과 → 둘 다 충족 (MODE_7D: stepCount=3, maxDays=7) → MAX_VIEW
         Card both = cardIn(deckA, 1000L, LocalDateTime.now().minusDays(15), 3);
 
         when(cardRepository.findAllByStatus(CardStatus.ON_FIELD)).thenReturn(List.of(both));
-        when(userScheduleQueryService.resolveOnFieldBudget(1L))
-                .thenReturn(OnFieldBudget.of(3, Duration.ofDays(10)));
+        when(userScheduleQueryService.currentMode(1L)).thenReturn(LearningMode.MODE_7D);
 
         CardExpiryBatchService.ExpiryResult result = service.processExpired();
 
@@ -144,22 +144,21 @@ class CardExpiryBatchServiceTest {
     }
 
     @Test
-    @DisplayName("여러 사용자 — 각 사용자별 budget 1회만 조회 (N+1 회피)")
+    @DisplayName("여러 사용자 — 각 사용자별 currentMode 1회만 조회 (N+1 회피)")
     void multipleUsers_budgetCalledOncePerUser() {
         Card a1 = cardIn(deckA, 1000L, LocalDateTime.now().minusDays(2), 0);
         Card a2 = cardIn(deckA, 1001L, LocalDateTime.now().minusDays(3), 0);
         Card b1 = cardIn(deckB, 2000L, LocalDateTime.now().minusDays(4), 0);
 
         when(cardRepository.findAllByStatus(CardStatus.ON_FIELD)).thenReturn(List.of(a1, a2, b1));
-        when(userScheduleQueryService.resolveOnFieldBudget(1L))
-                .thenReturn(OnFieldBudget.of(5, Duration.ofDays(10)));
-        when(userScheduleQueryService.resolveOnFieldBudget(2L))
-                .thenReturn(OnFieldBudget.of(5, Duration.ofDays(20)));
+        // MODE_28D (stepCount=5, maxDays=28) — 위 카드들 모두 미만료
+        when(userScheduleQueryService.currentMode(1L)).thenReturn(LearningMode.MODE_28D);
+        when(userScheduleQueryService.currentMode(2L)).thenReturn(LearningMode.MODE_28D);
 
         service.processExpired();
 
-        verify(userScheduleQueryService, times(1)).resolveOnFieldBudget(1L);
-        verify(userScheduleQueryService, times(1)).resolveOnFieldBudget(2L);
+        verify(userScheduleQueryService, times(1)).currentMode(1L);
+        verify(userScheduleQueryService, times(1)).currentMode(2L);
     }
 
     @Test
@@ -169,8 +168,8 @@ class CardExpiryBatchServiceTest {
         Card e2 = cardIn(deckA, 1001L, LocalDateTime.now().minusDays(20), 0);
 
         when(cardRepository.findAllByStatus(CardStatus.ON_FIELD)).thenReturn(List.of(e1, e2));
-        when(userScheduleQueryService.resolveOnFieldBudget(1L))
-                .thenReturn(OnFieldBudget.of(3, Duration.ofDays(10)));
+        // MODE_7D (maxDays=7) — 두 카드 모두 만료 (15일·20일 > 7일)
+        when(userScheduleQueryService.currentMode(1L)).thenReturn(LearningMode.MODE_7D);
 
         CardExpiryBatchService.ExpiryResult result = service.processExpired();
 

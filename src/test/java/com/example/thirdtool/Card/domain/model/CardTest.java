@@ -5,7 +5,6 @@ import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -513,11 +512,11 @@ class CardTest {
     }
 
     // =========================================================================
-    // ON_FIELD 체류 추적
+    // ON_FIELD 체류 추적 — viewCount만 기록 (Story-CARD-E2-S2-1 OnFieldBudget 폐기)
     // =========================================================================
 
     @Nested
-    @DisplayName("recordView() / isMaxViewReached() / isLastView()")
+    @DisplayName("recordView()")
     class ViewTrackingTest {
 
         @Test
@@ -535,7 +534,7 @@ class CardTest {
         }
 
         @Test
-        @DisplayName("ARCHIVE 카드에 recordView()를 호출하면 아무 변화가 없다")
+        @DisplayName("ARCHIVE 카드에 recordView()를 호출하면 아무 변화가 없다 — 예외 없음(멱등)")
         void recordView_archivedCard_isIgnored() {
             // given
             Card card = sampleCard();
@@ -548,98 +547,11 @@ class CardTest {
             assertThat(card.getViewCount()).isEqualTo(0);
             assertThat(card.getLastViewedAt()).isNull();
         }
-
-        @Test
-        @DisplayName("viewCount가 maxView에 도달하면 isMaxViewReached()가 true를 반환한다")
-        void isMaxViewReached_viewCountEqualsMaxView_returnsTrue() {
-            // given
-            Card card = sampleCard();
-            card.recordView();
-            card.recordView();
-            card.recordView(); // viewCount=3
-
-            // when
-            boolean reached = card.isMaxViewReached(3);
-
-            // then
-            assertThat(reached).isTrue();
-        }
-
-        @Test
-        @DisplayName("viewCount가 maxView 미만이면 isMaxViewReached()가 false를 반환한다")
-        void isMaxViewReached_viewCountBelowMaxView_returnsFalse() {
-            // given
-            Card card = sampleCard();
-            card.recordView();
-            card.recordView(); // viewCount=2
-
-            // when
-            boolean reached = card.isMaxViewReached(3);
-
-            // then
-            assertThat(reached).isFalse();
-        }
-
-        @Test
-        @DisplayName("maxView가 0 이하이면 isMaxViewReached()는 항상 false를 반환한다")
-        void isMaxViewReached_zeroOrNegativeMaxView_returnsFalse() {
-            // given
-            Card card = sampleCard();
-
-            // when
-            boolean reached = card.isMaxViewReached(0);
-
-            // then
-            assertThat(reached).isFalse();
-        }
-
-        @Test
-        @DisplayName("recordView() 후 viewCount가 maxView와 같으면 isLastView()가 true를 반환한다")
-        void isLastView_viewCountEqualsMaxView_returnsTrue() {
-            // given
-            Card card = sampleCard();
-            card.recordView();
-            card.recordView();
-            card.recordView(); // viewCount=3 = maxView
-
-            // when
-            boolean isLast = card.isLastView(3);
-
-            // then
-            assertThat(isLast).isTrue();
-        }
     }
 
     @Nested
-    @DisplayName("isDurationExceeded() / isScheduleAvailable()")
-    class TimeBasedTrackingTest {
-
-        @Test
-        @DisplayName("체류 기간이 maxDuration을 초과하면 isDurationExceeded()가 true를 반환한다")
-        void isDurationExceeded_durationExceeded_returnsTrue() {
-            // given
-            Card card = sampleCardWithEnteredFieldAt(LocalDateTime.now().minusDays(11));
-
-            // when
-            boolean exceeded = card.isDurationExceeded(Duration.ofDays(10));
-
-            // then
-            assertThat(exceeded).isTrue();
-        }
-
-        @Test
-        @DisplayName("enteredFieldAt이 null이면 isDurationExceeded()가 false를 반환한다 — NPE 방어")
-        void isDurationExceeded_nullEnteredFieldAt_returnsFalse() {
-            // given
-            Card card = sampleCard();
-            ReflectionTestUtils.setField(card, "enteredFieldAt", null);
-
-            // when
-            boolean exceeded = card.isDurationExceeded(Duration.ofDays(10));
-
-            // then
-            assertThat(exceeded).isFalse();
-        }
+    @DisplayName("isScheduleAvailable()")
+    class ScheduleAvailabilityTest {
 
         @Test
         @DisplayName("lastViewedAt이 null이면 isScheduleAvailable()이 true를 반환한다 — 신규 카드 즉시 가용")

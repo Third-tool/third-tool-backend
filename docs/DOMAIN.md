@@ -8,7 +8,7 @@
 
 ## 목차
 
-- [1. Ubiquitous Language — 전역 용어 (38)](#1-ubiquitous-language--전역-용어-35)
+- [1. Ubiquitous Language — 전역 용어](#1-ubiquitous-language--전역-용어)
 - [2. Bounded Context별 도메인 의도](#2-bounded-context별-도메인-의도)
   - [2.1 Card — 회상 가능한 학습 단위](#21-card--회상-가능한-학습-단위)
   - [2.2 Deck — 카드 분류 컨테이너](#22-deck--카드-분류-컨테이너)
@@ -21,7 +21,7 @@
 
 ---
 
-## 1. Ubiquitous Language — 전역 용어 (38)
+## 1. Ubiquitous Language — 전역 용어
 
 BC 횡단으로 사용되는 핵심 용어. BC 내부 미세 용어는 해당 BC 섹션에서 다룬다.
 
@@ -36,10 +36,7 @@ BC 횡단으로 사용되는 핵심 용어. BC 내부 미세 용어는 해당 BC
 | **ReviewSession** | 덱 내 카드 순차 순회 세션 |
 | **RECALLING** | 카드 공개 단계 — Main만 노출, 회상 시도 |
 | **COMPARING** | 카드 공개 단계 — Main+Keywords+Summary 함께 노출, 기억과 정답 비교 |
-| **OnFieldBudget** | ON_FIELD 체류 예산 (maxView + maxDuration, 유저별 매핑) |
-| **maxView** | 최대 허용 노출 횟수. 초과 시 AUTO_ARCHIVE |
-| **maxDuration** | 최대 허용 체류 기간. 초과 시 AUTO_ARCHIVE |
-| **enteredFieldAt** | ON_FIELD 진입 시각 (복귀 시 재기록, budget 기준) |
+| **enteredFieldAt** | ON_FIELD 진입 시각 (복귀 시 재기록) |
 | **lastViewedAt** | 최후 열람 시각 (schedule 판단 기준, 복귀 시 null 초기화) |
 | **viewCount** | 현 ON_FIELD 구간 노출 횟수 (복귀 시 0 초기화) |
 | **SoftSchedule** | 카드 재노출 최소 간격 정책 (1/3/7/14/21일 단계) |
@@ -58,10 +55,9 @@ BC 횡단으로 사용되는 핵심 용어. BC 내부 미세 용어는 해당 BC
 | **Deck** | 카드를 주제별로 계층화한 컨테이너 |
 | **displayOrder** | 화면 표시 순서 (1-based, 낮을수록 우선) |
 | **revisionCount** | AxisTopic 명 수정 누적 횟수 (동일 값 재입력 제외) |
-| **LearningMode** | 유저 에너지 수준 (MODE_10D/20D/30D, maxView·maxDuration·간격 결정) |
-| **CardStatusHistory** | 카드 상태 전환 이력 (MANUAL/MAX_VIEW/MAX_DURATION 사유) |
+| **LearningMode** | 유저 에너지 수준 (MODE_10D/20D/30D, 소프트 스케줄 간격 결정) |
+| **CardStatusHistory** | 카드 상태 전환 이력 (MANUAL / SCHEDULE_EXHAUSTED / MODE_DOWNGRADED 사유) |
 | **ArchiveReason** | Archive 전환 사유 구분 |
-| **isLastView()** | recordView() 후 "이번이 maxView 도달인가" 판단 메서드 |
 | **isScheduleAvailable()** | Card의 soft schedule 가용 여부 (schedule 필터 기준) |
 | **hasUncoveredTopics()** | 미커버 주제 존재 여부 (축·Facade 경고 뱃지) |
 | **isFocused()** | 주제가 상위 N개(=3) 우선순위 내인가 (집중 표시) |
@@ -72,7 +68,7 @@ BC 횡단으로 사용되는 핵심 용어. BC 내부 미세 용어는 해당 BC
 
 ### 2.1 Card — 회상 가능한 학습 단위
 
-**한 줄 책임**: 맥락·단서·압축을 분리해 회상 기반 학습을 모델링하고, ON_FIELD/ARCHIVE 상태와 노출 예산을 추적한다.
+**한 줄 책임**: 맥락·단서·압축을 분리해 회상 기반 학습을 모델링하고, ON_FIELD/ARCHIVE 상태 전이만 책임진다. Archive 판정(스케줄 소진·모드 다운그레이드)은 M5 DailyLearningBatch로 위임.
 
 **Aggregate Root**: `Card` — 회상 가능한 최소 구조(Main + Keywords + Summary)를 생성·수정 시 일관되게 유지.
 
@@ -81,9 +77,8 @@ BC 횡단으로 사용되는 핵심 용어. BC 내부 미세 용어는 해당 BC
 - `KeywordCue` (Entity) — 회상 단서 (최소 1개)
 - `Summary` (VO) — 핵심 압축 (1~3문장)
 - `CardStatus` (Enum) — `ON_FIELD` / `ARCHIVE`
-- `ArchiveReason` (Enum) — `MANUAL` / `MAX_VIEW` / `MAX_DURATION`
+- `ArchiveReason` (Enum) — `MANUAL` / `SCHEDULE_EXHAUSTED` / `MODE_DOWNGRADED`
 - `CardStatusHistory` (Entity) — 상태 전환 이력
-- `OnFieldBudget` (VO) — 노출 횟수·체류 기간 예산 (유저별 매핑)
 - `SoftScheduleState` (Enum) — `FRESH` / `INTERVAL_1D` / `INTERVAL_3D` / `INTERVAL_7D` / `INTERVAL_14D` / `INTERVAL_21D` / `NOT_YET`
 - `SoftScheduleTemplate` (VO) — 간격 단계 정의 및 상태 계산
 - `Tag` (Entity) — 카드 간 관련 통로 (최대 3개/카드)
@@ -99,12 +94,11 @@ BC 횡단으로 사용되는 핵심 용어. BC 내부 미세 용어는 해당 BC
 7. `lastViewedAt` = 최후 열람 시각, schedule 판단 기준 (복귀 시 null 초기화).
 8. `recordView()` = ON_FIELD 카드만 유효 (ARCHIVE는 무시).
 9. `archive()` / `returnToField()` 멱등성 보장 — 같은 상태로의 호출은 no-op.
-10. `isLastView()` = `viewCount == maxView` (recordView() 이후 판단).
 
 **상태 전이**:
 ```
 ON_FIELD ↔ ARCHIVE
-  ─archive() (사유: MANUAL / MAX_VIEW / MAX_DURATION)
+  ─archive() (사유: MANUAL / SCHEDULE_EXHAUSTED / MODE_DOWNGRADED)
   ─returnToField() (사유 기록 안 함)
 ```
 
@@ -112,7 +106,7 @@ ON_FIELD ↔ ARCHIVE
 - Keyword 변경 시 커버리지 자동 초기화 없음 — 주제 내용 변경은 tag 재점검 유저 책임.
 - Card 삭제 시 CardStatusHistory 연쇄 삭제 (orphanRemoval) — 이력은 Card 생애주기에 종속.
 - `recordView()` 호출 시점 = ReviewSession 안에서만 (외부 직접 접근 금지, 캡슐화).
-- maxView / maxDuration은 `UserScheduleConfig.resolveOnFieldBudget()`에서 유저별 매핑.
+- **OnFieldBudget 폐기 · Archive 판정 M5 이관** (Story-CARD-E2, 2026-07-03) — `OnFieldBudget` VO / `CardExpiryPolicy` / `CardExpiryBatchService`(야간 03:00 배치) 및 `Card.isMaxViewReached` / `isDurationExceeded` / `isLastView` 도메인 메서드 전부 폐기. Card BC는 상태 유지·전이(`recordView` / `archive` / `returnToField`)만 책임하며, ARCHIVE 판정은 M5 DailyLearningBatch가 스케줄 소진(`SCHEDULE_EXHAUSTED`) · 모드 다운그레이드(`MODE_DOWNGRADED`) 시점에 lazy로 수행한다.
 - SoftScheduleTemplate 간격 단계는 `LearningMode`(10D/20D/30D)가 결정.
 - **축 스코프 카드 조회는 ReviewSession Layer 1 수집과 별개의 "사용자 표현 흐름"** (fix-deck-axis-visibility 0.0.2v Story 3·4, ADR020). `CardRepository.findByUserIdAndAxisIdsAndStatus`(삭제 제외·상태·`axisId IN`)를 today 집계와 축 카드 뷰(`GET /learning-facade/axes/{axisId}/cards`)가 공유한다. eligibility(최소 간격) 재판정은 이 read-model이 아니라 `SoftScheduleTemplate`가 인메모리로 책임진다 — 따라서 read-model 쿼리는 threshold를 갖지 않는다.
 
@@ -160,7 +154,7 @@ ON_FIELD ↔ ARCHIVE
 **진행 상태 자동 갱신 트리거 (Story-005-2)**:
 - `CardCommandService.create`가 카드 추가 후 `deck.markInProgress()` 호출 → `NOT_STARTED → IN_PROGRESS`.
 - `CardCommandService.softDelete`가 카드 삭제 후 `deck.recalculateProgressStatus()` 호출.
-- `ReviewCommandService.incrementViewAndHandleMaxView`가 maxView 도달 시 archive 직후 `deck.recalculateProgressStatus()` 호출.
+- Archive 흐름(수동 archive · M5 DailyLearningBatch lazy 판정)이 카드 상태를 전환한 뒤 소속 Deck의 `recalculateProgressStatus()`를 호출한다.
 - 모두 Card BC가 Deck Aggregate의 행위 메서드를 호출 (conventions §1.7 — 다른 Aggregate 상태를 직접 변경하지 않음). Card 도메인 자체는 변경 없음.
 
 **Axis 추가 협력 (Fix-Story 1~4 / ADR007 Amended 2026-06-30)**:
@@ -205,7 +199,7 @@ ON_FIELD ↔ ARCHIVE
 7. 마지막 카드에서 moveToNext() 시 `finished = true`.
 8. `finished` 컬럼으로 저장 — cardReviews 로딩 없이 완료 판단.
 9. 세션 생성 직후 + moveToNext() 이후 `recordCurrentCardView()` 호출 필수.
-10. `recordCurrentCardView()` 반환값 true = maxView 소진 → 즉시 Archive 처리.
+10. `recordCurrentCardView()`는 열람 사실만 갱신한다 — Archive 판정은 M5 DailyLearningBatch가 lazy로 수행하며, ReviewSession 내부에서 즉시 Archive 처리하지 않는다 (Story-CARD-E2).
 
 **상태 전이**:
 ```
@@ -313,14 +307,14 @@ NO_MATERIAL ─ TopicMaterial 연결 → PARTIALLY_COVERED ─ proficiencyLevel�
 
 ### 2.6 UserSchedule — 유저별 학습 모드 설정
 
-**한 줄 책임**: 유저 입력값을 모드로 매핑해 카드 예산·노출 간격을 유저별로 파생하고, 설정 이력을 추적한다.
+**한 줄 책임**: 유저 입력값을 모드로 매핑해 소프트 스케줄 간격을 유저별로 파생하고, 설정 이력을 추적한다.
 
-**Aggregate Root**: `UserScheduleConfig` — 매핑된 모드 보관 + 예산·간격 파생.
+**Aggregate Root**: `UserScheduleConfig` — 매핑된 모드 보관 + 간격 파생.
 
 > **BC 디렉토리명은 `UserSchedule/`** — Aggregate Root 이름은 `UserScheduleConfig`로 구분.
 
 **Entity / VO**:
-- `LearningMode` (Enum) — `MODE_10D` (3회, 10일, 1/3/7일) / `MODE_20D` (5회, 20일, 1/3/7/14일) / `MODE_30D` (7회, 30일, 1/3/7/14/21일)
+- `LearningMode` (Enum) — `MODE_10D` (간격 1/3/7일) / `MODE_20D` (간격 1/3/7/14일) / `MODE_30D` (간격 1/3/7/14/21일)
 - `LearningModeMappingPolicy` (Domain Service) — 입력값→모드 매핑 규칙
 - `UserScheduleConfigHistory` (Entity) — 설정 변경 이력
 
@@ -330,15 +324,16 @@ NO_MATERIAL ─ TopicMaterial 연결 → PARTIALLY_COVERED ─ proficiencyLevel�
 3. `rawInputDays` 유저 입력값 원본 보존 (매핑 후에도 유지).
 4. `mappedMode`는 `LearningModeMappingPolicy.resolve()`로만 결정 (외부 주입 금지).
 5. 설정 변경 시 이력 기록은 Application Service 담당 (CardStatusHistoryAppender 패턴).
-6. 모드별 maxView / maxDuration / 간격 목록은 LearningMode가 정의 — 변경은 v2.
+6. 모드별 소프트 스케줄 간격 목록은 LearningMode가 정의 — 변경은 v2.
 7. 매핑 분기 (v1): 1~14일 → MODE_10D, 15~24일 → MODE_20D, 25일↑ → MODE_30D.
 8. **내림 매핑 원칙** — 13일 입력 → 10일 모드 (빠른 순환 습관 유리).
 
 **주의·결정 메모**:
-- maxView / maxDuration / 소프트 스케줄 간격은 모드가 유일한 결정 권자.
+- 소프트 스케줄 간격은 모드가 유일한 결정 권자.
 - 매핑 기준 분기점(14일, 24일)은 도메인 규칙 — 외부 설정값 아님.
 - v1부터 SystemBudgetConfig 제거. 요청마다 configRepository에서 조회.
 - 설정 변경 이력은 동일 값 재입력도 포함 — 유저 "확인" 행위 기록 가치.
+- **OnFieldBudget 폐기** (Story-CARD-E2, 2026-07-03) — `UserScheduleConfig.resolveOnFieldBudget()` / `UserScheduleQueryService.resolveOnFieldBudget()` 및 `LearningMode.toOnFieldBudget()` 폐기. UserSchedule은 더 이상 노출 예산(maxView·maxDuration)을 파생하지 않으며, 사용자 현재 모드(LearningMode)만 제공한다. Archive 판정은 M5 DailyLearningBatch가 lazy로 수행.
 
 ---
 
@@ -350,7 +345,7 @@ NO_MATERIAL ─ TopicMaterial 연결 → PARTIALLY_COVERED ─ proficiencyLevel�
 2. **revisionCount 추적** — AxisTopic 명만 추적. 설명 변경은 제외. "단련 중 안내"(>=3회) 기준.
 3. **description 변경 시 커버리지 미초기화** — 설명은 보조 정보. 자료 유효성은 유저 판단.
 4. **SoftScheduleTemplate 모드 결정** — LearningMode가 10D/20D/30D 간격 목록 소유. 확장은 v2.
-5. **OnFieldBudget 유저별 매핑** — v1까지 시스템 단일. Epic 4부터 UserScheduleConfig로 파생.
+5. **OnFieldBudget 폐기 · Archive 판정 M5 이관** — Story-CARD-E2 (2026-07-03)로 `OnFieldBudget` VO · `CardExpiryPolicy` · `CardExpiryBatchService`(야간 03:00 배치) 폐기. Card BC는 상태 유지·전이(`recordView` / `archive` / `returnToField`)만 책임하며, ARCHIVE 판정은 M5 DailyLearningBatch가 lazy로 수행한다. ArchiveReason은 `MANUAL` / `SCHEDULE_EXHAUSTED` / `MODE_DOWNGRADED`로 재정의.
 6. **CardStatusHistory reason 필수** — ON_FIELD→ARCHIVE만 사유 기록. 복귀는 null.
 7. **Card·Review 캡슐화** — ReviewSession 통해서만 열람 기록 갱신. 외부 Card 직접 접근 금지.
 8. **Material 타입별 부가 속성 검증 없음** — BOOK에 platform, COURSE에 author 입력 가능. FE가 필수 표시 관리.

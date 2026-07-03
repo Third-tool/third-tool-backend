@@ -145,7 +145,7 @@ class CardArchiveReturnToFieldIntegrationTest {
         em.flush();
 
         // 사이클 2
-        cardCommandService.archive(card.getId(), ArchiveReason.MAX_DURATION);
+        cardCommandService.archive(card.getId(), ArchiveReason.SCHEDULE_EXHAUSTED);
         em.flush();
         cardCommandService.returnToField(card.getId());
         em.flush();
@@ -159,7 +159,7 @@ class CardArchiveReturnToFieldIntegrationTest {
                 .map(CardStatusHistory::getReason)
                 .collect(java.util.stream.Collectors.toSet());
         assertThat(reasonsForArchive).containsExactlyInAnyOrder(
-                ArchiveReason.MANUAL, ArchiveReason.MAX_DURATION
+                ArchiveReason.MANUAL, ArchiveReason.SCHEDULE_EXHAUSTED
         );
     }
 }

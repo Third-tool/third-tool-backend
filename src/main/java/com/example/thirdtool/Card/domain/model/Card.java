@@ -264,21 +264,8 @@ public class Card {
         this.lastViewedAt = LocalDateTime.now();
     }
 
-    public boolean isMaxViewReached(int maxView) {
-        if (maxView <= 0) return false;
-        return this.viewCount >= maxView;
-    }
-
-    public boolean isDurationExceeded(Duration maxDuration) {
-        if (this.enteredFieldAt == null) return false;
-        return Duration.between(this.enteredFieldAt, LocalDateTime.now()).compareTo(maxDuration) >= 0;
-    }
-
-    //
-    public boolean isLastView(int maxView) {
-        if (maxView <= 0) return false;
-        return this.viewCount == maxView;
-    }
+    // Story-CARD-E2-S2-1 — OnFieldBudget 폐기로 이중 게이트(maxView/maxDuration) 도메인 메서드 제거.
+    // Archive 결정은 M5 DailyLearningBatch가 lazy 판정한다.
 
     public boolean isScheduleAvailable(Duration minInterval) {
         if (minInterval == null || minInterval.isZero() || minInterval.isNegative()) return true;

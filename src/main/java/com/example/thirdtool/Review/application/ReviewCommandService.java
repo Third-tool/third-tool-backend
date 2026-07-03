@@ -1,8 +1,7 @@
 package com.example.thirdtool.Review.application;
 
-import com.example.thirdtool.Card.domain.model.*;
+import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
-import com.example.thirdtool.Common.Exception.BusinessException;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.application.service.DeckQueryService;
 import com.example.thirdtool.Deck.domain.model.Deck;
@@ -12,13 +11,19 @@ import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
 import com.example.thirdtool.Review.presentation.dto.ReviewRequest;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
-import com.example.thirdtool.UserSchedule.application.service.UserScheduleQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * ReviewCommandService — Story-CARD-E2-S2-4 재작성.
+ *
+ * <p>OnFieldBudget 폐기(PR#2)로 이중 게이트(maxView + maxDuration) archive 로직이 사라짐.
+ * 리뷰 세션은 viewCount만 기록하고, ARCHIVE 결정은 M5 DailyLearningBatch가 lazy 판정한다.
+ * `isLastView`는 API 호환을 위해 응답 필드로 남되 항상 {@code false}로 전달된다.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -30,15 +35,9 @@ public class ReviewCommandService {
 
     // Card BC 의존 — port interface를 통한 접근 (ADR-006)
     private final CardRepository cardRepository;
-    private final CardStatusHistoryAppender historyAppender;
-
-    // UserSchedule BC 의존 — 사용자별 OnFieldBudget 파생 (Story 2-1/2-3 + Epic 4 합류)
-    private final UserScheduleQueryService userScheduleQueryService;
 
     // ─── 1. 리뷰 세션 시작 ───────────────────────────────
 
-    // Story-5-2: Long userId → UserEntity user 시그니처 통일. JWTFilter가 Principal에 UserEntity를
-    // 주입하므로 userRepository 재조회 제거 (불필요한 DB I/O 절감).
     public ReviewResponse.StartSession startReview(ReviewRequest.StartSession request, UserEntity user) {
         Deck deck = deckQueryService.getActiveDeck(request.deckId());
 
@@ -54,13 +53,10 @@ public class ReviewCommandService {
         ReviewSession session = ReviewSession.of(deck, cards, user, cards.size());
         reviewSessionRepository.save(session);
 
-        // 첫 번째 카드 진입 처리 (viewCount 증가 + maxView 도달 시 즉시 ARCHIVE)
-        // Story-CARD-E1-S1-4 — resolveOnFieldBudget() 폐기 → currentMode(userId).toOnFieldBudget()로 우회.
-        //                     PR#2에서 OnFieldBudget 자체 폐기 시 이 우회도 함께 제거.
-        OnFieldBudget budget = userScheduleQueryService.currentMode(user.getId()).toOnFieldBudget();
-        boolean isLastView = incrementViewAndHandleMaxView(session.currentCardReview().getCard(), budget);
+        // 첫 번째 카드 진입 처리 (viewCount 증가만). Archive 판정은 M5로 이관.
+        recordViewOnCurrent(session);
 
-        return ReviewResponse.StartSession.of(session, isLastView);
+        return ReviewResponse.StartSession.of(session, false);
     }
 
     // ─── 2. 현재 카드 COMPARING 전환 ─────────────────────
@@ -68,11 +64,7 @@ public class ReviewCommandService {
     public ReviewResponse.CardReviewDto startComparing(Long sessionId, UserEntity user) {
         ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, user);
         session.startComparingCurrentCard();
-
-        // isLastView는 카드 진입 시 이미 결정된 viewCount 상태를 그대로 읽는다.
-        OnFieldBudget budget = userScheduleQueryService.currentMode(user.getId()).toOnFieldBudget();
-        boolean isLastView = resolveIsLastView(session, budget);
-        return ReviewResponse.CardReviewDto.of(session.currentCardReview(), isLastView);
+        return ReviewResponse.CardReviewDto.of(session.currentCardReview(), false);
     }
 
     // ─── 3. 다음 카드로 이동 ──────────────────────────────
@@ -83,37 +75,18 @@ public class ReviewCommandService {
         // 종료 여부 + COMPARING 검증은 도메인 내부에서 처리
         session.moveToNext();
 
-        boolean isLastView = false;
         if (!session.isFinished()) {
-            OnFieldBudget budget = userScheduleQueryService.currentMode(user.getId()).toOnFieldBudget();
-            isLastView = incrementViewAndHandleMaxView(session.currentCardReview().getCard(), budget);
+            recordViewOnCurrent(session);
         }
 
-        return ReviewResponse.NextCard.of(session, isLastView);
+        return ReviewResponse.NextCard.of(session, false);
     }
 
     // ─── 내부 처리 ────────────────────────────────────────
-    private boolean incrementViewAndHandleMaxView(Card card, OnFieldBudget budget) {
+
+    private void recordViewOnCurrent(ReviewSession session) {
+        Card card = session.currentCardReview().getCard();
         card.recordView();
-
-        boolean isLastView = card.isLastView(budget.getMaxView());
-        if (isLastView) {
-            // viewCount가 maxView에 도달 → 즉시 ARCHIVE 전환
-            CardStatus before = card.getStatus();  // 항상 ON_FIELD (incrementViewCount는 ARCHIVE 무시)
-            card.archive();
-            CardStatus after = card.getStatus();
-            historyAppender.append(card, before, after, ArchiveReason.MAX_VIEW);
-
-            // Story-005-2: 카드 archive 후 Deck progressStatus 자동 재계산.
-            // 모든 활성 Card가 ARCHIVE면 COMPLETED로 전환.
-            card.getDeck().recalculateProgressStatus();
-        }
         cardRepository.save(card);
-        return isLastView;
-    }
-
-    private boolean resolveIsLastView(ReviewSession session, OnFieldBudget budget) {
-        if (session.isFinished()) return false;
-        return session.currentCardReview().getCard().isLastView(budget.getMaxView());
     }
 }

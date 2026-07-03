@@ -1,7 +1,6 @@
 package com.example.thirdtool.Review.domain.model;
 
 import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Review.domain.exception.ReviewSessionException;
@@ -91,11 +90,13 @@ public class ReviewSession {
         currentCardReview().startComparing();
     }
 
-    public boolean recordCurrentCardView(OnFieldBudget budget) {
+    /**
+     * Story-CARD-E2-S2-4 — OnFieldBudget 폐기 후 시그니처 축소.
+     * viewCount만 기록하며 archive 판정은 M5 DailyLearningBatch로 이관됐다.
+     */
+    public void recordCurrentCardView() {
         validateNotFinished();
-        CardReview current = currentCardReview();
-        current.recordView();
-        return current.isCardLastView(budget.getMaxView());
+        currentCardReview().recordView();
     }
 
     public void moveToNext() {

@@ -16,8 +16,5 @@ spring:
       hibernate:
         format_sql: true     # 보기 좋게 포맷
 
-# Card 야간 만료 배치(Story 2-2)는 로컬에서 비활성화 — Spring `@Scheduled`는 cron="-"을 disabled로 해석.
-# 운영 환경(prod profile)에서 cron 활성화한다.
-card:
-  expiry:
-    cron: "-"
+# Story-CARD-E2-S2-2 — CardExpiryBatchService 폐기로 card.expiry.cron 설정도 제거.
+# Archive 판정은 M5 DailyLearningBatch로 이관.

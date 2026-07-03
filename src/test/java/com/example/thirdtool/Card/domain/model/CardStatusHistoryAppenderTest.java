@@ -71,7 +71,7 @@ class CardStatusHistoryAppenderTest {
             Card card = sampleCard();
 
             // when
-            appender.append(card, CardStatus.ON_FIELD, CardStatus.ARCHIVE, ArchiveReason.MAX_VIEW);
+            appender.append(card, CardStatus.ON_FIELD, CardStatus.ARCHIVE, ArchiveReason.SCHEDULE_EXHAUSTED);
 
             // then
             verify(historyRepository, times(1)).save(any(CardStatusHistory.class));
@@ -119,7 +119,7 @@ class CardStatusHistoryAppenderTest {
 
             // when & then
             assertThatThrownBy(() ->
-                    appender.append(card, CardStatus.ARCHIVE, CardStatus.ON_FIELD, ArchiveReason.MAX_DURATION))
+                    appender.append(card, CardStatus.ARCHIVE, CardStatus.ON_FIELD, ArchiveReason.SCHEDULE_EXHAUSTED))
                     .isInstanceOf(CardDomainException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.INVALID_INPUT);
@@ -135,7 +135,7 @@ class CardStatusHistoryAppenderTest {
 
             // when & then
             assertThatCode(() ->
-                    appender.append(card, CardStatus.ON_FIELD, CardStatus.ARCHIVE, ArchiveReason.MAX_DURATION))
+                    appender.append(card, CardStatus.ON_FIELD, CardStatus.ARCHIVE, ArchiveReason.SCHEDULE_EXHAUSTED))
                     .doesNotThrowAnyException();
 
             verify(historyRepository, times(1)).save(any(CardStatusHistory.class));

@@ -1,6 +1,5 @@
 package com.example.thirdtool.UserSchedule.domain.model;
 
-import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.UserSchedule.domain.exception.UserScheduleDomainException;
@@ -109,10 +108,6 @@ public class UserScheduleConfig {
     }
 
     // ─── 파생값 제공 ─────────────────────────────────────────────
-
-    public OnFieldBudget resolveOnFieldBudget() {
-        return mappedMode.toOnFieldBudget();
-    }
 
     public SoftScheduleTemplate resolveSoftScheduleTemplate() {
         return mappedMode.toSoftScheduleTemplate();

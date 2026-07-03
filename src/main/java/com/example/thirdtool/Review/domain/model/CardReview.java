@@ -1,7 +1,6 @@
 package com.example.thirdtool.Review.domain.model;
 
 import com.example.thirdtool.Card.domain.model.Card;
-import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -66,10 +65,6 @@ public class CardReview {
 
     void recordView() {
         card.recordView();
-    }
-
-    boolean isCardLastView(int maxView) {
-        return card.isLastView(maxView);
     }
 
     public boolean isComparing() {

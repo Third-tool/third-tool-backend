@@ -100,6 +100,55 @@ class CardHybridScenarioTest {
     }
 
     @Nested
+    @DisplayName("경계값 - MODE_60D 하이브리드 판정")
+    class Mode60DEdge {
+
+        @Test
+        @DisplayName("MODE_60D_카드_down_MODE_14D_effectiveMaxDays_14로_cap")
+        void MODE_60D_카드_down_MODE_14D_effectiveMaxDays_14로_cap() {
+            // createdMode=MODE_60D (intervals=[1,3,7,14,28,60]), userCurrent=MODE_14D.
+            // effectiveMaxDays = min(60, 14) = 14. effectiveIntervals = [1, 3, 7, 14].
+            Card card = cardWithEnteredDaysAgo(LearningMode.MODE_60D, 14);
+
+            assertThat(card.effectiveMaxDays(LearningMode.MODE_14D)).isEqualTo(14);
+            assertThat(card.effectiveIntervals(LearningMode.MODE_14D))
+                    .containsExactly(1, 3, 7, 14);
+            assertThat(card.hasScheduleExhausted(LearningMode.MODE_14D, LocalDate.now())).isFalse();
+            assertThat(card.isDueOn(LocalDate.now(), LearningMode.MODE_14D)).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("예외 - null 입력")
+    class NullInputs {
+
+        @Test
+        @DisplayName("effectiveMaxDays_null_userCurrentMode_예외")
+        void effectiveMaxDays_null_userCurrentMode_예외() {
+            Card card = cardWithEnteredDaysAgo(LearningMode.MODE_14D, 3);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> card.effectiveMaxDays(null))
+                    .isInstanceOf(RuntimeException.class);
+        }
+
+        @Test
+        @DisplayName("isDueOn_null_today_예외")
+        void isDueOn_null_today_예외() {
+            Card card = cardWithEnteredDaysAgo(LearningMode.MODE_14D, 3);
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> card.isDueOn(null, LearningMode.MODE_14D))
+                    .isInstanceOf(RuntimeException.class);
+        }
+
+        @Test
+        @DisplayName("returnToField_null_userCurrentMode_예외")
+        void returnToField_null_userCurrentMode_예외() {
+            Card card = cardWithEnteredDaysAgo(LearningMode.MODE_28D, 5);
+            card.archive();
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> card.returnToField(null, LocalDate.now()))
+                    .isInstanceOf(RuntimeException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("4. returnToField fresh 재시작")
     class ReturnToFieldFresh {
 

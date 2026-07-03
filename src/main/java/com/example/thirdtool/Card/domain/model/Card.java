@@ -319,6 +319,12 @@ public class Card {
     //   - effectiveIntervals = createdMode.intervals 중 effectiveMaxDays 이하만
     //   - isDueOn = daysSinceEntered ∈ effectiveIntervals
     //   - hasScheduleExhausted = daysSinceEntered > effectiveMaxDays
+    //
+    // 시간대: LocalDate/enteredFieldAt은 서버 로컬(운영 프로필: KST) 기준.
+    //         사용자별 시간대 지원은 v2 이관. daysSinceEntered는 KST 자정 경계로 계산.
+    //
+    // 소비처: M4에는 판정 소비처 없음 (dead code 상태). M5 DailyLearningBatch가 hasScheduleExhausted를
+    //         소비해 archive 트리거. FE는 createdMode 노출값으로 사용자 안내에 활용.
     // -------------------------------------------------------------------------
 
     public int effectiveMaxDays(LearningMode userCurrentMode) {

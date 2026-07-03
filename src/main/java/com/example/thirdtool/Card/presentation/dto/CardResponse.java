@@ -1,6 +1,7 @@
 package com.example.thirdtool.Card.presentation.dto;
 
 import com.example.thirdtool.Card.domain.model.*;
+import com.example.thirdtool.UserSchedule.domain.model.LearningMode;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -8,6 +9,8 @@ import java.util.List;
 public class CardResponse {
 
     // ─── 1. 카드 생성 응답 ───────────────────────────────────
+    // Story-CARD-E3-S3-4 — 생성 시점 사용자 mode 스냅샷(createdMode)을 응답에 노출한다.
+    // FE는 이 값을 사용자 안내(예: "이 카드는 14일 인터벌로 학습됩니다") 및 M5 하이브리드 판정에 활용한다.
     public record Create(
             Long cardId,
             Long deckId,
@@ -19,6 +22,7 @@ public class CardResponse {
             LocalDateTime enteredFieldAt,
             int viewCount,
             LocalDateTime lastViewedAt,
+            LearningMode createdMode,
             LocalDateTime createdDate
     ) {
         public static Create of(Card card) {
@@ -33,6 +37,7 @@ public class CardResponse {
                     card.getEnteredFieldAt(),
                     card.getViewCount(),
                     card.getLastViewedAt(),
+                    card.getCreatedMode(),
                     card.getCreatedDate()
             );
         }
@@ -50,6 +55,7 @@ public class CardResponse {
             LocalDateTime enteredFieldAt,
             int viewCount,
             LocalDateTime lastViewedAt,
+            LearningMode createdMode,
             LocalDateTime createdDate,
             LocalDateTime updatedDate
     ) {
@@ -65,6 +71,7 @@ public class CardResponse {
                     card.getEnteredFieldAt(),
                     card.getViewCount(),
                     card.getLastViewedAt(),
+                    card.getCreatedMode(),
                     card.getCreatedDate(),
                     card.getUpdatedDate()
             );

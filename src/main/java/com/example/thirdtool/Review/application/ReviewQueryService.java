@@ -2,7 +2,6 @@ package com.example.thirdtool.Review.application;
 
 import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.CardStatus;
-import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Card.domain.model.SoftScheduleState;
 import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
@@ -27,6 +26,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * ReviewQueryService.
+ *
+ * <p>Story-CARD-E2-S2-4 — OnFieldBudget 폐기에 따라 `isLastView` 판정이 사라진다.
+ * API 필드 호환을 위해 응답 DTO에는 남지만 항상 {@code false}로 반환한다.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -38,15 +43,10 @@ public class ReviewQueryService {
     private final StateRecommendationDistributor stateRecommendationDistributor;
     private final LearningFacadeQueryService learningFacadeQueryService;
 
-    // Story-5-2: Long userId → UserEntity user 시그니처 통일.
-
     // ─── 1. 세션 단건 조회 ────────────────────────────────
     public ReviewResponse.SessionDetail findById(Long sessionId, UserEntity user) {
         ReviewSession session = getSessionByOwner(sessionId, user);
-        // Story-CARD-E1-S1-4 — resolveOnFieldBudget() 폐기 → currentMode() 우회. PR#2에서 함께 제거.
-        OnFieldBudget budget = userScheduleQueryService.currentMode(user.getId()).toOnFieldBudget();
-        boolean isLastView = resolveIsLastView(session, budget);
-        return ReviewResponse.SessionDetail.of(session, isLastView);
+        return ReviewResponse.SessionDetail.of(session, false);
     }
 
 
@@ -82,15 +82,7 @@ public class ReviewQueryService {
         return session;
     }
 
-    private boolean resolveIsLastView(ReviewSession session, OnFieldBudget budget) {
-        if (session.isFinished()) return false;
-        return session.currentCardReview().getCard().isLastView(budget.getMaxView());
-    }
-
     // ─── 3. 오늘의 학습 후보 (Story 6-1) ─────────────────
-    // 사용자의 ON_FIELD + soft schedule 통과 카드를 SoftScheduleState별 분류해 반환한다.
-    // Layer 1(LearningFacade) 기준 필터링은 후속 PR에서 도입 — 본 PR은 사용자 전체 카드 기준
-    // (Spec 6-1 엣지 케이스 "Layer 1 미설정 유저" 경로 그대로).
 
     public ReviewResponse.TodayCandidates getTodayCandidates(UserEntity user) {
         return collectToday(user, userScheduleQueryService.resolveDailyTarget(user.getId()));
@@ -112,13 +104,6 @@ public class ReviewQueryService {
         Duration minInterval = template.getIntervalSteps().get(0).minDuration();
         LocalDateTime threshold = LocalDateTime.now().minus(minInterval);
 
-        // Story 6-1 Layer 1 한정: 사용자의 LearningFacade(직업 컨셉) 안의 axes 범위로만 수집.
-        // LearningFacade 미보유 사용자는 axisIds 빈 리스트 → 전체 카드 fallback (Spec 6-1 엣지 케이스).
-        //
-        // fix-deck-axis-visibility (0.0.2v) Story 3: axis 한정 경로는 축 카드 뷰와 공유하는
-        // 단일 read-model(findByUserIdAndAxisIdsAndStatus)로 위임. 최소 간격(threshold) 재판정은
-        // 아래 template.resolveState()가 in-memory로 책임지므로 쿼리 단계 threshold가 불필요하다
-        // (NOT_YET 필터가 최종 게이트). fallback(전체 카드) 경로는 threshold 1차 필터를 유지한다.
         List<Long> axisIds = learningFacadeQueryService.findAxisIdsByUserId(userId);
         List<Card> candidates = axisIds.isEmpty()
                 ? cardRepository.findOnFieldEligibleByUserId(userId, threshold)
@@ -127,7 +112,6 @@ public class ReviewQueryService {
         Map<SoftScheduleState, List<ReviewResponse.TodayCandidates.CandidateItem>> byState =
                 candidates.stream()
                           .map(card -> Map.entry(template.resolveState(card), card))
-                          // NOT_YET은 threshold 통과 카드 중에서도 도메인 재판정으로 걸러진 경우 제외.
                           .filter(entry -> entry.getKey() != SoftScheduleState.NOT_YET)
                           .collect(Collectors.groupingBy(
                                   Map.Entry::getKey,
@@ -140,7 +124,6 @@ public class ReviewQueryService {
 
         int total = byState.values().stream().mapToInt(List::size).sum();
 
-        // 응답의 dailyTarget은 사용자 설정 값(원래값) — 추천이 그 값을 따랐는지는 recommendedTotal로 판단.
         int dailyTarget = userScheduleQueryService.resolveDailyTarget(userId);
 
         Map<SoftScheduleState, Integer> poolSizes = new EnumMap<>(SoftScheduleState.class);

@@ -17,10 +17,7 @@ spring:
   flyway:
     enabled: false
 
-# 테스트 컨텍스트에서 Card 야간 만료 배치(@Scheduled) 비활성화 — `-` 값은 disabled 트리거.
-card:
-  expiry:
-    cron: "-"
+# Story-CARD-E2-S2-2 — CardExpiryBatchService 폐기로 card.expiry.cron 제거.
 
 # @SpringBootTest로 컨텍스트 전체 로드 시 S3Config 같은 외부 인프라 빈이 placeholder를 요구한다.
 # 슬라이스 테스트는 영향 없지만 통합 테스트에서 dummy 값을 둔다.

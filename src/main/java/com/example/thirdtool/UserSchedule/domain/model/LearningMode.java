@@ -1,6 +1,5 @@
 package com.example.thirdtool.UserSchedule.domain.model;
 
-import com.example.thirdtool.Card.domain.model.OnFieldBudget;
 import com.example.thirdtool.Card.domain.model.SoftScheduleState;
 import com.example.thirdtool.Card.domain.model.SoftScheduleTemplate;
 
@@ -36,10 +35,6 @@ public enum LearningMode {
 
     public String getDisplayName() {
         return displayName;
-    }
-
-    public OnFieldBudget toOnFieldBudget() {
-        return OnFieldBudget.of(stepCount(), Duration.ofDays(maxDays()));
     }
 
     public SoftScheduleTemplate toSoftScheduleTemplate() {

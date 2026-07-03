@@ -16,10 +16,13 @@ import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.Deck.application.service.DeckQueryService;
 import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Deck.infrastructure.repository.DeckRepository;
+import com.example.thirdtool.UserSchedule.application.service.UserScheduleQueryService;
+import com.example.thirdtool.UserSchedule.domain.model.LearningMode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,6 +35,9 @@ public class CardCommandService {
     private final TagRepository tagRepository;
     private final DeckRepository deckRepository;
     private final CardStatusHistoryAppender cardStatusHistoryAppender;
+
+    // Story-CARD-E3-S3-4 — Card.create 팩토리 확장(createdMode 스냅샷)을 위해 UserSchedule BC 의존 추가.
+    private final UserScheduleQueryService userScheduleQueryService;
 
     // ─── 카드 생성 ─────────────────────────────────────
 
@@ -48,7 +54,12 @@ public class CardCommandService {
 
         List<Tag> tags = resolveTags(request.tags());
 
-        Card card = Card.create(deck, mainNote, summary, request.keywords(), tags);
+        // Story-CARD-E3-S3-4 — 카드 생성 시점 사용자 mode를 스냅샷으로 저장.
+        // 미보유 유저는 currentMode 내부에서 default MODE_14D로 lazy 초기화.
+        LearningMode createdMode = userScheduleQueryService.currentMode(deck.getUser().getId());
+        LocalDate today = LocalDate.now();
+
+        Card card = Card.create(deck, mainNote, summary, request.keywords(), tags, createdMode, today);
         cardRepository.save(card);
 
         // Story-005-2: 첫 Card 추가 시 Deck progressStatus를 NOT_STARTED → IN_PROGRESS로 자동 전환.
@@ -146,14 +157,15 @@ public class CardCommandService {
     }
 
     // ─── 카드 ON_FIELD 복귀 ───────────────────────────────
-    // product-card.md Epic 7 — 새 사이클 시작. enteredFieldAt/viewCount/lastViewedAt은 도메인에서 재초기화.
+    // Story-CARD-E3-S3-3 — fresh 재시작: createdMode를 사용자 현재 모드로 재기록, enteredFieldAt=today.
     // 멱등: 이미 ON_FIELD면 도메인 no-op + 이력 미생성 + Deck 재계산 미호출.
 
     public CardResponse.Detail returnToField(Long cardId) {
         Card       card       = findActiveCard(cardId);
         CardStatus fromStatus = card.getStatus();
 
-        card.returnToField();
+        LearningMode userCurrentMode = userScheduleQueryService.currentMode(card.getDeck().getUser().getId());
+        card.returnToField(userCurrentMode, LocalDate.now());
 
         if (fromStatus != card.getStatus()) {
             cardStatusHistoryAppender.append(card, fromStatus, card.getStatus(), null);

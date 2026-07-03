@@ -26,6 +26,8 @@ public class QCard extends EntityPathBase<Card> {
 
     public final DateTimePath<java.time.LocalDateTime> createdDate = createDateTime("createdDate", java.time.LocalDateTime.class);
 
+    public final EnumPath<com.example.thirdtool.UserSchedule.domain.model.LearningMode> createdMode = createEnum("createdMode", com.example.thirdtool.UserSchedule.domain.model.LearningMode.class);
+
     public final com.example.thirdtool.Deck.domain.model.QDeck deck;
 
     public final BooleanPath deleted = createBoolean("deleted");

@@ -32,9 +32,21 @@ public class QLearningAxis extends EntityPathBase<LearningAxis> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final DateTimePath<java.time.LocalDateTime> lastAccessedAt = createDateTime("lastAccessedAt", java.time.LocalDateTime.class);
+
     public final QLearningLayer layer;
 
+    public final NumberPath<Long> learningMaterialId = createNumber("learningMaterialId", Long.class);
+
+    public final EnumPath<AxisLearningMode> mode = createEnum("mode", AxisLearningMode.class);
+
     public final StringPath name = createString("name");
+
+    public final BooleanPath onLibrary = createBoolean("onLibrary");
+
+    public final EnumPath<AxisProgressStatus> progressStatus = createEnum("progressStatus", AxisProgressStatus.class);
+
+    public final DateTimePath<java.time.LocalDateTime> publishedAt = createDateTime("publishedAt", java.time.LocalDateTime.class);
 
     public final ListPath<AxisRoadmapNode, QAxisRoadmapNode> roadmapNodes = this.<AxisRoadmapNode, QAxisRoadmapNode>createList("roadmapNodes", AxisRoadmapNode.class, QAxisRoadmapNode.class, PathInits.DIRECT2);
 

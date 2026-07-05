@@ -11,9 +11,9 @@ public class CardResponse {
     // ─── 1. 카드 생성 응답 ───────────────────────────────────
     // Story-CARD-E3-S3-4 — createdMode 스냅샷 노출
     // Story-LT-E4-S4-3 — axisId 직접 노출 (M5 Deck 폐기 대비 사전 인프라)
+    // LT-E5-S5-3 (M5) — deckId 필드 제거 · axisId만 노출
     public record Create(
             Long cardId,
-            Long deckId,
             Long axisId,
             MainNoteDto mainNote,
             List<KeywordDto> keywords,
@@ -29,7 +29,6 @@ public class CardResponse {
         public static Create of(Card card) {
             return new Create(
                     card.getId(),
-                    card.getDeck().getId(),
                     card.getAxisId(),
                     MainNoteDto.of(card),
                     KeywordDto.listOf(card),
@@ -46,9 +45,9 @@ public class CardResponse {
     }
 
     // ─── 2. 카드 단건 조회 응답 ───────────────────────────────
+    // LT-E5-S5-3 (M5) — deckId 필드 제거 · axisId만 노출
     public record Detail(
             Long cardId,
-            Long deckId,
             Long axisId,
             MainNoteDto mainNote,
             List<KeywordDto> keywords,
@@ -65,7 +64,6 @@ public class CardResponse {
         public static Detail of(Card card) {
             return new Detail(
                     card.getId(),
-                    card.getDeck().getId(),
                     card.getAxisId(),
                     MainNoteDto.of(card),
                     KeywordDto.listOf(card),

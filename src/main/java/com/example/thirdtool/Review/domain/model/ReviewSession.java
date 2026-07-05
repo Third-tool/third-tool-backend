@@ -24,9 +24,21 @@ public class ReviewSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * @deprecated LT-E5-S5-3 (M5) · Deck BC 폐기 대기. axisId 직접 참조로 이관.
+     * V33에서 review_session.deck_id 컬럼 소프트 폐기 · 다음 릴리스 완전 삭제 예정.
+     */
+    @Deprecated
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "deck_id", nullable = false)
+    @JoinColumn(name = "deck_id", nullable = true)  // V33 폐기 대응 · nullable 완화
     private Deck deck;
+
+    /**
+     * LT-E5-S5-3 (M5) — 세션이 소속된 Axis 직접 참조 (raw Long).
+     * BC 간 직접 객체 참조 회피 (docs/PACKAGE.md §6).
+     */
+    @Column(name = "axis_id", nullable = false)
+    private Long axisId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -55,13 +67,18 @@ public class ReviewSession {
     // 정적 팩토리
     // -------------------------------------------------------
 
-    public static ReviewSession of(Deck deck, List<Card> availableCards, UserEntity user, int totalCardCount) {
-        validateDeck(deck);
+    /**
+     * LT-E5-S5-3 (M5) blessed — axisId 직접 주입.
+     */
+    public static ReviewSession of(Long axisId, List<Card> availableCards, UserEntity user, int totalCardCount) {
+        if (axisId == null) {
+            throw new IllegalArgumentException("ReviewSession 생성 실패: axisId는 null일 수 없습니다.");
+        }
         validateUser(user);
         validateCards(availableCards);
 
         ReviewSession session        = new ReviewSession();
-        session.deck                 = deck;
+        session.axisId               = axisId;
         session.user                 = user;
         session.currentIndex         = 0;
         session.finished             = false;
@@ -73,6 +90,22 @@ public class ReviewSession {
             session.cardReviews.add(CardReview.of(availableCards.get(i), session, i));
         }
 
+        return session;
+    }
+
+    /**
+     * @deprecated LT-E5-S5-3 (M5) — Deck 폐기 대응. of(Long axisId, ...) 사용 권장.
+     * deck에서 axisId 뽑아서 blessed 팩토리로 위임. deck.deck 필드는 @Deprecated 유지용으로 세팅.
+     */
+    @Deprecated
+    public static ReviewSession of(Deck deck, List<Card> availableCards, UserEntity user, int totalCardCount) {
+        validateDeck(deck);
+        Long axisId = deck.getAxisId();
+        if (axisId == null) {
+            throw new IllegalArgumentException("ReviewSession 생성 실패: deck.axisId는 null일 수 없습니다.");
+        }
+        ReviewSession session = of(axisId, availableCards, user, totalCardCount);
+        session.deck = deck;  // @Deprecated 필드 유지용
         return session;
     }
 

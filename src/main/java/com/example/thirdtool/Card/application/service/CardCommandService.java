@@ -13,9 +13,8 @@ import com.example.thirdtool.Card.infrastructure.persistence.TagRepository;
 import com.example.thirdtool.Card.presentation.dto.CardRequest;
 import com.example.thirdtool.Card.presentation.dto.CardResponse;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
-import com.example.thirdtool.Deck.application.service.DeckQueryService;
-import com.example.thirdtool.Deck.domain.model.Deck;
-import com.example.thirdtool.Deck.infrastructure.repository.DeckRepository;
+import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
 import com.example.thirdtool.UserSchedule.application.service.UserScheduleQueryService;
 import com.example.thirdtool.UserSchedule.domain.model.LearningMode;
 import lombok.RequiredArgsConstructor;
@@ -33,18 +32,28 @@ public class CardCommandService {
 
     private final CardRepository cardRepository;
     private final TagRepository tagRepository;
-    private final DeckRepository deckRepository;
     private final CardStatusHistoryAppender cardStatusHistoryAppender;
+
+    // LT-E5-S5-3 (M5) — DeckRepository/DeckQueryService 폐기 · LearningFacadeRepository β 확장 사용
+    private final LearningFacadeRepository learningFacadeRepository;
 
     // Story-CARD-E3-S3-4 — Card.create 팩토리 확장(createdMode 스냅샷)을 위해 UserSchedule BC 의존 추가.
     private final UserScheduleQueryService userScheduleQueryService;
 
     // ─── 카드 생성 ─────────────────────────────────────
 
-    public CardResponse.Create create(Long deckId, CardRequest.Create request) {
-        Deck deck = deckRepository.findById(deckId)
-                                  .orElseThrow(() -> CardDomainException.of(
-                                          ErrorCode.DECK_NOT_FOUND, "deckId=" + deckId));
+    /**
+     * LT-E5-S5-3 (M5) — Deck 폐기 · axisId 직접 참조.
+     * request.deckId()는 호환용 파라미터명 · 실제 값은 axisId. Controller 재배선 시 파라미터명 이관 예정.
+     */
+    public CardResponse.Create create(Long axisId, CardRequest.Create request) {
+        LearningAxis axis = learningFacadeRepository.findAxisById(axisId)
+                .orElseThrow(() -> CardDomainException.of(
+                        ErrorCode.LEARNING_AXIS_NOT_FOUND, "axisId=" + axisId));
+
+        Long userId = learningFacadeRepository.findUserIdByAxisId(axisId)
+                .orElseThrow(() -> CardDomainException.of(
+                        ErrorCode.LEARNING_AXIS_NOT_FOUND, "axisId=" + axisId));
 
         MainNote mainNote = MainNote.of(
                 request.mainNote().textContent(),
@@ -55,16 +64,15 @@ public class CardCommandService {
         List<Tag> tags = resolveTags(request.tags());
 
         // Story-CARD-E3-S3-4 — 카드 생성 시점 사용자 mode를 스냅샷으로 저장.
-        // 미보유 유저는 currentMode 내부에서 default MODE_14D로 lazy 초기화.
-        LearningMode createdMode = userScheduleQueryService.currentMode(deck.getUser().getId());
+        LearningMode createdMode = userScheduleQueryService.currentMode(userId);
         LocalDate today = LocalDate.now();
 
-        Card card = Card.create(deck, mainNote, summary, request.keywords(), tags, createdMode, today);
+        Card card = Card.create(axisId, mainNote, summary, request.keywords(), tags, createdMode, today);
         cardRepository.save(card);
 
-        // Story-005-2: 첫 Card 추가 시 Deck progressStatus를 NOT_STARTED → IN_PROGRESS로 자동 전환.
+        // LT-E5-S5-3 (M5) — Deck.markInProgress() → Axis.markInProgress() 이관.
         // markInProgress는 멱등 — 이미 IN_PROGRESS / COMPLETED면 무시. JPA dirty checking으로 자동 save.
-        deck.markInProgress();
+        axis.markInProgress();
 
         return CardResponse.Create.of(card);
     }
@@ -151,25 +159,29 @@ public class CardCommandService {
 
         if (fromStatus != card.getStatus()) {
             cardStatusHistoryAppender.append(card, fromStatus, card.getStatus(), reason);
-            card.getDeck().recalculateProgressStatus();
+            recalculateAxisProgress(card.getAxisId());
         }
         return CardResponse.Detail.of(card);
     }
 
     // ─── 카드 ON_FIELD 복귀 ───────────────────────────────
     // Story-CARD-E3-S3-3 — fresh 재시작: createdMode를 사용자 현재 모드로 재기록, enteredFieldAt=today.
-    // 멱등: 이미 ON_FIELD면 도메인 no-op + 이력 미생성 + Deck 재계산 미호출.
+    // 멱등: 이미 ON_FIELD면 도메인 no-op + 이력 미생성 + Axis 재계산 미호출.
 
     public CardResponse.Detail returnToField(Long cardId) {
         Card       card       = findActiveCard(cardId);
         CardStatus fromStatus = card.getStatus();
 
-        LearningMode userCurrentMode = userScheduleQueryService.currentMode(card.getDeck().getUser().getId());
+        // LT-E5-S5-3 (M5) — Deck 폐기 · axis→facade→user 경로.
+        Long ownerId = learningFacadeRepository.findUserIdByAxisId(card.getAxisId())
+                .orElseThrow(() -> CardDomainException.of(
+                        ErrorCode.LEARNING_AXIS_NOT_FOUND, "axisId=" + card.getAxisId()));
+        LearningMode userCurrentMode = userScheduleQueryService.currentMode(ownerId);
         card.returnToField(userCurrentMode, LocalDate.now());
 
         if (fromStatus != card.getStatus()) {
             cardStatusHistoryAppender.append(card, fromStatus, card.getStatus(), null);
-            card.getDeck().recalculateProgressStatus();
+            recalculateAxisProgress(card.getAxisId());
         }
         return CardResponse.Detail.of(card);
     }
@@ -178,11 +190,27 @@ public class CardCommandService {
 
     public void softDelete(Long cardId) {
         Card card = findActiveCard(cardId);
+        Long axisId = card.getAxisId();
         card.softDelete();
 
-        // Story-005-2: 카드 soft delete 후 Deck progressStatus 자동 재계산.
-        // 모든 활성 Card가 ARCHIVE면 COMPLETED, 0개면 NOT_STARTED로 회귀.
-        card.getDeck().recalculateProgressStatus();
+        // LT-E5-S5-3 (M5) — Deck 폐기 · Axis progressStatus 재계산.
+        recalculateAxisProgress(axisId);
+    }
+
+    /**
+     * LT-E5-S5-3 (M5) — 축 스코프 progressStatus 재계산 헬퍼.
+     * <p>Application이 Card 카운트를 계산하여 axis.recalculateProgressStatus를 호출한다.
+     * (Deck 폐기와 함께 Deck.recalculateProgressStatus() 부수효과 이관)
+     */
+    private void recalculateAxisProgress(Long axisId) {
+        LearningAxis axis = learningFacadeRepository.findAxisById(axisId).orElse(null);
+        if (axis == null) return;
+
+        long total = cardRepository.countByAxisIdAndDeletedFalse(axisId);
+        long archived = cardRepository.countByAxisIdAndStatusAndDeletedFalse(axisId, CardStatus.ARCHIVE);
+        int activeCount = (int) (total - archived);
+        int archivedCount = (int) archived;
+        axis.recalculateProgressStatus(activeCount, archivedCount);
     }
 
     // ─── 내부 유틸 ────────────────────────────────────────

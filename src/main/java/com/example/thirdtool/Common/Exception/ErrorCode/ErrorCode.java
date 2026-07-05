@@ -74,6 +74,8 @@ public enum ErrorCode {
     DAILY_BATCH_NOT_FOUND("DAILY001",   "일일 학습 배치를 찾을 수 없습니다.",                 HttpStatus.NOT_FOUND),
     DAILY_BATCH_CLOSED("DAILY002",      "오늘 학습 세션이 종료되었습니다.",                    HttpStatus.CONFLICT),
     DAILY_BATCH_FORBIDDEN("DAILY003",   "본인의 일일 배치가 아닙니다.",                        HttpStatus.FORBIDDEN),
+    DAILY_BATCH_CLOSED_FOR_NEW_SESSION("DAILY004", "closed batch로는 새 세션을 시작할 수 없습니다.", HttpStatus.CONFLICT),
+    DAILY_BATCH_HAS_NO_CARDS("DAILY005", "오늘 학습할 카드가 없습니다.",                       HttpStatus.BAD_REQUEST),
 
     // ─── LearningFacade ───────────────────────────────────
     LEARNING_FACADE_NOT_FOUND("LF001",       "LearningFacade를 찾을 수 없습니다.",   HttpStatus.NOT_FOUND),

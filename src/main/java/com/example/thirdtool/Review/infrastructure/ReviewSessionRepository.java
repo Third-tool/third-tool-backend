@@ -1,13 +1,20 @@
 package com.example.thirdtool.Review.infrastructure;
 
 
-import com.example.thirdtool.Review.domain.model.ReviewScope;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * ReviewSessionRepository — REV E2 · Story 2-6 재편.
+ *
+ * <p>PR#2에서 심었던 deck / axis / layer 스코프 조회 메서드는 batch 참조 기반으로 완전 대체.
+ */
 public interface ReviewSessionRepository
         extends JpaRepository<ReviewSession, Long>, ReviewSessionRepositoryCustom {
 
@@ -15,34 +22,25 @@ public interface ReviewSessionRepository
     List<ReviewSession> findByUserId(Long userId);
 
     /**
-     * @deprecated LT-E5-S5-3 (M5) · Deck 폐기 대기. axis 스코프 조회로 이관.
+     * REV E2 · Story 2-3 + 2-6 — 사용자의 진행 중인 세션 조회.
+     * 자동 finish 정책 트리거용. finished_at IS NULL 최신.
      */
-    @Deprecated
-    List<ReviewSession> findByDeckId(Long deckId);
+    Optional<ReviewSession> findFirstByUserIdAndFinishedFalseOrderByStartedAtDesc(Long userId);
 
     /**
-     * @deprecated LT-E5-S5-3 (M5) · Deck 폐기 대기.
+     * REV E2 · Story 2-6 — 특정 batch로 시작된 세션 목록 (통계용).
      */
-    @Deprecated
-    Optional<ReviewSession> findTopByUserIdAndDeckIdOrderByStartedAtDesc(Long userId, Long deckId);
+    List<ReviewSession> findAllByBatchId(Long batchId);
 
     /**
-     * LT-E6-S6-2 (M5) — AXIS 스코프 세션 조회.
-     * Spring Data 명명 규칙: WHERE scope = ? AND scopeId = ?
+     * REV E2 · Story 2-6 — 특정 사용자 · 날짜 세션 목록 (batch.batchDate 기준).
+     * 대시보드 · 이력 조회용.
      */
-    List<ReviewSession> findAllByScopeAndScopeId(ReviewScope scope, Long scopeId);
-
-    /**
-     * LT-E6-S6-2 (M5) — AXIS 스코프 편의 메서드.
-     */
-    default List<ReviewSession> findAllByAxisId(Long axisId) {
-        return findAllByScopeAndScopeId(ReviewScope.AXIS, axisId);
-    }
-
-    /**
-     * LT-E6-S6-2 (M5) — LAYER 스코프 편의 메서드.
-     */
-    default List<ReviewSession> findAllByLayerId(Long layerId) {
-        return findAllByScopeAndScopeId(ReviewScope.LAYER, layerId);
-    }
+    @Query("""
+            SELECT s FROM ReviewSession s
+            WHERE s.user.id = :userId
+              AND s.batch.batchDate = :date
+            ORDER BY s.startedAt DESC
+            """)
+    List<ReviewSession> findAllByUserIdAndDate(@Param("userId") Long userId, @Param("date") LocalDate date);
 }

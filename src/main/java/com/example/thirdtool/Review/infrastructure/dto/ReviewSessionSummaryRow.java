@@ -5,30 +5,33 @@ import lombok.Getter;
 
 import java.time.LocalDateTime;
 
+/**
+ * REV E2 · Story 2-6 — deckId/deckName 필드 폐기 · batchId + finishedAt 신설.
+ */
 @Getter
 public class ReviewSessionSummaryRow {
 
     private final Long          sessionId;
-    private final Long          deckId;
-    private final String        deckName;
+    private final Long          batchId;
     private final int           totalCardCount;
     private final int           availableCardCount;
     private final LocalDateTime startedAt;
+    private final LocalDateTime finishedAt;
 
     @QueryProjection
     public ReviewSessionSummaryRow(
             Long sessionId,
-            Long deckId,
-            String deckName,
+            Long batchId,
             int totalCardCount,
             int availableCardCount,
-            LocalDateTime startedAt
+            LocalDateTime startedAt,
+            LocalDateTime finishedAt
                                   ) {
         this.sessionId          = sessionId;
-        this.deckId             = deckId;
-        this.deckName           = deckName;
+        this.batchId            = batchId;
         this.totalCardCount     = totalCardCount;
         this.availableCardCount = availableCardCount;
         this.startedAt          = startedAt;
+        this.finishedAt         = finishedAt;
     }
 }

@@ -4,13 +4,12 @@ import com.example.thirdtool.Card.domain.event.CardViewedEvent;
 import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
-import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
-import com.example.thirdtool.LearningFacade.domain.model.LearningLayer;
-import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
+import com.example.thirdtool.Review.application.service.DailyLearningBatchService;
 import com.example.thirdtool.Review.domain.exception.ReviewSessionException;
+import com.example.thirdtool.Review.domain.model.DailyCardEntry;
+import com.example.thirdtool.Review.domain.model.DailyLearningBatch;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
 import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
-import com.example.thirdtool.Review.presentation.dto.ReviewRequest;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import lombok.RequiredArgsConstructor;
@@ -18,14 +17,15 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ReviewCommandService — Story-CARD-E2-S2-4 재작성.
+ * ReviewCommandService — REV E2 · Story 2-1/2-2/2-3 재편.
  *
- * <p>OnFieldBudget 폐기(PR#2)로 이중 게이트(maxView + maxDuration) archive 로직이 사라짐.
- * 리뷰 세션은 viewCount만 기록하고, ARCHIVE 결정은 M5 DailyLearningBatch가 lazy 판정한다.
- * `isLastView`는 API 호환을 위해 응답 필드로 남되 항상 {@code false}로 전달된다.
+ * <p>PR#2 deck/axis/layer 스코프 startReview 폐기 · DailyLearningBatch 원천 세션 흐름으로 대체.
+ * 트랜잭션 안에서 batch entry viewed 동기화 · 진행 중 세션 자동 finish 정책 강제.
  */
 @Service
 @RequiredArgsConstructor
@@ -34,79 +34,52 @@ public class ReviewCommandService {
 
     private final ReviewSessionRepository reviewSessionRepository;
     private final ReviewQueryService      reviewQueryService;
+    private final DailyLearningBatchService dailyLearningBatchService;
 
-    // LT-E5-S5-3 (M5) — DeckQueryService 대체 · axis 직접 조회
-    private final LearningFacadeRepository learningFacadeRepository;
-
-    // Card BC 의존 — port interface를 통한 접근 (ADR-006)
     private final CardRepository cardRepository;
 
     // Story-LT-E4-S4-5 — CardViewedEvent 발행용. 소비처는 M5 이관.
     private final ApplicationEventPublisher eventPublisher;
 
-    // ─── 1. 리뷰 세션 시작 ───────────────────────────────
+    // ─── 1. 리뷰 세션 시작 (Story 2-1 + 2-3) ─────────────────
 
-    public ReviewResponse.StartSession startReview(ReviewRequest.StartSession request, UserEntity user) {
-        // LT-E5-S5-3 (M5) — Deck 조회 폐기 · axisId 직접 사용.
-        // request.deckId()는 호환용 · 실제 값은 axisId (Story 5-3 SDD 정합 · Controller 재배선 시 파라미터명 이관 예정).
-        Long axisId = request.deckId();
-        LearningAxis axis = learningFacadeRepository.findAxisById(axisId)
-                .orElseThrow(() -> ReviewSessionException.of(
-                        ErrorCode.LEARNING_AXIS_NOT_FOUND, "axisId=" + axisId));
+    /**
+     * REV E2 · Story 2-1 + 2-3 · POST /api/v1/review-sessions.
+     *
+     * <p>진행 중 세션 있으면 자동 finish → DailyLearningBatch(오늘) 조회/생성 → batch.unviewedEntries 기반 세션 생성.
+     */
+    public ReviewResponse.StartSession startSession(UserEntity user) {
+        Long userId = user.getId();
+        LocalDateTime now = LocalDateTime.now();
 
-        Long ownerId = learningFacadeRepository.findUserIdByAxisId(axisId)
-                .orElseThrow(() -> ReviewSessionException.of(
-                        ErrorCode.LEARNING_AXIS_NOT_FOUND, "axisId=" + axisId));
-        if (!ownerId.equals(user.getId())) {
-            throw ReviewSessionException.of(ErrorCode.REVIEW_SESSION_FORBIDDEN);
+        // Story 2-3 — 진행 중 세션 자동 finish (멱등)
+        reviewSessionRepository.findFirstByUserIdAndFinishedFalseOrderByStartedAtDesc(userId)
+                .ifPresent(existing -> existing.finish(now));
+
+        // Story 1-3 lazy 생성 계승 · 없으면 생성
+        DailyLearningBatch batch = dailyLearningBatchService.getOrCreateToday(userId);
+
+        // batch 미완료 entries → Card 리스트로 변환 (순서 유지, 삭제/archive 카드 제외)
+        List<DailyCardEntry> unviewed = batch.unviewedEntries();
+        List<Card> cards = new ArrayList<>();
+        for (DailyCardEntry entry : unviewed) {
+            cardRepository.findById(entry.getCardId())
+                    .filter(c -> !c.isDeleted() && !c.isArchived())
+                    .ifPresent(cards::add);
         }
 
-        // 카드 목록 조회 — LT-E5-S5-2 신설 축 스코프 메서드.
-        List<Card> cards = cardRepository.findAllByAxisIdAndDeletedFalse(axisId);
+        if (cards.isEmpty()) {
+            throw ReviewSessionException.of(ErrorCode.DAILY_BATCH_HAS_NO_CARDS);
+        }
 
-        // 카드 0개 검증은 ReviewSession.of() 도메인 내부에서 처리 (REVIEW002)
-        ReviewSession session = ReviewSession.of(axisId, cards, user, cards.size());
+        // 도메인 팩토리 — batch closed/soap 검증 내부
+        ReviewSession session = ReviewSession.startFrom(batch, cards, user, now);
         reviewSessionRepository.save(session);
 
-        // 첫 번째 카드 진입 처리 (viewCount 증가만). Archive 판정은 M5로 이관.
-        recordViewOnCurrent(session);
+        // 첫 카드 view 기록 (batch entry viewedAt 동기화 포함)
+        recordViewOnCurrent(session, now);
 
-        return ReviewResponse.StartSession.of(session, false);
-    }
-
-    // ─── 1-b. LAYER 스코프 세션 시작 (LT-E6-S6-3 · M5) ───
-    // 궤적 관리: PR#4 (Review E2)가 issue-25 supersede로 폐기 예정.
-
-    public ReviewResponse.StartSession startLayerReview(Long layerId, UserEntity user) {
-        LearningLayer layer = learningFacadeRepository.findLayerById(layerId)
-                .orElseThrow(() -> ReviewSessionException.of(
-                        ErrorCode.LEARNING_LAYER_NOT_FOUND, "layerId=" + layerId));
-
-        Long ownerId = learningFacadeRepository.findUserIdByLayerId(layerId)
-                .orElseThrow(() -> ReviewSessionException.of(
-                        ErrorCode.LEARNING_LAYER_NOT_FOUND, "layerId=" + layerId));
-        if (!ownerId.equals(user.getId())) {
-            throw ReviewSessionException.of(ErrorCode.LAYER_REVIEW_ACCESS_DENIED);
-        }
-
-        List<Long> axisIds = layer.getAxes().stream().map(LearningAxis::getId).toList();
-        if (axisIds.isEmpty()) {
-            throw ReviewSessionException.of(ErrorCode.LAYER_HAS_NO_AXES, "layerId=" + layerId);
-        }
-
-        // Card BC 이관 조회 · axisId in-list 스코프
-        List<Card> cards = cardRepository.findByUserIdAndAxisIdsAndStatus(
-                user.getId(), axisIds,
-                com.example.thirdtool.Card.domain.model.CardStatus.ON_FIELD);
-
-        // 카드 0개 검증은 ReviewSession.ofLayer() 내부 · REVIEW002
-        ReviewSession session = ReviewSession.ofLayer(layerId, cards, user, cards.size());
-        reviewSessionRepository.save(session);
-
-        // 첫 카드 view 기록 (기존 흐름과 동일)
-        recordViewOnCurrent(session);
-
-        return ReviewResponse.StartSession.of(session, false);
+        return ReviewResponse.StartSession.of(session);
     }
 
     // ─── 2. 현재 카드 COMPARING 전환 ─────────────────────
@@ -114,7 +87,7 @@ public class ReviewCommandService {
     public ReviewResponse.CardReviewDto startComparing(Long sessionId, UserEntity user) {
         ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, user);
         session.startComparingCurrentCard();
-        return ReviewResponse.CardReviewDto.of(session.currentCardReview(), false);
+        return ReviewResponse.CardReviewDto.of(session.currentCardReview());
     }
 
     // ─── 3. 다음 카드로 이동 ──────────────────────────────
@@ -122,23 +95,47 @@ public class ReviewCommandService {
     public ReviewResponse.NextCard moveToNext(Long sessionId, UserEntity user) {
         ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, user);
 
-        // 종료 여부 + COMPARING 검증은 도메인 내부에서 처리
         session.moveToNext();
 
         if (!session.isFinished()) {
-            recordViewOnCurrent(session);
+            recordViewOnCurrent(session, LocalDateTime.now());
         }
 
-        return ReviewResponse.NextCard.of(session, false);
+        return ReviewResponse.NextCard.of(session);
+    }
+
+    // ─── 4. 현재 카드 view 명시 기록 (Story 2-2) ─────────
+
+    /**
+     * REV E2 · Story 2-2 · POST /api/v1/review-sessions/{id}/record-view.
+     *
+     * <p>세션 상태(finished) 검증 후 card.recordView + batch.entry.viewedAt 동시 갱신.
+     * batch가 closed 상태면 batch.markViewed가 DAILY_BATCH_CLOSED 던짐 → 전체 트랜잭션 롤백.
+     */
+    public void recordView(Long sessionId, UserEntity user) {
+        ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, user);
+        recordViewOnCurrent(session, LocalDateTime.now());
+    }
+
+    // ─── 5. 세션 명시 finish (Story 2-3) ─────────────────
+
+    public ReviewResponse.FinishSession finish(Long sessionId, UserEntity user) {
+        ReviewSession session = reviewQueryService.getSessionByOwner(sessionId, user);
+        session.finish(LocalDateTime.now());
+        return ReviewResponse.FinishSession.of(session);
     }
 
     // ─── 내부 처리 ────────────────────────────────────────
 
-    private void recordViewOnCurrent(ReviewSession session) {
+    private void recordViewOnCurrent(ReviewSession session, LocalDateTime now) {
         Card card = session.currentCardReview().getCard();
         card.recordView();
         cardRepository.save(card);
-        // Story-LT-E4-S4-5 — axisId 이벤트 발행. Deck 폐기(M5) 이후에도 축 소유권이 유지되도록 명시.
+
+        // Story 2-2 · batch entry viewedAt 동기화 · batch closed면 예외 → 트랜잭션 롤백
+        session.getBatch().markViewed(card.getId(), now);
+
+        // Story-LT-E4-S4-5 · axisId 이벤트 발행 궤적 유지
         eventPublisher.publishEvent(new CardViewedEvent(
                 card.getId(),
                 session.getUser().getId(),

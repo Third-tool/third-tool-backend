@@ -181,6 +181,16 @@ public class DailyLearningBatch {
         return Collections.unmodifiableList(entries);
     }
 
+    /**
+     * REV E2 · Story 2-1 — 아직 보지 않은 entries만 필터링.
+     * ReviewSession 신규 생성 시 카드 큐 원천으로 사용.
+     */
+    public List<DailyCardEntry> unviewedEntries() {
+        return entries.stream()
+                .filter(e -> !e.isViewed())
+                .toList();
+    }
+
     public boolean isOwner(Long userId) {
         return this.userId.equals(userId);
     }

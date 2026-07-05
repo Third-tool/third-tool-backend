@@ -1,6 +1,5 @@
 package com.example.thirdtool.Review.infrastructure;
 
-import com.example.thirdtool.Deck.domain.model.QDeck;
 import com.example.thirdtool.Review.domain.model.QReviewSession;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
 import com.example.thirdtool.Review.infrastructure.dto.QReviewSessionSummaryRow;
@@ -13,30 +12,31 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * REV E2 · Story 2-6 — QueryDSL 재편. deck 조인 제거 · batch 참조 기반으로 단순화.
+ */
 @RequiredArgsConstructor
 public class ReviewSessionRepositoryImpl implements ReviewSessionRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 
     private final QReviewSession reviewSession = QReviewSession.reviewSession;
-    private final QDeck deck = QDeck.deck;
 
     @Override
     public List<ReviewSessionSummaryRow> searchSessions(ReviewSessionSearchCondition condition) {
         return queryFactory
                 .select(new QReviewSessionSummaryRow(
                         reviewSession.id,
-                        deck.id,
-                        deck.name,
+                        reviewSession.batch.id,
                         reviewSession.totalCardCount,
                         reviewSession.availableCardCount,
-                        reviewSession.startedAt
+                        reviewSession.startedAt,
+                        reviewSession.finishedAt
                 ))
                 .from(reviewSession)
-                .join(reviewSession.deck, deck)
                 .where(
                         userIdEq(condition.getUserId()),
-                        deckIdEq(condition.getDeckId())
+                        batchIdEq(condition.getBatchId())
                       )
                 .orderBy(reviewSession.startedAt.desc())
                 .fetch();
@@ -63,7 +63,7 @@ public class ReviewSessionRepositoryImpl implements ReviewSessionRepositoryCusto
         return userId != null ? reviewSession.user.id.eq(userId) : null;
     }
 
-    private BooleanExpression deckIdEq(Long deckId) {
-        return deckId != null ? reviewSession.deck.id.eq(deckId) : null;
+    private BooleanExpression batchIdEq(Long batchId) {
+        return batchId != null ? reviewSession.batch.id.eq(batchId) : null;
     }
 }

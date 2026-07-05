@@ -2,6 +2,7 @@ package com.example.thirdtool.LearningFacade.infrastructure.persistence;
 
 import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
 import com.example.thirdtool.LearningFacade.domain.model.LearningFacade;
+import com.example.thirdtool.LearningFacade.domain.model.LearningLayer;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -41,6 +42,19 @@ public interface LearningFacadeJpaRepository extends JpaRepository<LearningFacad
      */
     @Query("SELECT a.facade.user.id FROM LearningAxis a WHERE a.id = :axisId")
     Optional<Long> findUserIdByAxisId(@Param("axisId") Long axisId);
+
+    /**
+     * LT-E6-S6-3 (M5) — layerId로 LearningLayer 단건 조회.
+     * @SQLRestriction 자동 필터 적용.
+     */
+    @Query("SELECT l FROM LearningLayer l WHERE l.id = :layerId")
+    Optional<LearningLayer> findLayerById(@Param("layerId") Long layerId);
+
+    /**
+     * LT-E6-S6-3 (M5) — layerId로 소유 사용자 id 조회 (layer→facade→user).
+     */
+    @Query("SELECT l.facade.user.id FROM LearningLayer l WHERE l.id = :layerId")
+    Optional<Long> findUserIdByLayerId(@Param("layerId") Long layerId);
 
     interface AxisIdNameProjection {
         Long getId();

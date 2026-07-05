@@ -36,6 +36,10 @@ public class QReviewSession extends EntityPathBase<ReviewSession> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final EnumPath<ReviewScope> scope = createEnum("scope", ReviewScope.class);
+
+    public final NumberPath<Long> scopeId = createNumber("scopeId", Long.class);
+
     public final DateTimePath<java.time.LocalDateTime> startedAt = createDateTime("startedAt", java.time.LocalDateTime.class);
 
     public final NumberPath<Integer> totalCardCount = createNumber("totalCardCount", Integer.class);

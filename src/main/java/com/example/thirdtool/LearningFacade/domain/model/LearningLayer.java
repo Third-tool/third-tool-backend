@@ -210,6 +210,39 @@ public class LearningLayer {
     }
 
     /**
+     * LT-E6-S6-4 (M5) — Layer 진행 상태 파생.
+     *
+     * <p>하위 axis의 {@link AxisProgressStatus}를 집계한 파생값. DB 컬럼 없음.
+     * SDD 규칙:
+     * <ul>
+     *   <li>활성 axis 0건 → NOT_STARTED (열린 질문 10 잠정 확정)</li>
+     *   <li>모두 NOT_STARTED → NOT_STARTED</li>
+     *   <li>모두 COMPLETED → COMPLETED</li>
+     *   <li>그 외 (하나 이상 IN_PROGRESS · 혼재) → IN_PROGRESS</li>
+     * </ul>
+     */
+    public LayerProgressStatus progressStatus() {
+        List<LearningAxis> active = getAxes();
+        if (active.isEmpty()) {
+            return LayerProgressStatus.NOT_STARTED;
+        }
+
+        boolean allNotStarted = active.stream()
+                .allMatch(a -> a.getProgressStatus() == AxisProgressStatus.NOT_STARTED);
+        if (allNotStarted) {
+            return LayerProgressStatus.NOT_STARTED;
+        }
+
+        boolean allCompleted = active.stream()
+                .allMatch(a -> a.getProgressStatus() == AxisProgressStatus.COMPLETED);
+        if (allCompleted) {
+            return LayerProgressStatus.COMPLETED;
+        }
+
+        return LayerProgressStatus.IN_PROGRESS;
+    }
+
+    /**
      * Layer 내 axis 순서 재배치. 전달 id 목록이 이 layer의 axis id 집합과 정확히 일치해야 함.
      */
     void reorderAxes(List<Long> orderedAxisIds) {

@@ -70,6 +70,10 @@ public enum ErrorCode {
     REVIEW_SESSION_ALREADY_FINISHED("REVIEW003", "이미 종료된 리뷰 세션입니다.", HttpStatus.BAD_REQUEST),
     REVIEW_COMPARING_REQUIRED("REVIEW004", "현재 카드를 먼저 비교(COMPARING) 단계로 전환해야 다음으로 이동할 수 있습니다.", HttpStatus.BAD_REQUEST),
     REVIEW_SESSION_FORBIDDEN("REVIEW005", "본인의 리뷰 세션이 아닙니다.", HttpStatus.FORBIDDEN),
+    // ─── Daily Batch (REV E1 · M5) ─────────────────────────
+    DAILY_BATCH_NOT_FOUND("DAILY001",   "일일 학습 배치를 찾을 수 없습니다.",                 HttpStatus.NOT_FOUND),
+    DAILY_BATCH_CLOSED("DAILY002",      "오늘 학습 세션이 종료되었습니다.",                    HttpStatus.CONFLICT),
+    DAILY_BATCH_FORBIDDEN("DAILY003",   "본인의 일일 배치가 아닙니다.",                        HttpStatus.FORBIDDEN),
 
     // ─── LearningFacade ───────────────────────────────────
     LEARNING_FACADE_NOT_FOUND("LF001",       "LearningFacade를 찾을 수 없습니다.",   HttpStatus.NOT_FOUND),

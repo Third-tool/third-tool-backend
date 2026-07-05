@@ -77,6 +77,13 @@ public enum ErrorCode {
     DAILY_BATCH_CLOSED_FOR_NEW_SESSION("DAILY004", "closed batch로는 새 세션을 시작할 수 없습니다.", HttpStatus.CONFLICT),
     DAILY_BATCH_HAS_NO_CARDS("DAILY005", "오늘 학습할 카드가 없습니다.",                       HttpStatus.BAD_REQUEST),
 
+    // ─── Recommendation / Notification (REV E3 · M5) ────────
+    RECOMMENDATION_NOT_FOUND("REC001",         "추천을 찾을 수 없습니다.",                       HttpStatus.NOT_FOUND),
+    RECOMMENDATION_ALREADY_RESOLVED("REC002",  "이미 처리된 추천입니다.",                       HttpStatus.CONFLICT),
+    RECOMMENDATION_FORBIDDEN("REC003",         "본인의 추천이 아닙니다.",                        HttpStatus.FORBIDDEN),
+    NOTIFICATION_NOT_FOUND("NOTIF001",         "알림을 찾을 수 없습니다.",                       HttpStatus.NOT_FOUND),
+    NOTIFICATION_FORBIDDEN("NOTIF002",         "본인의 알림이 아닙니다.",                        HttpStatus.FORBIDDEN),
+
     // ─── LearningFacade ───────────────────────────────────
     LEARNING_FACADE_NOT_FOUND("LF001",       "LearningFacade를 찾을 수 없습니다.",   HttpStatus.NOT_FOUND),
     LEARNING_FACADE_ALREADY_EXISTS("LF002",  "이미 LearningFacade가 존재합니다.",    HttpStatus.CONFLICT),

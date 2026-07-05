@@ -35,12 +35,20 @@ public class CardRepositoryAdapter implements CardRepository {
     }
 
     /**
-     * 덱 내 활성 카드 목록 조회.
-     * deleted = false 조건은 JpaRepository 네이밍 규칙으로 자동 처리된다.
+     * @deprecated LT-E5-S5-2 (M5) · 폐기 대기.
      */
+    @Deprecated
     @Override
     public List<Card> findAllByDeckIdAndDeletedFalse(Long deckId) {
         return cardJpaRepository.findAllByDeckIdAndDeletedFalse(deckId);
+    }
+
+    /**
+     * LT-E5-S5-2 (M5) — 축 스코프 카드 조회. Spring Data 네이밍 규칙 자동 도출.
+     */
+    @Override
+    public List<Card> findAllByAxisIdAndDeletedFalse(Long axisId) {
+        return cardJpaRepository.findAllByAxisIdAndDeletedFalse(axisId);
     }
 
     /**

@@ -18,10 +18,18 @@ public interface CardRepository {
     Optional<Card> findById(Long id);
 
     /**
-     * 덱 내 활성 카드 목록 조회 (논리 삭제 제외).
-     * CardQueryService.findAllByDeckId()에서 사용.
+     * @deprecated LT-E5-S5-2 (M5) — Deck BC 폐기와 함께 폐기. axis 스코프 조회로 이관.
+     * 대체: {@link #findAllByAxisIdAndDeletedFalse(Long)}.
      */
+    @Deprecated
     List<Card> findAllByDeckIdAndDeletedFalse(Long deckId);
+
+    /**
+     * LT-E5-S5-2 (M5) — 축 내 활성 카드 목록 조회 (논리 삭제 제외).
+     * Deck 폐기 후 카드-축 직접 매핑 (axisId NOT NULL · V30 M4) 기반.
+     * Review 세션 시작·Card 목록 조회 등에서 사용.
+     */
+    List<Card> findAllByAxisIdAndDeletedFalse(Long axisId);
 
     List<Card> findBySharedTagIds(List<Long> tagIds, Long excludeCardId);
 

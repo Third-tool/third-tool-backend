@@ -1,5 +1,6 @@
 package com.example.thirdtool.LearningFacade.infrastructure.persistence;
 
+import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
 import com.example.thirdtool.LearningFacade.domain.model.LearningFacade;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,6 +27,20 @@ public interface LearningFacadeJpaRepository extends JpaRepository<LearningFacad
      */
     @Query("SELECT a.id AS id, a.name AS name FROM LearningAxis a WHERE a.id IN :axisIds")
     List<AxisIdNameProjection> findAxisIdNamePairsByIdIn(@Param("axisIds") Collection<Long> axisIds);
+
+    /**
+     * LT-E5-S5-2 — axisId로 LearningAxis 단건 조회.
+     * @SQLRestriction("deleted_at IS NULL") 자동 필터 적용.
+     */
+    @Query("SELECT a FROM LearningAxis a WHERE a.id = :axisId")
+    Optional<LearningAxis> findAxisById(@Param("axisId") Long axisId);
+
+    /**
+     * LT-E5-S5-2 — axisId로 소유 사용자 id 조회 (axis→facade→user).
+     * Card 생성·Review 세션 시작 시 소유권·createdMode 조회에 사용.
+     */
+    @Query("SELECT a.facade.user.id FROM LearningAxis a WHERE a.id = :axisId")
+    Optional<Long> findUserIdByAxisId(@Param("axisId") Long axisId);
 
     interface AxisIdNameProjection {
         Long getId();

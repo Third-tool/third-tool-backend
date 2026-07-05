@@ -108,6 +108,52 @@ public class LearningAxis {
     @OrderBy("createdAt DESC")
     private final List<AxisSelection> selections = new ArrayList<>();
 
+    // ─── Deck 폐기 흡수 필드 (LT E5 · M5 · Story 5-1) ─────────
+    //
+    // Deck BC 완전 폐기 (M5)로 인해 8 책임 필드 중 6개를 LearningAxis로 이전.
+    // 계층 필드 (parentDeck·depth·subDecks)는 SDD 우선 정책으로 완전 폐기 (Layer가 유일 상위 개념).
+    // scoring_algorithm_type (V1 legacy)는 이관 없이 _archived_deck에만 잔존.
+
+    /**
+     * 축 진행 상태 (Deck.progressStatus 이관).
+     * 축에 속한 카드 상태 집계로 파생. Application Service가 카드 카운트 계산 후
+     * {@link #recalculateProgressStatus(int, int)} 호출.
+     * Epic 6 Story 6-4에서 Layer.progressStatus 파생의 소스.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "progress_status", nullable = false, length = 20)
+    private AxisProgressStatus progressStatus = AxisProgressStatus.NOT_STARTED;
+
+    /**
+     * 학습 모드 (Deck.mode 이관 · SDD 우선 재정의).
+     * 기존 {@code DeckMode.ON_FIELD/ARCHIVE} → 신규 {@link AxisLearningMode#STUDY}/{@link AxisLearningMode#REVIEW}.
+     * V31 백필 정책: ON_FIELD→STUDY, ARCHIVE→REVIEW.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mode", nullable = false, length = 20)
+    private AxisLearningMode mode = AxisLearningMode.STUDY;
+
+    /** 최근 접근 시각 (Deck.lastAccessed 이관). Review 세션 진입 시 갱신. */
+    @Column(name = "last_accessed_at")
+    private LocalDateTime lastAccessedAt;
+
+    /**
+     * 대표 학습 자료 참조 (Deck.learningMaterialId 이관 · Long id).
+     * BC 간 직접 객체 참조 회피 (docs/PACKAGE.md §6). 자료 삭제 시 null로 전환.
+     */
+    @Column(name = "learning_material_id")
+    private Long learningMaterialId;
+
+    /** 라이브러리 공개 여부 (Deck.onLibrary 이관). */
+    @Column(name = "on_library", nullable = false)
+    private boolean onLibrary = false;
+
+    /** 공개 시각 (Deck.publishedAt 이관 · 라이브러리 정렬용). */
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
+    // ─── 표준 audit / soft delete ─────────────────────────
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -207,6 +253,80 @@ public class LearningAxis {
             );
         }
         this.displayOrder = newOrder;
+    }
+
+    // ─── Deck 폐기 흡수 도메인 행위 (LT E5 · M5 · Story 5-1) ─────────
+
+    /**
+     * NOT_STARTED → IN_PROGRESS 전용 마커.
+     * 축에 첫 Card가 추가될 때 Application Service가 호출한다.
+     *
+     * <p><strong>멱등</strong>: 이미 IN_PROGRESS / COMPLETED이면 무시.
+     * COMPLETED → IN_PROGRESS 회귀는 본 메서드 책임 아님. {@link #recalculateProgressStatus(int, int)} 담당.
+     *
+     * <p>(Deck.markInProgress() 계승 · LT E5)
+     */
+    public void markInProgress() {
+        if (this.progressStatus == AxisProgressStatus.NOT_STARTED) {
+            this.progressStatus = AxisProgressStatus.IN_PROGRESS;
+        }
+    }
+
+    /**
+     * Card 상태 집계 결과로 progressStatus 재계산.
+     * <p>LearningAxis는 자기 자신의 자식 컬렉션 (topics·roadmapNodes·selections) 만 소유하므로
+     * Card 컬렉션을 직접 순회하지 않는다. Application Service (CardCommandService 등)가
+     * 카드 카운트를 계산한 후 본 메서드를 호출.
+     *
+     * <ul>
+     *   <li>활성 + 아카이브 Card 0개 → NOT_STARTED</li>
+     *   <li>활성 Card 0개 + 아카이브 Card ≥1 → COMPLETED</li>
+     *   <li>그 외 → IN_PROGRESS</li>
+     * </ul>
+     *
+     * <p>(Deck.recalculateProgressStatus() 계승 · LT E5 · Epic 6 Story 6-4 연결점)
+     */
+    public void recalculateProgressStatus(int activeCardCount, int archivedCardCount) {
+        if (activeCardCount == 0 && archivedCardCount == 0) {
+            this.progressStatus = AxisProgressStatus.NOT_STARTED;
+            return;
+        }
+        boolean allArchived = activeCardCount == 0 && archivedCardCount > 0;
+        this.progressStatus = allArchived
+                ? AxisProgressStatus.COMPLETED
+                : AxisProgressStatus.IN_PROGRESS;
+    }
+
+    /**
+     * 최근 접근 시각 갱신 (Deck.updateLastAccessed() 계승).
+     * Review 세션 진입 또는 축 조회 시 Application Service가 호출.
+     */
+    public void updateLastAccessed() {
+        this.lastAccessedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 학습 모드 변경 (Deck.changeMode() 계승 · SDD 우선 재정의).
+     * null 검증. 값 자체는 동일 시에도 대입 (updated_at 갱신 트리거).
+     */
+    public void changeMode(AxisLearningMode newMode) {
+        if (newMode == null) {
+            throw LearningFacadeDomainException.of(
+                    ErrorCode.INVALID_INPUT,
+                    "AxisLearningMode는 null일 수 없습니다."
+            );
+        }
+        this.mode = newMode;
+    }
+
+    /**
+     * 원천 학습 자료 삭제 시 호출 (Deck.markMaterialDeleted() 계승).
+     * {@code learningMaterialId}만 null로 전환 — "자료 미연결 Axis"로 유지.
+     *
+     * <p><strong>멱등</strong>: 이미 null이면 효과 없음 (예외 X).
+     */
+    public void markMaterialDeleted() {
+        this.learningMaterialId = null;
     }
 
     public AxisTopic addTopic(String name, String description) {

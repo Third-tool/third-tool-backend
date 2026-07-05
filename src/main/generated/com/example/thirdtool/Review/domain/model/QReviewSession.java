@@ -24,6 +24,8 @@ public class QReviewSession extends EntityPathBase<ReviewSession> {
 
     public final NumberPath<Integer> availableCardCount = createNumber("availableCardCount", Integer.class);
 
+    public final NumberPath<Long> axisId = createNumber("axisId", Long.class);
+
     public final ListPath<CardReview, QCardReview> cardReviews = this.<CardReview, QCardReview>createList("cardReviews", CardReview.class, QCardReview.class, PathInits.DIRECT2);
 
     public final NumberPath<Integer> currentIndex = createNumber("currentIndex", Integer.class);

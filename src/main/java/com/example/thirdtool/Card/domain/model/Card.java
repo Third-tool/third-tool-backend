@@ -33,13 +33,18 @@ public class Card {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * @deprecated LT-E5-S5-2 (M5) — Deck BC 폐기와 함께 폐기. axisId 직접 참조로 이관.
+     * V32에서 card.deck_id FK/컬럼 제거 · 다음 릴리스에서 필드·getter 완전 삭제 예정.
+     * <p>현 시점 유지 근거: 대량 리팩토링 회피 · JPQL의 c.deck 참조 지점 순차 이관 대기.
+     */
+    @Deprecated
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "deck_id", nullable = false)
+    @JoinColumn(name = "deck_id", nullable = true)  // V32 폐기 대응 · nullable로 완화
     private Deck deck;
 
-    // ─── 축 직접 매핑 (Story-LT-E4-S4-3) ─────────────────────
-    // Card가 소속 Axis를 직접 참조한다. 값은 create() 시점에 deck.getAxisId()로 유도.
-    // M5 Deck 폐기에 대비한 사전 인프라 (deck.axis_id와 병존 · 데이터 정합 유지).
+    // ─── 축 직접 매핑 (Story-LT-E4-S4-3 · LT-E5-S5-2 확립) ────
+    // Card가 소속 Axis를 직접 참조한다. Deck 참조는 @Deprecated 상태.
     // Raw Long 참조 — BC 간 직접 객체 참조 회피 (docs/PACKAGE.md §6).
     @Column(name = "axis_id", nullable = false)
     private Long axisId;
@@ -132,10 +137,11 @@ public class Card {
     // -------------------------------------------------------------------------
 
     /**
-     * Story-CARD-E3-S3-4 — 확장된 팩토리. 사용자의 현재 mode(createdMode 스냅샷)와 오늘 날짜(enteredFieldAt 기준)를 주입받는다.
+     * Story-CARD-E3-S3-4 · LT-E5-S5-2 — Deck 폐기 반영 · axisId 직접 주입 blessed 팩토리.
+     * 사용자의 현재 mode(createdMode 스냅샷)와 오늘 날짜(enteredFieldAt 기준)를 함께 받는다.
      */
     public static Card create(
-            Deck deck,
+            Long axisId,
             MainNote mainNote,
             Summary summary,
             List<String> keywordValues,
@@ -143,7 +149,7 @@ public class Card {
             LearningMode createdMode,
             LocalDate today
                              ) {
-        requireNonNull(deck,          "deck");
+        requireNonNull(axisId,        "axisId");
         requireNonNull(mainNote,      "mainNote");
         requireNonNull(summary,       "summary");
         requireNonNull(keywordValues, "keywordValues");
@@ -162,20 +168,37 @@ public class Card {
                     "생성 시 태그는 최대 " + MAX_TAG_COUNT + "개까지 허용됩니다.");
         }
 
-        Long axisId = deck.getAxisId();
-        requireNonNull(axisId, "deck.axisId");  // Story-LT-E4-Reviewer — NOT NULL late-fail 방어
-
-        Card card  = new Card(mainNote, summary, createdMode, today);
-        card.deck  = deck;
-        card.axisId = axisId;  // Story-LT-E4-S4-3 — deck.axisId 스냅샷 (정합 불변식)
+        Card card = new Card(mainNote, summary, createdMode, today);
+        card.axisId = axisId;
         keywordValues.forEach(v -> card.keywordCues.add(KeywordCue.create(card, v)));
         resolvedTags.forEach(tag -> card.cardTags.add(CardTag.link(card, tag)));
         return card;
     }
 
     /**
-     * @deprecated Story-CARD-E3-S3-4 이관 후 호환 오버로드. Card.create(..., createdMode, today) 사용 권장.
-     * default: createdMode = MODE_14D, today = LocalDate.now(). 다음 릴리스에서 제거 예정.
+     * @deprecated LT-E5-S5-2 (M5) — Deck 폐기 대응. Card.create(Long axisId, ...) 사용 권장.
+     * 기존 호출부 순차 이관 대기. Deck 파라미터에서 axisId 뽑아 blessed 팩토리로 위임.
+     */
+    @Deprecated
+    public static Card create(
+            Deck deck,
+            MainNote mainNote,
+            Summary summary,
+            List<String> keywordValues,
+            List<Tag> tagList,
+            LearningMode createdMode,
+            LocalDate today
+                             ) {
+        requireNonNull(deck, "deck");
+        Long axisId = deck.getAxisId();
+        requireNonNull(axisId, "deck.axisId");
+        Card card = create(axisId, mainNote, summary, keywordValues, tagList, createdMode, today);
+        card.deck = deck;  // @Deprecated Card.deck 필드 유지용 · 다음 릴리스 폐기
+        return card;
+    }
+
+    /**
+     * @deprecated LT-E5-S5-2 (M5) · 다음 릴리스 제거 예정.
      */
     @Deprecated
     public static Card create(
@@ -189,7 +212,7 @@ public class Card {
     }
 
     /**
-     * @deprecated Story-CARD-E3-S3-4 이관 후 호환 오버로드. 다음 릴리스에서 제거 예정.
+     * @deprecated LT-E5-S5-2 (M5) · 다음 릴리스 제거 예정.
      */
     @Deprecated
     public static Card create(
@@ -199,6 +222,35 @@ public class Card {
             List<String> keywordValues
                              ) {
         return create(deck, mainNote, summary, keywordValues, null, DEFAULT_CREATED_MODE, LocalDate.now());
+    }
+
+    /**
+     * LT-E5-S5-2 (M5) 이관 · axisId 기반 blessed 오버로드 (createdMode·today default).
+     * @deprecated 신규 호출부는 create(axisId, ..., createdMode, today) 사용 권장.
+     */
+    @Deprecated
+    public static Card create(
+            Long axisId,
+            MainNote mainNote,
+            Summary summary,
+            List<String> keywordValues,
+            List<Tag> tagList
+                             ) {
+        return create(axisId, mainNote, summary, keywordValues, tagList, DEFAULT_CREATED_MODE, LocalDate.now());
+    }
+
+    /**
+     * LT-E5-S5-2 (M5) 이관 · axisId 기반 blessed 오버로드 (tag·createdMode·today default).
+     * @deprecated 신규 호출부는 create(axisId, ..., createdMode, today) 사용 권장.
+     */
+    @Deprecated
+    public static Card create(
+            Long axisId,
+            MainNote mainNote,
+            Summary summary,
+            List<String> keywordValues
+                             ) {
+        return create(axisId, mainNote, summary, keywordValues, null, DEFAULT_CREATED_MODE, LocalDate.now());
     }
 
     // -------------------------------------------------------------------------
@@ -405,6 +457,10 @@ public class Card {
     // 조회
     // -------------------------------------------------------------------------
 
+    /**
+     * @deprecated LT-E5-S5-2 (M5) · Card.deck 폐기 대기 · axis 기반 조회 사용 권장.
+     */
+    @Deprecated
     public Deck          getDeck()          { return deck; }
     public MainNote      getMainNote()      { return mainNote; }
     public Summary       getSummary()       { return summary; }

@@ -1,5 +1,6 @@
 package com.example.thirdtool.LearningFacade.infrastructure.persistence;
 
+import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
 import com.example.thirdtool.LearningFacade.domain.model.LearningFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -41,5 +42,15 @@ public class LearningFacadeRepositoryAdapter implements LearningFacadeRepository
                         LearningFacadeJpaRepository.AxisIdNameProjection::getId,
                         LearningFacadeJpaRepository.AxisIdNameProjection::getName
                 ));
+    }
+
+    @Override
+    public Optional<LearningAxis> findAxisById(Long axisId) {
+        return jpa.findAxisById(axisId);
+    }
+
+    @Override
+    public Optional<Long> findUserIdByAxisId(Long axisId) {
+        return jpa.findUserIdByAxisId(axisId);
     }
 }

@@ -4,8 +4,8 @@ import com.example.thirdtool.Card.domain.event.CardViewedEvent;
 import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
-import com.example.thirdtool.Deck.application.service.DeckQueryService;
-import com.example.thirdtool.Deck.domain.model.Deck;
+import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
+import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
 import com.example.thirdtool.Review.domain.exception.ReviewSessionException;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
 import com.example.thirdtool.Review.infrastructure.ReviewSessionRepository;
@@ -33,7 +33,9 @@ public class ReviewCommandService {
 
     private final ReviewSessionRepository reviewSessionRepository;
     private final ReviewQueryService      reviewQueryService;
-    private final DeckQueryService        deckQueryService;
+
+    // LT-E5-S5-3 (M5) — DeckQueryService 대체 · axis 직접 조회
+    private final LearningFacadeRepository learningFacadeRepository;
 
     // Card BC 의존 — port interface를 통한 접근 (ADR-006)
     private final CardRepository cardRepository;
@@ -44,18 +46,25 @@ public class ReviewCommandService {
     // ─── 1. 리뷰 세션 시작 ───────────────────────────────
 
     public ReviewResponse.StartSession startReview(ReviewRequest.StartSession request, UserEntity user) {
-        Deck deck = deckQueryService.getActiveDeck(request.deckId());
+        // LT-E5-S5-3 (M5) — Deck 조회 폐기 · axisId 직접 사용.
+        // request.deckId()는 호환용 · 실제 값은 axisId (Story 5-3 SDD 정합 · Controller 재배선 시 파라미터명 이관 예정).
+        Long axisId = request.deckId();
+        LearningAxis axis = learningFacadeRepository.findAxisById(axisId)
+                .orElseThrow(() -> ReviewSessionException.of(
+                        ErrorCode.LEARNING_AXIS_NOT_FOUND, "axisId=" + axisId));
 
-        if (!deck.getUser().getId().equals(user.getId())) {
+        Long ownerId = learningFacadeRepository.findUserIdByAxisId(axisId)
+                .orElseThrow(() -> ReviewSessionException.of(
+                        ErrorCode.LEARNING_AXIS_NOT_FOUND, "axisId=" + axisId));
+        if (!ownerId.equals(user.getId())) {
             throw ReviewSessionException.of(ErrorCode.REVIEW_SESSION_FORBIDDEN);
         }
 
-        // 카드 목록을 Application Service에서 조회해 ReviewSession에 전달한다.
-        // ReviewSession이 deck.getCards()를 직접 호출하지 않도록 해 N+1 제어권을 유지한다.
-        List<Card> cards = cardRepository.findAllByDeckIdAndDeletedFalse(deck.getId());
+        // 카드 목록 조회 — LT-E5-S5-2 신설 축 스코프 메서드.
+        List<Card> cards = cardRepository.findAllByAxisIdAndDeletedFalse(axisId);
 
         // 카드 0개 검증은 ReviewSession.of() 도메인 내부에서 처리 (REVIEW002)
-        ReviewSession session = ReviewSession.of(deck, cards, user, cards.size());
+        ReviewSession session = ReviewSession.of(axisId, cards, user, cards.size());
         reviewSessionRepository.save(session);
 
         // 첫 번째 카드 진입 처리 (viewCount 증가만). Archive 판정은 M5로 이관.

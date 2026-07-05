@@ -21,7 +21,16 @@ public interface CardJpaRepository extends JpaRepository<Card, Long>, CardReposi
     Optional<Card> findByIdWithKeywords(@Param("cardId") Long cardId);
 
 
+    /**
+     * @deprecated LT-E5-S5-2 (M5) · Deck 폐기 대기.
+     */
+    @Deprecated
     List<Card> findAllByDeckIdAndDeletedFalse(Long deckId);
+
+    /**
+     * LT-E5-S5-2 (M5) — 축 스코프 카드 조회 · Spring Data 네이밍 자동 도출.
+     */
+    List<Card> findAllByAxisIdAndDeletedFalse(Long axisId);
 
 
     List<Card> findAllByStatusAndDeletedFalse(CardStatus status);

@@ -107,13 +107,14 @@ class CardTest {
     class CreateValidationTest {
 
         @Test
-        @DisplayName("deck이 null이면 INVALID_INPUT 예외가 발생한다")
-        void create_nullDeck_throwsInvalidInputException() {
-            // given - no setup
+        @DisplayName("axisId(또는 deck)가 null이면 INVALID_INPUT 예외가 발생한다")
+        void create_nullAxisId_throwsInvalidInputException() {
+            // LT-E5-S5-3 (M5): axisId 기반 blessed 팩토리에서 null 검증.
+            // Long 명시 캐스팅으로 오버로드 ambiguity 회피.
+            Long nullAxisId = null;
 
-            // when & then
             assertThatThrownBy(() -> Card.create(
-                    null,
+                    nullAxisId,
                     MainNote.of("내용", null),
                     Summary.of("요약."),
                     List.of("키워드")

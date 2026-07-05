@@ -186,6 +186,29 @@ public class CardCommandService {
         return CardResponse.Detail.of(card);
     }
 
+    // ─── REV E1 · Story 1-4 · 다건 archive orchestration ─
+    /**
+     * REV E1 · M5 · Story 1-4 — DailyLearningBatch generation 시 exhausted 카드 일괄 archive.
+     * Aggregate가 다른 BC를 호출하지 않는 원칙 준수 · Application Service 조율.
+     */
+    public void archiveMany(List<Long> cardIds, ArchiveReason reason) {
+        if (reason == null) {
+            throw CardDomainException.of(ErrorCode.INVALID_INPUT, "archiveMany: reason은 null일 수 없습니다.");
+        }
+        if (cardIds == null || cardIds.isEmpty()) return;
+
+        for (Long cardId : cardIds) {
+            Card card = cardRepository.findById(cardId).orElse(null);
+            if (card == null || card.isDeleted()) continue;
+            CardStatus fromStatus = card.getStatus();
+            card.archive();
+            if (fromStatus != card.getStatus()) {
+                cardStatusHistoryAppender.append(card, fromStatus, card.getStatus(), reason);
+                recalculateAxisProgress(card.getAxisId());
+            }
+        }
+    }
+
     // ─── 13. 카드 삭제 (Soft Delete) ──────────────────────
 
     public void softDelete(Long cardId) {

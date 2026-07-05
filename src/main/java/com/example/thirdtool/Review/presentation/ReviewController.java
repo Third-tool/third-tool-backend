@@ -2,11 +2,8 @@ package com.example.thirdtool.Review.presentation;
 
 import com.example.thirdtool.Review.application.ReviewCommandService;
 import com.example.thirdtool.Review.application.ReviewQueryService;
-import com.example.thirdtool.Review.presentation.dto.ReviewRequest;
 import com.example.thirdtool.Review.presentation.dto.ReviewResponse;
 import com.example.thirdtool.User.domain.model.UserEntity;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +13,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * REV E2 · Story 2-4 — 신규 review-session 엔드포인트 세트.
+ *
+ * <p>DailyLearningBatch (E1) 원천으로 시작하는 세션. deck/axis/layer 스코프 개념 폐기.
+ */
 @RestController
+@RequestMapping("/api/v1/review-sessions")
 @RequiredArgsConstructor
 @Validated
 public class ReviewController {
@@ -24,76 +27,75 @@ public class ReviewController {
     private final ReviewCommandService reviewCommandService;
     private final ReviewQueryService reviewQueryService;
 
-    // ─── 1. 리뷰 세션 시작 ───────────────────────────────
-    @PostMapping("/api/v1/reviews")
-    public ResponseEntity<ReviewResponse.StartSession> startReview(
-            @Valid @RequestBody ReviewRequest.StartSession request,
+    /**
+     * POST /api/v1/review-sessions — 신 세션 시작.
+     *
+     * <p>진행 중 세션 있으면 자동 finish (Story 2-3). 오늘 batch에서 미완료 카드로 세션 구성.
+     */
+    @PostMapping
+    public ResponseEntity<ReviewResponse.StartSession> startSession(
             @AuthenticationPrincipal UserEntity currentUser
-                                                                  ) {
+    ) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(reviewCommandService.startReview(request, currentUser));
+                .body(reviewCommandService.startSession(currentUser));
     }
 
-    // ─── 1-b. LAYER 스코프 리뷰 세션 시작 (LT-E6-S6-3 · M5) ─
-    // 궤적 관리: PR#4 (Review E2)가 issue-25 supersede로 폐기 예정.
-    @PostMapping("/api/v1/layers/{layerId}/review-sessions")
-    public ResponseEntity<ReviewResponse.StartSession> startLayerReview(
-            @PathVariable Long layerId,
-            @AuthenticationPrincipal UserEntity currentUser
-                                                                       ) {
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(reviewCommandService.startLayerReview(layerId, currentUser));
-    }
-
-    // ─── 2. 세션 단건 조회 ────────────────────────────────
-    @GetMapping("/api/v1/reviews/{sessionId}")
+    /** GET /api/v1/review-sessions/{id} — 세션 단건 조회. */
+    @GetMapping("/{sessionId}")
     public ResponseEntity<ReviewResponse.SessionDetail> findById(
             @PathVariable Long sessionId,
             @AuthenticationPrincipal UserEntity currentUser
-                                                                ) {
+    ) {
         return ResponseEntity.ok(reviewQueryService.findById(sessionId, currentUser));
     }
 
-    // ─── 3. 현재 카드 COMPARING 전환 ─────────────────────
-    @PatchMapping("/api/v1/reviews/{sessionId}/comparing")
+    /** POST /api/v1/review-sessions/{id}/start-comparing — 현재 카드 COMPARING 전환. */
+    @PostMapping("/{sessionId}/start-comparing")
     public ResponseEntity<ReviewResponse.CardReviewDto> startComparing(
             @PathVariable Long sessionId,
             @AuthenticationPrincipal UserEntity currentUser
-                                                                      ) {
+    ) {
         return ResponseEntity.ok(reviewCommandService.startComparing(sessionId, currentUser));
     }
 
-    // ─── 4. 다음 카드로 이동 ──────────────────────────────
-    @PatchMapping("/api/v1/reviews/{sessionId}/next")
+    /** POST /api/v1/review-sessions/{id}/record-view — 현재 카드 view 기록 (batch 동기화). */
+    @PostMapping("/{sessionId}/record-view")
+    public ResponseEntity<Void> recordView(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserEntity currentUser
+    ) {
+        reviewCommandService.recordView(sessionId, currentUser);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** POST /api/v1/review-sessions/{id}/next — 다음 카드로 이동. */
+    @PostMapping("/{sessionId}/next")
     public ResponseEntity<ReviewResponse.NextCard> moveToNext(
             @PathVariable Long sessionId,
             @AuthenticationPrincipal UserEntity currentUser
-                                                             ) {
+    ) {
         return ResponseEntity.ok(reviewCommandService.moveToNext(sessionId, currentUser));
     }
 
-    // ─── 5. 세션 목록 조회 ────────────────────────────────
-    @GetMapping("/api/v1/reviews")
-    public ResponseEntity<List<ReviewResponse.SessionSummary>> searchSessions(
-            @RequestParam(required = false) Long deckId,
+    /** POST /api/v1/review-sessions/{id}/finish — 세션 명시 finish. */
+    @PostMapping("/{sessionId}/finish")
+    public ResponseEntity<ReviewResponse.FinishSession> finish(
+            @PathVariable Long sessionId,
             @AuthenticationPrincipal UserEntity currentUser
-                                                                             ) {
-        return ResponseEntity.ok(reviewQueryService.searchSessions(deckId, currentUser));
+    ) {
+        return ResponseEntity.ok(reviewCommandService.finish(sessionId, currentUser));
     }
 
-    // ─── 6. 오늘의 학습 후보 (Story 6-1·6-2·6-3) ──────────
-    // 사용자의 ON_FIELD + soft schedule 통과 카드를 state별 분류해 반환.
-    // target 미입력 시 사용자 dailyTarget 사용. target 입력 시 그 값으로 분배(Story 6-3 "+N장").
-    @GetMapping("/api/v1/review-session/today")
-    public ResponseEntity<ReviewResponse.TodayCandidates> getTodayCandidates(
-            @AuthenticationPrincipal UserEntity currentUser,
-            @RequestParam(required = false) @Min(1) Integer target
-                                                                            ) {
-        ReviewResponse.TodayCandidates response = (target == null)
-                ? reviewQueryService.getTodayCandidates(currentUser)
-                : reviewQueryService.getTodayCandidatesWithTarget(currentUser, target);
-        return ResponseEntity.ok(response);
+    /**
+     * GET /api/v1/review-sessions?batchId= — 세션 목록 조회.
+     * batchId 미입력 시 사용자 전체 세션 반환 (startedAt DESC).
+     */
+    @GetMapping
+    public ResponseEntity<List<ReviewResponse.SessionSummary>> searchSessions(
+            @RequestParam(required = false) Long batchId,
+            @AuthenticationPrincipal UserEntity currentUser
+    ) {
+        return ResponseEntity.ok(reviewQueryService.searchSessions(batchId, currentUser));
     }
 }

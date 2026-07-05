@@ -1,9 +1,7 @@
 package com.example.thirdtool.Review.presentation.dto;
 
-import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.domain.model.KeywordCue;
 import com.example.thirdtool.Card.domain.model.MainContentType;
-import com.example.thirdtool.Card.domain.model.SoftScheduleState;
 import com.example.thirdtool.Review.domain.model.CardReview;
 import com.example.thirdtool.Review.domain.model.CardVisibleContent;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
@@ -12,31 +10,36 @@ import com.example.thirdtool.Review.infrastructure.dto.ReviewSessionSummaryRow;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
+/**
+ * ReviewResponse — REV E2 · Story 2-1/2-4 재편.
+ *
+ * <p>PR#2 궤적: deckId · deckName 필드 폐기 · batchId + finishedAt로 대체.
+ * TodayCandidates는 DailyBatch 엔드포인트로 흡수 폐기 (Story 2-5).
+ */
 public class ReviewResponse {
 
     // ─── 1. 리뷰 세션 시작 응답 (201) ────────────────────────────────────────
     public record StartSession(
             Long sessionId,
-            Long deckId,
-            String deckName,
+            Long batchId,
             int totalCardCount,
+            int availableCardCount,
             int currentIndex,
             LocalDateTime startedAt,
             boolean isFinished,
             CardReviewDto currentCard   // 첫 카드. 항상 RECALLING 상태.
     ) {
-        public static StartSession of(ReviewSession session, boolean isLastView) {
+        public static StartSession of(ReviewSession session) {
             return new StartSession(
                     session.getId(),
-                    session.getDeck().getId(),
-                    session.getDeck().getName(),
-                    session.getCardReviews().size(),
+                    session.getBatch().getId(),
+                    session.getTotalCardCount(),
+                    session.getAvailableCardCount(),
                     session.getCurrentIndex(),
                     session.getStartedAt(),
                     session.isFinished(),
-                    CardReviewDto.of(session.currentCardReview(), isLastView)
+                    CardReviewDto.of(session.currentCardReview())
             );
         }
     }
@@ -44,46 +47,45 @@ public class ReviewResponse {
     // ─── 2. 세션 단건 조회 응답 (200) ────────────────────────────────────────
     public record SessionDetail(
             Long sessionId,
-            Long deckId,
-            String deckName,
+            Long batchId,
             int totalCardCount,
+            int availableCardCount,
             int currentIndex,
             LocalDateTime startedAt,
+            LocalDateTime finishedAt,
             boolean isFinished,
             CardReviewDto currentCard   // isFinished == true이면 null
     ) {
-        public static SessionDetail of(ReviewSession session, boolean isLastView) {
+        public static SessionDetail of(ReviewSession session) {
             CardReviewDto currentCard = session.isFinished()
                     ? null
-                    : CardReviewDto.of(session.currentCardReview(), isLastView);
+                    : CardReviewDto.of(session.currentCardReview());
 
             return new SessionDetail(
                     session.getId(),
-                    session.getDeck().getId(),
-                    session.getDeck().getName(),
-                    session.getCardReviews().size(),
+                    session.getBatch().getId(),
+                    session.getTotalCardCount(),
+                    session.getAvailableCardCount(),
                     session.getCurrentIndex(),
                     session.getStartedAt(),
+                    session.getFinishedAt(),
                     session.isFinished(),
                     currentCard
             );
         }
     }
 
-    // ─── 3. 현재 카드 COMPARING 전환 응답 (200) ──────────────────────────────
-    // CardReviewDto를 직접 반환한다.
-
-    // ─── 4. 다음 카드 이동 응답 (200) ────────────────────────────────────────
+    // ─── 3. 다음 카드 이동 응답 (200) ────────────────────────────────────────
     public record NextCard(
             Long sessionId,
             int currentIndex,
             boolean isFinished,
             CardReviewDto currentCard   // isFinished == true이면 null
     ) {
-        public static NextCard of(ReviewSession session, boolean isLastView) {
+        public static NextCard of(ReviewSession session) {
             CardReviewDto currentCard = session.isFinished()
                     ? null
-                    : CardReviewDto.of(session.currentCardReview(), isLastView);
+                    : CardReviewDto.of(session.currentCardReview());
 
             return new NextCard(
                     session.getId(),
@@ -94,79 +96,55 @@ public class ReviewResponse {
         }
     }
 
-    // ─── 5. 세션 목록 아이템 응답 (200) ──────────────────────────────────────
+    // ─── 4. 세션 목록 아이템 응답 (200) ──────────────────────────────────────
     public record SessionSummary(
             Long sessionId,
-            Long deckId,
-            String deckName,
+            Long batchId,
             int totalCardCount,
-            LocalDateTime startedAt
+            int availableCardCount,
+            LocalDateTime startedAt,
+            LocalDateTime finishedAt
     ) {
         public static SessionSummary of(ReviewSessionSummaryRow row) {
             return new SessionSummary(
                     row.getSessionId(),
-                    row.getDeckId(),
-                    row.getDeckName(),
+                    row.getBatchId(),
                     row.getTotalCardCount(),
-                    row.getStartedAt()
+                    row.getAvailableCardCount(),
+                    row.getStartedAt(),
+                    row.getFinishedAt()
             );
         }
     }
 
-    // ─── 6. 오늘의 학습 후보 응답 (Story 6-1·6-2) ───────────────────────────
-    // - byState: 적격 풀 전체 (FE가 각 state별 카드를 모두 표시)
-    // - recommendedByState: dailyTarget × 풀 비례 분배 결과 (FE가 추천 카드 N장 take)
-    // - recommendedTotal: 실제 추천된 카드 수 (≤ dailyTarget, ≤ total)
-    // - dailyTarget: 사용자 설정 학습 목표
-    // - total: 적격 카드 전체 수
-    // NOT_YET은 응답에서 제외.
-    public record TodayCandidates(
-            int total,
-            int dailyTarget,
-            int recommendedTotal,
-            Map<SoftScheduleState, Integer> recommendedByState,
-            Map<SoftScheduleState, List<CandidateItem>> byState
+    // ─── 5. Finish 응답 (200) ────────────────────────────────────────────────
+    public record FinishSession(
+            Long sessionId,
+            boolean isFinished,
+            LocalDateTime finishedAt
     ) {
-        public record CandidateItem(
-                Long cardId,
-                Long deckId,
-                String deckName,
-                String summary
-        ) {
-            public static CandidateItem of(Card card) {
-                return new CandidateItem(
-                        card.getId(),
-                        card.getDeck().getId(),
-                        card.getDeck().getName(),
-                        card.getSummary().getValue()
-                );
-            }
+        public static FinishSession of(ReviewSession session) {
+            return new FinishSession(
+                    session.getId(),
+                    session.isFinished(),
+                    session.getFinishedAt()
+            );
         }
     }
 
     // ─── 공통 중첩 DTO ────────────────────────────────────────────────────────
 
-    /**
-     * 리뷰 카드 응답 DTO.
-     *
-     * <p><b>Deprecated 필드</b>: {@code isLastView} — Story-CARD-E2-S2-4 폐기.
-     * OnFieldBudget 폐기로 "이번이 마지막 노출인가" 판정이 사라졌다. FE 호환 유지를 위해
-     * 필드는 남지만 값은 항상 {@code false}. Archive 판정은 M5 DailyLearningBatch로 이관됐다.
-     * v2 API에서 필드 자체가 제거될 예정.
-     */
     public record CardReviewDto(
             Long cardReviewId,
             Long cardId,
             int cardOrder,
             ReviewStep reviewStep,
-            // @deprecated Story-CARD-E2-S2-4 — 항상 false. M5 DailyLearningBatch로 판정 이관, v2 API에서 필드 제거 예정.
-            boolean isLastView,
             MainNoteDto mainNote,
             List<KeywordDto> keywordCues,   // RECALLING이면 null
             String summary,                  // RECALLING이면 null
             LocalDateTime comparingStartedAt
     ) {
-        public static CardReviewDto of(CardReview cardReview, boolean isLastView) {
+        public static CardReviewDto of(CardReview cardReview) {
             CardVisibleContent content = cardReview.visibleContent();
 
             List<KeywordDto> keywordCues = content.keywordCues() == null
@@ -182,7 +160,6 @@ public class ReviewResponse {
                     cardReview.getCard().getId(),
                     cardReview.getCardOrder(),
                     cardReview.getReviewStep(),
-                    isLastView,
                     MainNoteDto.of(cardReview),
                     keywordCues,
                     summary,

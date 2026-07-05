@@ -2,7 +2,6 @@ package com.example.thirdtool.Review.domain.model;
 
 import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
-import com.example.thirdtool.Deck.domain.model.Deck;
 import com.example.thirdtool.Review.domain.exception.ReviewSessionException;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import jakarta.persistence.*;
@@ -12,8 +11,22 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 
+/**
+ * ReviewSession — REV E2 · SDD Story 2-1 재편 (batch 원천).
+ *
+ * <p>PR#2에서 심었던 {@code scope}·{@code scope_id}·{@code axis_id} 컬럼은 V36에서 폐기되고,
+ * batch 참조로 대체된다. DailyLearningBatch가 하루 큐의 원천 · 세션은 그 상태 위에서 자란다.
+ *
+ * <p>불변식:
+ * <ul>
+ *   <li>batch가 closed 상태면 새 세션 생성 불가 (DAILY_BATCH_CLOSED_FOR_NEW_SESSION)</li>
+ *   <li>availableCards 비면 세션 생성 불가 (DAILY_BATCH_HAS_NO_CARDS)</li>
+ *   <li>finish()는 멱등 (재호출 시 finishedAt 유지)</li>
+ * </ul>
+ */
 @Entity
 @Table(name = "review_session")
 @Getter
@@ -24,38 +37,10 @@ public class ReviewSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * @deprecated LT-E5-S5-3 (M5) · Deck BC 폐기 대기. axisId 직접 참조로 이관.
-     * V33에서 review_session.deck_id 컬럼 소프트 폐기 · 다음 릴리스 완전 삭제 예정.
-     */
-    @Deprecated
+    /** REV E2 · Story 2-1 — DailyLearningBatch 참조. 세션 카드 큐의 원천. */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "deck_id", nullable = true)  // V33 폐기 대응 · nullable 완화
-    private Deck deck;
-
-    /**
-     * LT-E5-S5-3 (M5) — 세션이 소속된 Axis 직접 참조 (raw Long).
-     * BC 간 직접 객체 참조 회피 (docs/PACKAGE.md §6).
-     * <p>LT-E6-S6-1 (M5) — scope 도입 후 이 필드는 scope=AXIS일 때만 유효.
-     * scope=LAYER 세션은 axisId=null (V34에서 nullable 승격).
-     */
-    @Column(name = "axis_id", nullable = true)
-    private Long axisId;
-
-    /**
-     * LT-E6-S6-1 (M5) — 리뷰 스코프 (AXIS / LAYER).
-     * 궤적 관리: PR#4 (Review E2)가 issue-25 supersede로 폐기 예정.
-     */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "scope", nullable = false, length = 10)
-    private ReviewScope scope = ReviewScope.AXIS;
-
-    /**
-     * LT-E6-S6-1 (M5) — scope 대상 id.
-     * scope=AXIS → axisId 동일 · scope=LAYER → layerId.
-     */
-    @Column(name = "scope_id", nullable = false)
-    private Long scopeId;
+    @JoinColumn(name = "batch_id", nullable = false)
+    private DailyLearningBatch batch;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -80,88 +65,57 @@ public class ReviewSession {
     @Column(name = "started_at", nullable = false, updatable = false)
     private LocalDateTime startedAt;
 
+    /** REV E2 · Story 2-3 — 세션 종료 시각. finish() 시점 기록 · 자동 finish 관찰에도 사용. */
+    @Column(name = "finished_at")
+    private LocalDateTime finishedAt;
+
     // -------------------------------------------------------
     // 정적 팩토리
     // -------------------------------------------------------
 
     /**
-     * LT-E5-S5-3 (M5) blessed — axisId 직접 주입.
-     * <p>LT-E6-S6-1 (M5) — scope=AXIS · scopeId=axisId 자동 세팅. {@link #ofAxis} 알리아스.
+     * REV E2 · Story 2-1 — batch 참조 기반 세션 생성.
+     *
+     * <p>{@code availableCards}는 호출부(Service)에서 batch.entries.filter(!viewed) 대응 카드로 정렬해서 전달.
+     * cardReviews는 그 순서대로 생성된다.
+     *
+     * @throws ReviewSessionException DAILY_BATCH_CLOSED_FOR_NEW_SESSION · DAILY_BATCH_HAS_NO_CARDS · REVIEW_SESSION_FORBIDDEN
      */
-    public static ReviewSession of(Long axisId, List<Card> availableCards, UserEntity user, int totalCardCount) {
-        return ofAxis(axisId, availableCards, user, totalCardCount);
-    }
+    public static ReviewSession startFrom(
+            DailyLearningBatch batch,
+            List<Card> availableCards,
+            UserEntity user,
+            LocalDateTime now
+    ) {
+        Objects.requireNonNull(batch, "batch는 null일 수 없습니다.");
+        Objects.requireNonNull(user, "user는 null일 수 없습니다.");
+        Objects.requireNonNull(availableCards, "availableCards는 null일 수 없습니다.");
+        Objects.requireNonNull(now, "now는 null일 수 없습니다.");
 
-    /**
-     * LT-E6-S6-1 (M5) — AXIS 스코프 세션 생성.
-     */
-    public static ReviewSession ofAxis(Long axisId, List<Card> availableCards, UserEntity user, int totalCardCount) {
-        if (axisId == null) {
-            throw new IllegalArgumentException("ReviewSession 생성 실패: axisId는 null일 수 없습니다.");
+        if (!batch.isOwner(user.getId())) {
+            throw ReviewSessionException.of(ErrorCode.REVIEW_SESSION_FORBIDDEN);
         }
-        validateUser(user);
-        validateCards(availableCards);
+        if (batch.isClosed()) {
+            throw ReviewSessionException.of(
+                    ErrorCode.DAILY_BATCH_CLOSED_FOR_NEW_SESSION, "batchId=" + batch.getId());
+        }
+        if (availableCards.isEmpty()) {
+            throw ReviewSessionException.of(ErrorCode.DAILY_BATCH_HAS_NO_CARDS);
+        }
 
-        ReviewSession session        = new ReviewSession();
-        session.axisId               = axisId;
-        session.scope                = ReviewScope.AXIS;
-        session.scopeId              = axisId;
-        session.user                 = user;
-        session.currentIndex         = 0;
-        session.finished             = false;
-        session.totalCardCount       = totalCardCount;
-        session.availableCardCount   = availableCards.size();
-        session.startedAt            = LocalDateTime.now();
+        ReviewSession session       = new ReviewSession();
+        session.batch               = batch;
+        session.user                = user;
+        session.currentIndex        = 0;
+        session.finished            = false;
+        session.totalCardCount      = batch.totalCount();
+        session.availableCardCount  = availableCards.size();
+        session.startedAt           = now;
 
         for (int i = 0; i < availableCards.size(); i++) {
             session.cardReviews.add(CardReview.of(availableCards.get(i), session, i));
         }
 
-        return session;
-    }
-
-    /**
-     * LT-E6-S6-1 (M5) — LAYER 스코프 세션 생성.
-     * 여러 axis 카드가 통합된 큐. axisId는 null (LAYER 스코프에서 무의미).
-     */
-    public static ReviewSession ofLayer(Long layerId, List<Card> availableCards, UserEntity user, int totalCardCount) {
-        if (layerId == null) {
-            throw new IllegalArgumentException("ReviewSession 생성 실패: layerId는 null일 수 없습니다.");
-        }
-        validateUser(user);
-        validateCards(availableCards);
-
-        ReviewSession session        = new ReviewSession();
-        session.axisId               = null;  // LAYER 스코프는 특정 axis에 종속되지 않음
-        session.scope                = ReviewScope.LAYER;
-        session.scopeId              = layerId;
-        session.user                 = user;
-        session.currentIndex         = 0;
-        session.finished             = false;
-        session.totalCardCount       = totalCardCount;
-        session.availableCardCount   = availableCards.size();
-        session.startedAt            = LocalDateTime.now();
-
-        for (int i = 0; i < availableCards.size(); i++) {
-            session.cardReviews.add(CardReview.of(availableCards.get(i), session, i));
-        }
-
-        return session;
-    }
-
-    /**
-     * @deprecated LT-E5-S5-3 (M5) — Deck 폐기 대응. of(Long axisId, ...) 사용 권장.
-     * deck에서 axisId 뽑아서 blessed 팩토리로 위임. deck.deck 필드는 @Deprecated 유지용으로 세팅.
-     */
-    @Deprecated
-    public static ReviewSession of(Deck deck, List<Card> availableCards, UserEntity user, int totalCardCount) {
-        validateDeck(deck);
-        Long axisId = deck.getAxisId();
-        if (axisId == null) {
-            throw new IllegalArgumentException("ReviewSession 생성 실패: deck.axisId는 null일 수 없습니다.");
-        }
-        ReviewSession session = of(axisId, availableCards, user, totalCardCount);
-        session.deck = deck;  // @Deprecated 필드 유지용
         return session;
     }
 
@@ -197,13 +151,29 @@ public class ReviewSession {
         }
         this.currentIndex++;
         if (this.currentIndex >= cardReviews.size()) {
-            this.finished = true;
+            this.finished   = true;
+            this.finishedAt = LocalDateTime.now();
         }
+    }
+
+    /**
+     * REV E2 · Story 2-3 — 명시적 finish. Story 2-3 자동 finish 시나리오에서 호출.
+     * 멱등: 이미 finished면 no-op (finishedAt 유지).
+     */
+    public void finish(LocalDateTime now) {
+        if (this.finished) return;
+        Objects.requireNonNull(now, "now는 null일 수 없습니다.");
+        this.finished   = true;
+        this.finishedAt = now;
     }
 
     /** is_finished 컬럼을 직접 읽는다. cardReviews 컬렉션을 로딩하지 않는다. */
     public boolean isFinished() {
         return finished;
+    }
+
+    public boolean isActive() {
+        return !finished;
     }
 
     public boolean isOwner(Long userId) {
@@ -217,20 +187,6 @@ public class ReviewSession {
     private void validateNotFinished() {
         if (isFinished()) {
             throw ReviewSessionException.of(ErrorCode.REVIEW_SESSION_ALREADY_FINISHED);
-        }
-    }
-
-    private static void validateDeck(Deck deck) {
-        if (deck == null) throw new IllegalArgumentException("ReviewSession 생성 실패: deck은 null일 수 없습니다.");
-    }
-
-    private static void validateUser(UserEntity user) {
-        if (user == null) throw new IllegalArgumentException("ReviewSession 생성 실패: user는 null일 수 없습니다.");
-    }
-
-    private static void validateCards(List<Card> cards) {
-        if (cards == null || cards.isEmpty()) {
-            throw ReviewSessionException.of(ErrorCode.REVIEW_DECK_HAS_NO_CARDS);
         }
     }
 }

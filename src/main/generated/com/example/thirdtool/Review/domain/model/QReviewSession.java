@@ -24,21 +24,17 @@ public class QReviewSession extends EntityPathBase<ReviewSession> {
 
     public final NumberPath<Integer> availableCardCount = createNumber("availableCardCount", Integer.class);
 
-    public final NumberPath<Long> axisId = createNumber("axisId", Long.class);
+    public final QDailyLearningBatch batch;
 
     public final ListPath<CardReview, QCardReview> cardReviews = this.<CardReview, QCardReview>createList("cardReviews", CardReview.class, QCardReview.class, PathInits.DIRECT2);
 
     public final NumberPath<Integer> currentIndex = createNumber("currentIndex", Integer.class);
 
-    public final com.example.thirdtool.Deck.domain.model.QDeck deck;
-
     public final BooleanPath finished = createBoolean("finished");
 
+    public final DateTimePath<java.time.LocalDateTime> finishedAt = createDateTime("finishedAt", java.time.LocalDateTime.class);
+
     public final NumberPath<Long> id = createNumber("id", Long.class);
-
-    public final EnumPath<ReviewScope> scope = createEnum("scope", ReviewScope.class);
-
-    public final NumberPath<Long> scopeId = createNumber("scopeId", Long.class);
 
     public final DateTimePath<java.time.LocalDateTime> startedAt = createDateTime("startedAt", java.time.LocalDateTime.class);
 
@@ -64,7 +60,7 @@ public class QReviewSession extends EntityPathBase<ReviewSession> {
 
     public QReviewSession(Class<? extends ReviewSession> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.deck = inits.isInitialized("deck") ? new com.example.thirdtool.Deck.domain.model.QDeck(forProperty("deck"), inits.get("deck")) : null;
+        this.batch = inits.isInitialized("batch") ? new QDailyLearningBatch(forProperty("batch")) : null;
         this.user = inits.isInitialized("user") ? new com.example.thirdtool.User.domain.model.QUserEntity(forProperty("user")) : null;
     }
 

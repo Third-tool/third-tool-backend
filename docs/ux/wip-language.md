@@ -161,3 +161,31 @@ FE에서 작성할 "운영 규칙 보기" 한 페이지의 권장 섹션 구조.
 - `docs/DOMAIN.md` § Card / ReviewSession (도메인 어휘 사전)
 - `docs/PACKAGE.md` §6 (BC 의존 — Review → Card·UserSchedule·LearningFacade)
 - `Common/Exception/ErrorCode/ErrorCode` (사용자 노출 에러 코드 enum, 메시지는 같은 enum 한국어 그대로)
+
+---
+
+## 8. Review 스코프 라벨 매핑 (LT E6 · M5 · Story 6-5)
+
+`ReviewSession.scope` enum 값의 UI 라벨 매핑. "Layer 1" 이라는 모호한 라벨은 대체됨.
+
+| `ReviewScope` | 응답 필드 값 (기술) | UI 라벨 (사용자 노출) | 부가 설명 |
+| --- | --- | --- | --- |
+| `AXIS` | `"AXIS"` | "축 리뷰: {axisName}" | 단일 축 세션 · 기존 흐름 |
+| `LAYER` | `"LAYER"` | "그룹 리뷰: {layerName}" | 그룹핑 여러 축의 카드가 통합된 세션 (신설) |
+
+**Layer.progressStatus 라벨**:
+
+| `LayerProgressStatus` | UI 라벨 | 원칙 |
+| --- | --- | --- |
+| `NOT_STARTED` | "학습 전" · "아직 시작 안 함" | 축 0건 · 모든 axis NOT_STARTED |
+| `IN_PROGRESS` | "학습 중" · "진행 중" | 축 하나 이상 IN_PROGRESS · 혼재 |
+| `COMPLETED` | "학습 완료" · "그룹 완주" | 모든 axis COMPLETED |
+
+**금지 표현**:
+- "Layer 1", "Layer 2" 같은 순서 표시 — Layer는 사용자가 만든 그룹 이름으로 표시
+- "레이어" — "그룹"으로 통일 (기술 용어 사용자 노출 X)
+- "완료율 100%" 같은 정량 강조 — "학습 완료" 정성 표현으로
+
+**궤적 관리 (milestone.md § M5 PR#2 리스크)**:
+S6-1·S6-2·S6-3의 scope enum·엔드포인트는 후속 issue-25 supersede로 M5 PR#4 (Review E2)가 폐기 예정.
+cross-layer 짬뽕 큐 방향으로 재편 · UI 라벨도 그때 재검토 · 본 매핑은 M5 궤적 유지 기간의 임시 안내.

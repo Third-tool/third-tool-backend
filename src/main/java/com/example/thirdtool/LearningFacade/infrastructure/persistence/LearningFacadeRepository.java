@@ -2,6 +2,7 @@ package com.example.thirdtool.LearningFacade.infrastructure.persistence;
 
 import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
 import com.example.thirdtool.LearningFacade.domain.model.LearningFacade;
+import com.example.thirdtool.LearningFacade.domain.model.LearningLayer;
 
 import java.util.Collection;
 import java.util.Map;
@@ -34,4 +35,15 @@ public interface LearningFacadeRepository {
      * axis→facade→user 경로로 이관.
      */
     Optional<Long> findUserIdByAxisId(Long axisId);
+
+    /**
+     * LT-E6-S6-3 (M5) — layerId로 LearningLayer 단건 조회.
+     * @SQLRestriction("deleted_at IS NULL") 자동 필터 적용.
+     */
+    Optional<LearningLayer> findLayerById(Long layerId);
+
+    /**
+     * LT-E6-S6-3 (M5) — layerId로 소유 사용자 id 조회 (layer→facade→user 경로).
+     */
+    Optional<Long> findUserIdByLayerId(Long layerId);
 }

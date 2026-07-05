@@ -5,6 +5,7 @@ import com.example.thirdtool.Card.domain.model.Card;
 import com.example.thirdtool.Card.infrastructure.persistence.CardRepository;
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
 import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
+import com.example.thirdtool.LearningFacade.domain.model.LearningLayer;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
 import com.example.thirdtool.Review.domain.exception.ReviewSessionException;
 import com.example.thirdtool.Review.domain.model.ReviewSession;
@@ -68,6 +69,41 @@ public class ReviewCommandService {
         reviewSessionRepository.save(session);
 
         // 첫 번째 카드 진입 처리 (viewCount 증가만). Archive 판정은 M5로 이관.
+        recordViewOnCurrent(session);
+
+        return ReviewResponse.StartSession.of(session, false);
+    }
+
+    // ─── 1-b. LAYER 스코프 세션 시작 (LT-E6-S6-3 · M5) ───
+    // 궤적 관리: PR#4 (Review E2)가 issue-25 supersede로 폐기 예정.
+
+    public ReviewResponse.StartSession startLayerReview(Long layerId, UserEntity user) {
+        LearningLayer layer = learningFacadeRepository.findLayerById(layerId)
+                .orElseThrow(() -> ReviewSessionException.of(
+                        ErrorCode.LEARNING_LAYER_NOT_FOUND, "layerId=" + layerId));
+
+        Long ownerId = learningFacadeRepository.findUserIdByLayerId(layerId)
+                .orElseThrow(() -> ReviewSessionException.of(
+                        ErrorCode.LEARNING_LAYER_NOT_FOUND, "layerId=" + layerId));
+        if (!ownerId.equals(user.getId())) {
+            throw ReviewSessionException.of(ErrorCode.LAYER_REVIEW_ACCESS_DENIED);
+        }
+
+        List<Long> axisIds = layer.getAxes().stream().map(LearningAxis::getId).toList();
+        if (axisIds.isEmpty()) {
+            throw ReviewSessionException.of(ErrorCode.LAYER_HAS_NO_AXES, "layerId=" + layerId);
+        }
+
+        // Card BC 이관 조회 · axisId in-list 스코프
+        List<Card> cards = cardRepository.findByUserIdAndAxisIdsAndStatus(
+                user.getId(), axisIds,
+                com.example.thirdtool.Card.domain.model.CardStatus.ON_FIELD);
+
+        // 카드 0개 검증은 ReviewSession.ofLayer() 내부 · REVIEW002
+        ReviewSession session = ReviewSession.ofLayer(layerId, cards, user, cards.size());
+        reviewSessionRepository.save(session);
+
+        // 첫 카드 view 기록 (기존 흐름과 동일)
         recordViewOnCurrent(session);
 
         return ReviewResponse.StartSession.of(session, false);

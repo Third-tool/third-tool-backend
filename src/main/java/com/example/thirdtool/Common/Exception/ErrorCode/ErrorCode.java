@@ -92,6 +92,9 @@ public enum ErrorCode {
     LEARNING_LAYER_HAS_ACTIVE_AXES("LL005",     "활성 축이 있는 Layer는 삭제할 수 없습니다.",                      HttpStatus.CONFLICT),
     LEARNING_LAYER_REORDER_MISMATCH("LL006",    "전달된 Layer id 목록이 현재 Layer id 집합과 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
     LEARNING_LAYER_NAME_TOO_LONG("LL007",       "Layer 이름은 100자 이내여야 합니다.",                              HttpStatus.BAD_REQUEST),
+    LAYER_HAS_NO_AXES("LL008",                  "Layer에 활성 축이 없어 리뷰 세션을 시작할 수 없습니다.",           HttpStatus.BAD_REQUEST),
+    LAYER_REVIEW_ACCESS_DENIED("LL009",         "본인의 Layer가 아닙니다.",                                        HttpStatus.FORBIDDEN),
+    REVIEW_SCOPE_INVALID("LL010",               "Review 스코프 값이 유효하지 않습니다.",                            HttpStatus.BAD_REQUEST),
 
     // ─── LearningAxis ─────────────────────────────────────
     LEARNING_AXIS_NOT_FOUND("LA001",              "세부 축을 찾을 수 없습니다.",                             HttpStatus.NOT_FOUND),

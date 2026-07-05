@@ -36,9 +36,26 @@ public class ReviewSession {
     /**
      * LT-E5-S5-3 (M5) — 세션이 소속된 Axis 직접 참조 (raw Long).
      * BC 간 직접 객체 참조 회피 (docs/PACKAGE.md §6).
+     * <p>LT-E6-S6-1 (M5) — scope 도입 후 이 필드는 scope=AXIS일 때만 유효.
+     * scope=LAYER 세션은 axisId=null (V34에서 nullable 승격).
      */
-    @Column(name = "axis_id", nullable = false)
+    @Column(name = "axis_id", nullable = true)
     private Long axisId;
+
+    /**
+     * LT-E6-S6-1 (M5) — 리뷰 스코프 (AXIS / LAYER).
+     * 궤적 관리: PR#4 (Review E2)가 issue-25 supersede로 폐기 예정.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "scope", nullable = false, length = 10)
+    private ReviewScope scope = ReviewScope.AXIS;
+
+    /**
+     * LT-E6-S6-1 (M5) — scope 대상 id.
+     * scope=AXIS → axisId 동일 · scope=LAYER → layerId.
+     */
+    @Column(name = "scope_id", nullable = false)
+    private Long scopeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -69,8 +86,16 @@ public class ReviewSession {
 
     /**
      * LT-E5-S5-3 (M5) blessed — axisId 직접 주입.
+     * <p>LT-E6-S6-1 (M5) — scope=AXIS · scopeId=axisId 자동 세팅. {@link #ofAxis} 알리아스.
      */
     public static ReviewSession of(Long axisId, List<Card> availableCards, UserEntity user, int totalCardCount) {
+        return ofAxis(axisId, availableCards, user, totalCardCount);
+    }
+
+    /**
+     * LT-E6-S6-1 (M5) — AXIS 스코프 세션 생성.
+     */
+    public static ReviewSession ofAxis(Long axisId, List<Card> availableCards, UserEntity user, int totalCardCount) {
         if (axisId == null) {
             throw new IllegalArgumentException("ReviewSession 생성 실패: axisId는 null일 수 없습니다.");
         }
@@ -79,6 +104,37 @@ public class ReviewSession {
 
         ReviewSession session        = new ReviewSession();
         session.axisId               = axisId;
+        session.scope                = ReviewScope.AXIS;
+        session.scopeId              = axisId;
+        session.user                 = user;
+        session.currentIndex         = 0;
+        session.finished             = false;
+        session.totalCardCount       = totalCardCount;
+        session.availableCardCount   = availableCards.size();
+        session.startedAt            = LocalDateTime.now();
+
+        for (int i = 0; i < availableCards.size(); i++) {
+            session.cardReviews.add(CardReview.of(availableCards.get(i), session, i));
+        }
+
+        return session;
+    }
+
+    /**
+     * LT-E6-S6-1 (M5) — LAYER 스코프 세션 생성.
+     * 여러 axis 카드가 통합된 큐. axisId는 null (LAYER 스코프에서 무의미).
+     */
+    public static ReviewSession ofLayer(Long layerId, List<Card> availableCards, UserEntity user, int totalCardCount) {
+        if (layerId == null) {
+            throw new IllegalArgumentException("ReviewSession 생성 실패: layerId는 null일 수 없습니다.");
+        }
+        validateUser(user);
+        validateCards(availableCards);
+
+        ReviewSession session        = new ReviewSession();
+        session.axisId               = null;  // LAYER 스코프는 특정 axis에 종속되지 않음
+        session.scope                = ReviewScope.LAYER;
+        session.scopeId              = layerId;
         session.user                 = user;
         session.currentIndex         = 0;
         session.finished             = false;

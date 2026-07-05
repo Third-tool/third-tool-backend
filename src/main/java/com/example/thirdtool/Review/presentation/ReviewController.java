@@ -35,6 +35,18 @@ public class ReviewController {
                 .body(reviewCommandService.startReview(request, currentUser));
     }
 
+    // ─── 1-b. LAYER 스코프 리뷰 세션 시작 (LT-E6-S6-3 · M5) ─
+    // 궤적 관리: PR#4 (Review E2)가 issue-25 supersede로 폐기 예정.
+    @PostMapping("/api/v1/layers/{layerId}/review-sessions")
+    public ResponseEntity<ReviewResponse.StartSession> startLayerReview(
+            @PathVariable Long layerId,
+            @AuthenticationPrincipal UserEntity currentUser
+                                                                       ) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(reviewCommandService.startLayerReview(layerId, currentUser));
+    }
+
     // ─── 2. 세션 단건 조회 ────────────────────────────────
     @GetMapping("/api/v1/reviews/{sessionId}")
     public ResponseEntity<ReviewResponse.SessionDetail> findById(

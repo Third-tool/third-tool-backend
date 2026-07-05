@@ -112,9 +112,23 @@ ON_FIELD ↔ ARCHIVE
 
 ---
 
-### 2.2 Deck — 카드 분류 컨테이너
+### 2.2 Deck — 카드 분류 컨테이너 (**SUPERSEDED — LT E5 · M5 · 2026-07-21**)
 
-**한 줄 책임**: 카드를 주제 단위로 계층 구조화하고, depth 일관성을 강제하며 공개 상태와 학습 진행 상태를 관리한다. **LearningAxis 생성 이벤트가 Deck의 유일 생성 진입점**이며 축당 1:1로 자동 생성된다 (fix-axis-deck-full-integration 0.0.2v / ADR021, 2026-07-01).
+**⚠️ 폐기 결정 (LT E5 · M5 · Story 5-1~5-5)**:
+Deck BC는 M5에 완전 폐기됨. 8 책임 필드는 `LearningAxis`(§2.1)로 이관 · SDD 우선 정책:
+- `progressStatus` → `AxisProgressStatus { NOT_STARTED, IN_PROGRESS, COMPLETED }`
+- `mode` → `AxisLearningMode { STUDY, REVIEW }` (SDD 재정의 · 기존 ON_FIELD/ARCHIVE 폐기)
+- `lastAccessedAt`, `learningMaterialId`, `onLibrary`, `publishedAt` — LearningAxis로 그대로 이관
+- 계층 (`parentDeck`, `depth`, `subDecks`) — 완전 폐기 (Layer가 유일 상위 개념)
+- `scoring_algorithm_type` (V1 legacy) — Java 참조 zero · 이관 안 함
+
+**Flyway 마이그레이션**: V31 (axis 흡수) · V32 (card.deck_id FK 제거·nullable 완화) · V33 (`deck` → `_archived_deck` RENAME) · 다음 릴리스 (v0.1.0v 이후) 물리 DROP 예정.
+
+**`/decks/*` 엔드포인트** → 폐기 (SDD 우선 · 404 응답).
+
+**계보 이력** (2026-07-21 이전):
+
+**한 줄 책임 (폐기 이전)**: 카드를 주제 단위로 계층 구조화하고, depth 일관성을 강제하며 공개 상태와 학습 진행 상태를 관리한다. **LearningAxis 생성 이벤트가 Deck의 유일 생성 진입점**이며 축당 1:1로 자동 생성된다 (fix-axis-deck-full-integration 0.0.2v / ADR021, 2026-07-01).
 
 **Aggregate Root**: `Deck` — 카드 목록과 하위 덱을 계층 일관성 하에 관리.
 

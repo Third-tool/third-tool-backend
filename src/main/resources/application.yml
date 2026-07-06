@@ -61,6 +61,14 @@ management:
       cache:
         time-to-live: 30s
 
+# REV E3 · Story 3-6 — 규칙 기반 추천 임계값. 관찰 데이터 축적 후 튜닝.
+app:
+  learning:
+    recommendation:
+      downgrade-threshold-ratio: 0.5  # 3주 평균 완료율 < 50% → DOWNGRADE 안내
+      downgrade-window-weeks: 3
+      upgrade-window-weeks: 4          # 4주 모두 perfect → UPGRADE 안내
+
 # Swagger / OpenAPI — prod profile에서 비활성화
 springdoc:
   api-docs:

@@ -1,10 +1,7 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
 import com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode;
-import com.example.thirdtool.Deck.application.service.DeckCommandService;
-import com.example.thirdtool.Deck.presentation.dto.DeckResponse;
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand;
-import com.example.thirdtool.LearningFacade.domain.event.LearningAxisCreatedEvent;
 import com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException;
 import com.example.thirdtool.LearningFacade.domain.model.*;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
@@ -17,7 +14,6 @@ import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeRespo
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,10 +28,6 @@ public class LearningFacadeCommandService {
     private final TopicDeletionRecordRepository topicDeletionRecordRepository;
     private final LearningMaterialRepository learningMaterialRepository;
     private final TopicMaterialRepository topicMaterialRepository;
-    private final ApplicationEventPublisher eventPublisher;
-    // Fix-Story 2: 축 스코프 Deck 생성 위임 (LearningFacade → Deck Application write).
-    // 자동 생성(LearningAxisCreatedEventHandler)과 별개로 사용자가 명시한 신규 Deck을 처리.
-    private final DeckCommandService deckCommandService;
 
     // ──────────────────────────────────────────────────────
     // 1. LearningFacade 생성
@@ -78,9 +70,6 @@ public class LearningFacadeCommandService {
                     "LearningAxis id가 cascade save 후에도 null입니다. JPA 설정 회귀 가능성.");
         }
 
-        eventPublisher.publishEvent(
-                new LearningAxisCreatedEvent(command.userId(), axis.getId(), axis.getName()));
-
         return AddAxis.of(axis, facade.isAxisCountExceedsRecommended());
     }
 
@@ -112,18 +101,7 @@ public class LearningFacadeCommandService {
     public void removeAxis(LearningFacadeCommand.RemoveAxis command) {
         LearningFacade facade = loadFacade(command.userId());
         facade.removeAxis(command.axisId());
-        // Fix — Axis↔Deck 완전 통합: 축 소프트 삭제 → flush → Deck 연쇄 소프트 삭제 순서.
-        //
-        // 순서 재배치 근거 (Reviewer Sceptical Major 지적):
-        //   Deck 연쇄를 axis flush 이전에 실행하면 관측 순서(deck 삭제 → axis 삭제)와
-        //   코드 순서(axis softDelete → deck 연쇄)가 뒤바뀐다. 현재는 무해하지만,
-        //   향후 softDeleteByAxisId가 "삭제된 축의 Deck만 삭제한다"는 방어 로직을
-        //   추가할 경우 flush 이전 조회가 0건을 반환해 연쇄 삭제가 누락된다.
-        //   → facadeRepository.save로 axis softDelete 먼저 flush → Deck 연쇄.
-        // Deck.softDelete()가 소속 Card까지 연쇄 처리하므로 카드 별도 순회 불필요.
-        // 세 호출 모두 동일 @Transactional 경계 내에서 원자성 보장.
         facadeRepository.save(facade);
-        deckCommandService.softDeleteByAxisId(command.axisId());
     }
 
     // ──────────────────────────────────────────────────────
@@ -174,14 +152,6 @@ public class LearningFacadeCommandService {
         facadeRepository.save(facade);
         return ReorderLayers.of(facade.getLayers());
     }
-
-    // ──────────────────────────────────────────────────────
-    // 사용자가 명시적으로 Deck을 생성하는 경로는 폐기되었다.
-    // (Fix — Axis↔Deck 완전 통합, BE-Story 2, 2026-07-01)
-    // Deck은 이제 LearningAxisCreatedEventHandler가 Axis 생성 이벤트에 반응해 자동으로만 생성한다.
-    // 이전 createDeckUnderAxis()는 축=덱 정책에 따라 제거됨. deckCommandService 필드는
-    // softDeleteByAxisId 조율(removeAxis 흐름) 목적으로만 유지된다.
-    // ──────────────────────────────────────────────────────
 
     // ──────────────────────────────────────────────────────
     // 8. 주제 추가

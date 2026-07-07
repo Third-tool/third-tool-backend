@@ -1,8 +1,6 @@
 package com.example.thirdtool.LearningFacade.application.service;
 
 import com.example.thirdtool.LearningFacade.application.dto.LearningFacadeCommand;
-import com.example.thirdtool.LearningFacade.domain.event.LearningAxisCreatedEvent;
-import com.example.thirdtool.LearningFacade.domain.model.LearningAxis;
 import com.example.thirdtool.LearningFacade.domain.model.LearningFacade;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningFacadeRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.LearningMaterialRepository;
@@ -10,12 +8,11 @@ import com.example.thirdtool.LearningFacade.infrastructure.persistence.RevisionR
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicDeletionRecordRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicMaterialRepository;
 import com.example.thirdtool.LearningFacade.infrastructure.persistence.TopicRevisionRepository;
+import com.example.thirdtool.LearningFacade.presentation.dto.LearningFacadeResponse.AddAxis;
 import com.example.thirdtool.User.domain.model.UserEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
@@ -23,13 +20,13 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-@DisplayName("LearningFacadeCommandService.addAxis() — LearningAxisCreatedEvent 발행 (Fix-Story 2)")
-class LearningFacadeCommandServiceAxisEventTest {
+@DisplayName("LearningFacadeCommandService.addAxis() — 축 추가 (Deck 동기화 제거 후 잔여 계약)")
+class LearningFacadeCommandServiceAddAxisTest {
 
     private LearningFacadeRepository facadeRepository;
-    private ApplicationEventPublisher eventPublisher;
     private LearningFacadeCommandService service;
 
     private UserEntity user;
@@ -38,7 +35,6 @@ class LearningFacadeCommandServiceAxisEventTest {
     @BeforeEach
     void setUp() {
         facadeRepository = mock(LearningFacadeRepository.class);
-        eventPublisher = mock(ApplicationEventPublisher.class);
 
         service = new LearningFacadeCommandService(
                 facadeRepository,
@@ -46,9 +42,7 @@ class LearningFacadeCommandServiceAxisEventTest {
                 mock(RevisionReasonOptionRepository.class),
                 mock(TopicDeletionRecordRepository.class),
                 mock(LearningMaterialRepository.class),
-                mock(TopicMaterialRepository.class),
-                eventPublisher,
-                mock(com.example.thirdtool.Deck.application.service.DeckCommandService.class));
+                mock(TopicMaterialRepository.class));
 
         user = UserEntity.ofLocal("tester", "encoded-pw", "닉네임", "tester@example.com");
         ReflectionTestUtils.setField(user, "id", 1L);
@@ -70,46 +64,27 @@ class LearningFacadeCommandServiceAxisEventTest {
     // ─── 해피 ────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("addAxis_정상_이벤트발행 — LearningAxisCreatedEvent에 userId·axisId·axisName 포함")
-    void addAxis_정상_이벤트발행() {
-        service.addAxis(new LearningFacadeCommand.AddAxis(1L, "Java 심화"));
+    @DisplayName("addAxis_정상_axis추가및저장 — 응답에 axisId·name·displayOrder 포함, facade 저장됨")
+    void addAxis_정상_axis추가및저장() {
+        AddAxis response = service.addAxis(new LearningFacadeCommand.AddAxis(1L, "Java 심화"));
 
-        ArgumentCaptor<LearningAxisCreatedEvent> captor =
-                ArgumentCaptor.forClass(LearningAxisCreatedEvent.class);
-        verify(eventPublisher).publishEvent(captor.capture());
-
-        LearningAxisCreatedEvent event = captor.getValue();
-        assertThat(event.userId()).isEqualTo(1L);
-        assertThat(event.axisId()).isEqualTo(100L);
-        assertThat(event.axisName()).isEqualTo("Java 심화");
-    }
-
-    // ─── 엣지 ────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("addAxis_이벤트는_save_이후_발행 — save 호출 후 publish 순서 보장")
-    void addAxis_이벤트는_save_이후_발행() {
-        var order = inOrder(facadeRepository, eventPublisher);
-
-        service.addAxis(new LearningFacadeCommand.AddAxis(1L, "Java 심화"));
-
-        order.verify(facadeRepository).save(any(LearningFacade.class));
-        order.verify(eventPublisher).publishEvent(any(LearningAxisCreatedEvent.class));
+        assertThat(response.axisId()).isEqualTo(100L);
+        assertThat(response.name()).isEqualTo("Java 심화");
+        assertThat(response.displayOrder()).isEqualTo(1);
+        assertThat(facade.getAxes()).hasSize(1);
     }
 
     // ─── 예외 ────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("addAxis_facade없음_이벤트미발행 — LEARNING_FACADE_NOT_FOUND 예외 시 이벤트 발행 없음")
-    void addAxis_facade없음_이벤트미발행() {
+    @DisplayName("addAxis_facade없음_예외 — LEARNING_FACADE_NOT_FOUND")
+    void addAxis_facade없음_예외() {
         when(facadeRepository.findByUserId(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.addAxis(new LearningFacadeCommand.AddAxis(1L, "Java 심화")))
                 .isInstanceOf(com.example.thirdtool.LearningFacade.domain.exception.LearningFacadeDomainException.class)
                 .hasFieldOrPropertyWithValue("errorCode",
                         com.example.thirdtool.Common.Exception.ErrorCode.ErrorCode.LEARNING_FACADE_NOT_FOUND);
-
-        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -121,7 +96,5 @@ class LearningFacadeCommandServiceAxisEventTest {
         assertThatThrownBy(() -> service.addAxis(new LearningFacadeCommand.AddAxis(1L, "Java 심화")))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("LearningAxis");
-
-        verify(eventPublisher, never()).publishEvent(any());
     }
 }
